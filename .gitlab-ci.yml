@@ -1,0 +1,34 @@
+image: sim-docker.fzi.de/sim_rust
+
+variables:
+  CARGO_HOME: $CI_PROJECT_DIR/cache
+
+cache: &general_cache
+  paths:
+    - cache/
+    - Cargo.lock
+  key:
+    files:
+      - Cargo.toml
+
+stages:
+  - build
+  - test
+
+cargo_build:
+  stage: build
+  tags:
+    - docker
+  script:
+    - cargo build
+
+cargo_test:
+  stage: test
+  tags:
+    - docker
+  script:
+    - cargo test
+  cache:
+    <<: *general_cache
+    policy: pull
+
