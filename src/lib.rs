@@ -5,7 +5,9 @@
 
 mod circuit;
 mod module;
+mod types;
 
 pub use circuit::Circuit;
 pub use module::Module;
+pub use types::{GroundType, Orientation, Type, Width};
 
