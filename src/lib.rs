@@ -8,6 +8,6 @@ mod module;
 mod types;
 
 pub use circuit::Circuit;
-pub use module::Module;
+pub use module::{Direction, Module, Port};
 pub use types::{GroundType, Orientation, OrientedType, Type, TypeEq, Width};
 
