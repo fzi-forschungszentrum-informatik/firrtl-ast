@@ -18,6 +18,19 @@ impl Default for Orientation {
     }
 }
 
+impl std::ops::Add for Orientation {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Self::Normal,  Self::Normal)  => Self::Normal,
+            (Self::Normal,  Self::Flipped) => Self::Flipped,
+            (Self::Flipped, Self::Normal)  => Self::Flipped,
+            (Self::Flipped, Self::Flipped) => Self::Normal,
+        }
+    }
+}
+
 
 /// FIRRTL ground type
 #[derive(Copy, Clone, Debug)]
