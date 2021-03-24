@@ -6,7 +6,7 @@ pub type Width = u16;
 
 
 /// Orientation
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Orientation {
     Normal,
     Flipped
