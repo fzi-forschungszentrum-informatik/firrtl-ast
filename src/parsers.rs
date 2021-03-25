@@ -1,10 +1,10 @@
 //! Parser utilities
 
-use nom::bytes::streaming::take_while;
+use nom::bytes::streaming::{tag, take_while};
 use nom::character::streaming::{satisfy, space0};
-use nom::combinator::{not, peek};
+use nom::combinator::{not, peek, value};
 use nom::error::context;
-use nom::sequence::tuple;
+use nom::sequence::{preceded, tuple};
 
 /// Result type for our (sub)parsers
 pub type IResult<'i, O> = nom::IResult<&'i str, O, Error<'i>>;
@@ -27,6 +27,27 @@ pub fn identifier(input: &str) -> IResult<&str> {
         nom::combinator::map(
             tuple((space0, peek(not(satisfy(char::is_numeric))), take_while(is_identifier_char))),
             |(_, _, s)| s
+        )
+    )(input)
+}
+
+
+/// Parse a decimal numeral
+///
+/// The returned parser will consume any spaces preceding the decimal.
+pub fn decimal<O>(input: &str) -> IResult<O>
+    where O: std::str::FromStr
+{
+    use nom::combinator::{recognize, success};
+    use nom::branch::alt;
+
+    let sign = alt((value((), tag("+")), value((), tag("-")), success(())));
+
+    context(
+        "expected decimal numeral",
+        nom::combinator::map_res(
+            preceded(space0, recognize(tuple((sign, take_while(char::is_numeric))))),
+            str::parse
         )
     )(input)
 }
