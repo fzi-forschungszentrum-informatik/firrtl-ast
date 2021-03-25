@@ -5,6 +5,7 @@
 
 mod circuit;
 mod module;
+mod parsers;
 mod types;
 
 pub use circuit::Circuit;
