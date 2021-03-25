@@ -3,6 +3,7 @@
 mod display;
 
 
+use std::fmt;
 use std::num::NonZeroU16;
 
 
@@ -67,6 +68,19 @@ impl TypeEq for GroundType {
             (Self::Clock,       Self::Clock)       => true,
             (Self::Analog(_),   Self::Analog(_))   => true,
             _ => false
+        }
+    }
+}
+
+impl fmt::Display for GroundType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use display::{PointOff, Width};
+        match self {
+            Self::UInt(w)     => write!(f, "UInt{}", Width::from(w)),
+            Self::SInt(w)     => write!(f, "SInt{}", Width::from(w)),
+            Self::Fixed(w, p) => write!(f, "Fixed{}{}", Width::from(w), PointOff::from(p)),
+            Self::Clock       => write!(f, "Clock"),
+            Self::Analog(w)   => write!(f, "Analog{}", Width::from(w)),
         }
     }
 }
