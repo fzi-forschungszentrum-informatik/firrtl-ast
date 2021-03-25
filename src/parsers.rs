@@ -53,6 +53,30 @@ pub fn decimal<O>(input: &str) -> IResult<O>
 }
 
 
+/// Create a parser for the specified keyword
+///
+/// Contrary to operators, keywords are a subset of identifiers in the sense
+/// that a parser for identifiers would also accept a keyword. I.e. they consist
+/// of characters which could appear in an identifier. Hence, they need to be
+/// separated from identifiers by whitespace.
+///
+/// The returned parser will consume any spaces and tabs preceding the keyword.
+pub fn kw<'i>(keyword: &'static str) -> impl nom::Parser<&'i str, (), Error<'i>> {
+    value((), tuple((space0, tag(keyword), peek(not(satisfy(is_identifier_char))))))
+}
+
+
+/// Create a parser for the specified operator
+///
+/// Operators are strings which do not contain characters which could appear in
+/// an identifier.
+///
+/// The returned parser will consume any spaces and tabs preceding the operator.
+pub fn op<'i>(operator: &'static str) -> impl nom::Parser<&'i str, (), Error<'i>> {
+    value((), tuple((space0, tag(operator))))
+}
+
+
 /// Check whether the character is allowed in identifiers
 fn is_identifier_char(c: char) -> bool {
     c.is_alphanumeric() || c == '_'
