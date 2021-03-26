@@ -1,8 +1,19 @@
 //! Types
 
+use std::num::NonZeroU16;
+
 
 /// (Bit)width
 pub type Width = u16;
+
+/// Bit-width of a ground-type, i.e. the number of "physical" wires or signals
+///
+/// A bit-width may be undefined in some instances, i.e. they may need to be
+/// inferred later. However, if it is defined, it can never be zero.
+pub type BitWidth = Option<NonZeroU16>;
+
+/// Number of elements in a vector
+pub type VecWidth = NonZeroU16;
 
 
 /// Orientation
