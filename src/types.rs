@@ -8,6 +8,9 @@ mod display;
 use std::fmt;
 use std::num::NonZeroU16;
 
+#[cfg(test)]
+use quickcheck::{Arbitrary, Gen};
+
 
 /// Bit-width of a ground-type, i.e. the number of "physical" wires or signals
 ///
@@ -83,6 +86,36 @@ impl fmt::Display for GroundType {
             Self::Fixed(w, p) => write!(f, "Fixed{}{}", Width::from(w), PointOff::from(p)),
             Self::Clock       => write!(f, "Clock"),
             Self::Analog(w)   => write!(f, "Analog{}", Width::from(w)),
+        }
+    }
+}
+
+#[cfg(test)]
+impl Arbitrary for GroundType {
+    fn arbitrary(g: &mut Gen) -> Self {
+        let opts: [&dyn Fn(&mut Gen) -> Self; 5] = [
+            &|g| Self::UInt(Arbitrary::arbitrary(g)),
+            &|g| Self::SInt(Arbitrary::arbitrary(g)),
+            &|g| Self::Fixed(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
+            &|_| Self::Clock,
+            &|g| Self::Analog(Arbitrary::arbitrary(g)),
+        ];
+        g.choose(&opts).unwrap()(g)
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        match self {
+            Self::UInt(w)     => Box::new(w.shrink().map(Self::UInt)),
+            Self::SInt(w)     => Box::new(w.shrink().map(Self::SInt)),
+            Self::Fixed(w, p) => {
+                use std::iter::once;
+                let p = *p;
+                Box::new(
+                    once(*w).chain(w.shrink()).flat_map(move |w| p.shrink().map(move |p| Self::Fixed(w, p)))
+                )
+            },
+            Self::Clock       => Box::new(std::iter::empty()),
+            Self::Analog(w)   => Box::new(w.shrink().map(Self::Analog)),
         }
     }
 }
