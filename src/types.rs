@@ -48,7 +48,7 @@ pub enum GroundType {
     /// Signed integer type with width
     SInt(BitWidth),
     /// Fixed point type, with width and negative exponent
-    Fixed(BitWidth, i16),
+    Fixed(BitWidth, Option<i16>),
     /// Clock type
     Clock,
     /// Analog signal with number of wires
