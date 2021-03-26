@@ -1,5 +1,8 @@
 //! Types
 
+mod display;
+
+
 use std::num::NonZeroU16;
 
 
