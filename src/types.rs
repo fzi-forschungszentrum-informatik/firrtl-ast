@@ -33,7 +33,7 @@ impl std::ops::Add for Orientation {
 
 
 /// FIRRTL ground type
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum GroundType {
     UInt(Width),
     SInt(Width),
@@ -57,7 +57,7 @@ impl TypeEq for GroundType {
 
 
 /// FIRRTL Type
-#[derive(Clone, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum Type {
     GroundType(GroundType),
     Vector(Box<Type>, Width),
@@ -107,7 +107,7 @@ impl TypeEq for Type {
 ///
 /// In an oriented type, the orientation is attached to the leaf nodes, i.e. the
 /// ground types, rather than fields in a bundle.
-#[derive(Clone, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum OrientedType {
     GroundType(GroundType, Orientation),
     Vector(Box<OrientedType>, Width),
