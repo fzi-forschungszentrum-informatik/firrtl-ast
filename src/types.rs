@@ -60,8 +60,8 @@ impl TypeEq for GroundType {
 #[derive(Clone, Debug)]
 pub enum Type {
     GroundType(GroundType),
-    Vector(Box<Type>, Width),
-    Bundle(Vec<(String, Type, Orientation)>),
+    Vector(Box<Self>, Width),
+    Bundle(Vec<(String, Self, Orientation)>),
 }
 
 impl Type {
@@ -110,8 +110,8 @@ impl TypeEq for Type {
 #[derive(Clone, Debug)]
 pub enum OrientedType {
     GroundType(GroundType, Orientation),
-    Vector(Box<OrientedType>, Width),
-    Bundle(Vec<(String, OrientedType)>),
+    Vector(Box<Self>, Width),
+    Bundle(Vec<(String, Self)>),
 }
 
 impl OrientedType {
