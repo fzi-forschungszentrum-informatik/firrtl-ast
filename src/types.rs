@@ -4,6 +4,9 @@ pub mod parsers;
 
 mod display;
 
+#[cfg(test)]
+mod tests;
+
 
 use std::fmt;
 use std::num::NonZeroU16;
