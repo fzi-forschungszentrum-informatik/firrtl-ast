@@ -9,5 +9,5 @@ mod types;
 
 pub use circuit::Circuit;
 pub use module::{Direction, Module, Port};
-pub use types::{GroundType, Orientation, OrientedType, Type, TypeEq, Width};
+pub use types::{GroundType, Orientation, OrientedType, Type, TypeEq};
 
