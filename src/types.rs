@@ -46,11 +46,16 @@ impl std::ops::Add for Orientation {
 /// FIRRTL ground type
 #[derive(Copy, Clone, Debug)]
 pub enum GroundType {
-    UInt(Width),
-    SInt(Width),
-    Fixed(Width, i16),
+    /// Unsigned integer type with width
+    UInt(BitWidth),
+    /// Signed integer type with width
+    SInt(BitWidth),
+    /// Fixed point type, with width and negative exponent
+    Fixed(BitWidth, i16),
+    /// Clock type
     Clock,
-    Analog(Width),
+    /// Analog signal with number of wires
+    Analog(BitWidth),
 }
 
 impl TypeEq for GroundType {
