@@ -28,3 +28,27 @@ impl fmt::Display for Width {
     }
 }
 
+
+/// Utility type for formatting point offsets
+pub struct PointOff {
+    off: Option<i16>,
+}
+
+impl From<&Option<i16>> for PointOff {
+    fn from(off: &Option<i16>) -> Self {
+        Self::from(*off)
+    }
+}
+
+impl From<Option<i16>> for PointOff {
+    fn from(off: Option<i16>) -> Self {
+        Self {off}
+    }
+}
+
+impl fmt::Display for PointOff {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.off.map(|w| write!(f, "<<{}>>", w)).unwrap_or(Ok(()))
+    }
+}
+
