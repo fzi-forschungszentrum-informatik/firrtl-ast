@@ -18,3 +18,14 @@ fn parse_identifier(original: Identifier) -> Result<Equivalence<Identifier>, Str
     res
 }
 
+
+#[quickcheck]
+fn parse_decimal(original: i128) -> Result<Equivalence<i128>, String> {
+    let s = format!("{}\n", original);
+    let res = all_consuming(terminated(super::decimal, newline))(&s)
+        .finish()
+        .map(|(_, parsed)| Equivalence::of(original, parsed))
+        .map_err(|e| e.to_string());
+    res
+}
+
