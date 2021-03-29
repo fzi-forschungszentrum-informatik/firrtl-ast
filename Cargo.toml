@@ -5,3 +5,4 @@ authors = ["Julian Ganz <ganz@fzi.de>"]
 edition = "2018"
 
 [dependencies]
+nom = "6.1"
