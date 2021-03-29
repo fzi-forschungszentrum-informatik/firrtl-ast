@@ -1,6 +1,6 @@
 //! Testing utilities
 
-use std::fmt::Debug;
+use std::fmt;
 
 /// Utility type for property-based tests involving an equivalence
 ///
@@ -15,11 +15,11 @@ use std::fmt::Debug;
 #[derive(Clone, Debug)]
 pub struct Equivalence<T>(pub T, pub T)
 where
-    T: Debug + PartialEq + 'static;
+    T: fmt::Debug + PartialEq + 'static;
 
 impl<T> Equivalence<T>
 where
-    T: Debug + PartialEq + 'static,
+    T: fmt::Debug + PartialEq + 'static,
 {
     /// Construct a value expressing the equivalence of the given values
     ///
@@ -33,7 +33,7 @@ where
 
 impl<T> quickcheck::Testable for Equivalence<T>
 where
-    T: Debug + PartialEq + 'static,
+    T: fmt::Debug + PartialEq + 'static,
 {
     fn result(&self, _: &mut quickcheck::Gen) -> quickcheck::TestResult {
         use quickcheck::TestResult;
