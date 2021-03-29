@@ -8,6 +8,14 @@ mod module;
 mod parsers;
 mod types;
 
+#[cfg(test)]
+mod tests;
+
+
+#[cfg(test)]
+#[macro_use(quickcheck)]
+extern crate quickcheck_macros;
+
 pub use circuit::Circuit;
 pub use module::{Direction, Module, Port};
 pub use types::{GroundType, Orientation, OrientedType, Type, TypeEq};
