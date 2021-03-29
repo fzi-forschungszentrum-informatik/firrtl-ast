@@ -170,6 +170,23 @@ impl TypeEq for Type {
     }
 }
 
+impl fmt::Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::GroundType(g) => fmt::Display::fmt(g, f),
+            Self::Vector(t, w)  => write!(f, "{}[{}]", t, w),
+            Self::Bundle(v)     => {
+                let mut fields = v.iter().map(display::BundleField::from);
+                write!(f, "{{")?;
+                fields.next().map(|field| fmt::Display::fmt(&field, f)).transpose().map(|_| ())?;
+                fields.try_for_each(|field| write!(f, ", {}", field))?;
+                write!(f, "}}")
+            },
+        }
+    }
+}
+
+
 
 /// Oriented type
 ///
