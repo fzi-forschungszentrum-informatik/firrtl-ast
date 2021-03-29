@@ -1,8 +1,16 @@
 //! Types
 
+use std::num::NonZeroU16;
 
-/// (Bit)width
-pub type Width = u16;
+
+/// Bit-width of a ground-type, i.e. the number of "physical" wires or signals
+///
+/// A bit-width may be undefined in some instances, i.e. they may need to be
+/// inferred later. However, if it is defined, it can never be zero.
+pub type BitWidth = Option<NonZeroU16>;
+
+/// Number of elements in a vector
+pub type VecWidth = NonZeroU16;
 
 
 /// Orientation
@@ -35,11 +43,16 @@ impl std::ops::Add for Orientation {
 /// FIRRTL ground type
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum GroundType {
-    UInt(Width),
-    SInt(Width),
-    Fixed(Width, i16),
+    /// Unsigned integer type with width
+    UInt(BitWidth),
+    /// Signed integer type with width
+    SInt(BitWidth),
+    /// Fixed point type, with width and negative exponent
+    Fixed(BitWidth, Option<i16>),
+    /// Clock type
     Clock,
-    Analog(Width),
+    /// Analog signal with number of wires
+    Analog(BitWidth),
 }
 
 impl TypeEq for GroundType {
@@ -60,8 +73,8 @@ impl TypeEq for GroundType {
 #[derive(Clone, PartialEq, Debug)]
 pub enum Type {
     GroundType(GroundType),
-    Vector(Box<Type>, Width),
-    Bundle(Vec<(String, Type, Orientation)>),
+    Vector(Box<Self>, VecWidth),
+    Bundle(Vec<(String, Self, Orientation)>),
 }
 
 impl Type {
@@ -110,8 +123,8 @@ impl TypeEq for Type {
 #[derive(Clone, PartialEq, Debug)]
 pub enum OrientedType {
     GroundType(GroundType, Orientation),
-    Vector(Box<OrientedType>, Width),
-    Bundle(Vec<(String, OrientedType)>),
+    Vector(Box<Self>, VecWidth),
+    Bundle(Vec<(String, Self)>),
 }
 
 impl OrientedType {
