@@ -194,6 +194,54 @@ impl fmt::Display for Type {
     }
 }
 
+#[cfg(test)]
+impl Arbitrary for Type {
+    fn arbitrary(g: &mut Gen) -> Self {
+        use crate::tests::Identifier;
+
+        let opts: [&dyn Fn(&mut Gen) -> Self; 3] = [
+            &|g| Self::GroundType(Arbitrary::arbitrary(g)),
+            &|g| Self::Vector(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
+            &|g| {
+                let len = u8::arbitrary(g).saturating_add(1);
+                let mut g = Gen::new(g.size() / len as usize);
+                Self::Bundle((0..len).map(|_| (
+                    Identifier::arbitrary(&mut g).to_string(),
+                    Arbitrary::arbitrary(&mut g),
+                    Arbitrary::arbitrary(&mut g)
+                )).collect())
+            },
+        ];
+        if g.size() > 0 {
+            g.choose(&opts).unwrap()(g)
+        } else {
+            Self::GroundType(Arbitrary::arbitrary(g))
+        }
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        match self {
+            Self::GroundType(g) => Box::new(g.shrink().map(Self::GroundType)),
+            Self::Vector(t, w) => {
+                use std::iter::once;
+                let w = *w;
+                let res = once(t.clone())
+                    .chain(t.shrink())
+                    .flat_map(move |t| w.shrink().map(move |w| Self::Vector(t.clone(), w)));
+                Box::new(res)
+            },
+            Self::Bundle(v) => {
+                let ident_valid = |i: &str| i.chars().nth(0).map(|c| !c.is_numeric()).unwrap_or(false);
+                let res = v
+                    .shrink()
+                    .filter(move |v| !v.is_empty() && v.iter().all(|(n, _, _)| ident_valid(n.as_ref())))
+                    .map(Self::Bundle);
+                Box::new(res)
+            }
+        }
+    }
+}
+
 
 
 /// Oriented type
