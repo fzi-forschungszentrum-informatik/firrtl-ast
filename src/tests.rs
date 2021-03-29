@@ -49,3 +49,50 @@ where
 }
 
 
+/// Utility type for generating identifiers for tests
+#[derive(Clone, Debug, PartialEq)]
+pub struct Identifier {
+    data: String
+}
+
+impl From<&str> for Identifier {
+    fn from(ident: &str) -> Self {
+        Self {data: ident.to_string()}
+    }
+}
+
+impl fmt::Display for Identifier {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(&self.data, f)
+    }
+}
+
+impl quickcheck::Arbitrary for Identifier {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+        let mut data: String = Default::default();
+
+        let mut i: u128 = quickcheck::Arbitrary::arbitrary(g);
+        const N: u128 = 2*36 + 1;
+
+        data.push(match (i % N) as u8 {
+            i if i < 26 => (0x41 + i) as char,
+            i if i < 52 => (0x61 - 26 + i) as char,
+            _ => '_',
+        });
+        i = i / N;
+
+        while i > 0 {
+            const M: u128 = 10 + N;
+            data.push(match (i % M) as u8 {
+                i if i < 10 => (0x30 + i) as char,
+                i if i < 36 => (0x41 - 10 + i) as char,
+                i if i < 62 => (0x61 - 36 + i) as char,
+                _ => '_',
+            });
+            i = i / M;
+        }
+
+        Self {data}
+    }
+}
+
