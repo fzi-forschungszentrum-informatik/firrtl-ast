@@ -51,6 +51,14 @@ impl std::ops::Add for Orientation {
     }
 }
 
+#[cfg(test)]
+impl Arbitrary for Orientation {
+    fn arbitrary(g: &mut Gen) -> Self {
+        *g.choose(&[Self::Normal, Self::Flipped]).unwrap()
+    }
+}
+
+
 
 /// FIRRTL ground type
 #[derive(Copy, Clone, PartialEq, Debug)]
