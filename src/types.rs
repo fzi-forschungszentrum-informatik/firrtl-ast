@@ -1,6 +1,18 @@
 //! Types
 
+pub mod parsers;
+
+mod display;
+
+#[cfg(test)]
+mod tests;
+
+
+use std::fmt;
 use std::num::NonZeroU16;
+
+#[cfg(test)]
+use quickcheck::{Arbitrary, Gen};
 
 
 /// Bit-width of a ground-type, i.e. the number of "physical" wires or signals
@@ -39,6 +51,14 @@ impl std::ops::Add for Orientation {
     }
 }
 
+#[cfg(test)]
+impl Arbitrary for Orientation {
+    fn arbitrary(g: &mut Gen) -> Self {
+        *g.choose(&[Self::Normal, Self::Flipped]).unwrap()
+    }
+}
+
+
 
 /// FIRRTL ground type
 #[derive(Copy, Clone, PartialEq, Debug)]
@@ -64,6 +84,49 @@ impl TypeEq for GroundType {
             (Self::Clock,       Self::Clock)       => true,
             (Self::Analog(_),   Self::Analog(_))   => true,
             _ => false
+        }
+    }
+}
+
+impl fmt::Display for GroundType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use display::{PointOff, Width};
+        match self {
+            Self::UInt(w)     => write!(f, "UInt{}", Width::from(w)),
+            Self::SInt(w)     => write!(f, "SInt{}", Width::from(w)),
+            Self::Fixed(w, p) => write!(f, "Fixed{}{}", Width::from(w), PointOff::from(p)),
+            Self::Clock       => write!(f, "Clock"),
+            Self::Analog(w)   => write!(f, "Analog{}", Width::from(w)),
+        }
+    }
+}
+
+#[cfg(test)]
+impl Arbitrary for GroundType {
+    fn arbitrary(g: &mut Gen) -> Self {
+        let opts: [&dyn Fn(&mut Gen) -> Self; 5] = [
+            &|g| Self::UInt(Arbitrary::arbitrary(g)),
+            &|g| Self::SInt(Arbitrary::arbitrary(g)),
+            &|g| Self::Fixed(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
+            &|_| Self::Clock,
+            &|g| Self::Analog(Arbitrary::arbitrary(g)),
+        ];
+        g.choose(&opts).unwrap()(g)
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        match self {
+            Self::UInt(w)     => Box::new(w.shrink().map(Self::UInt)),
+            Self::SInt(w)     => Box::new(w.shrink().map(Self::SInt)),
+            Self::Fixed(w, p) => {
+                use std::iter::once;
+                let p = *p;
+                Box::new(
+                    once(*w).chain(w.shrink()).flat_map(move |w| p.shrink().map(move |p| Self::Fixed(w, p)))
+                )
+            },
+            Self::Clock       => Box::new(std::iter::empty()),
+            Self::Analog(w)   => Box::new(w.shrink().map(Self::Analog)),
         }
     }
 }
@@ -114,6 +177,71 @@ impl TypeEq for Type {
         }
     }
 }
+
+impl fmt::Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::GroundType(g) => fmt::Display::fmt(g, f),
+            Self::Vector(t, w)  => write!(f, "{}[{}]", t, w),
+            Self::Bundle(v)     => {
+                let mut fields = v.iter().map(display::BundleField::from);
+                write!(f, "{{")?;
+                fields.next().map(|field| fmt::Display::fmt(&field, f)).transpose().map(|_| ())?;
+                fields.try_for_each(|field| write!(f, ", {}", field))?;
+                write!(f, "}}")
+            },
+        }
+    }
+}
+
+#[cfg(test)]
+impl Arbitrary for Type {
+    fn arbitrary(g: &mut Gen) -> Self {
+        use crate::tests::Identifier;
+
+        let opts: [&dyn Fn(&mut Gen) -> Self; 3] = [
+            &|g| Self::GroundType(Arbitrary::arbitrary(g)),
+            &|g| Self::Vector(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
+            &|g| {
+                let len = u8::arbitrary(g).saturating_add(1);
+                let mut g = Gen::new(g.size() / len as usize);
+                Self::Bundle((0..len).map(|_| (
+                    Identifier::arbitrary(&mut g).to_string(),
+                    Arbitrary::arbitrary(&mut g),
+                    Arbitrary::arbitrary(&mut g)
+                )).collect())
+            },
+        ];
+        if g.size() > 0 {
+            g.choose(&opts).unwrap()(g)
+        } else {
+            Self::GroundType(Arbitrary::arbitrary(g))
+        }
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        match self {
+            Self::GroundType(g) => Box::new(g.shrink().map(Self::GroundType)),
+            Self::Vector(t, w) => {
+                use std::iter::once;
+                let w = *w;
+                let res = once(t.clone())
+                    .chain(t.shrink())
+                    .flat_map(move |t| w.shrink().map(move |w| Self::Vector(t.clone(), w)));
+                Box::new(res)
+            },
+            Self::Bundle(v) => {
+                let ident_valid = |i: &str| i.chars().nth(0).map(|c| !c.is_numeric()).unwrap_or(false);
+                let res = v
+                    .shrink()
+                    .filter(move |v| !v.is_empty() && v.iter().all(|(n, _, _)| ident_valid(n.as_ref())))
+                    .map(Self::Bundle);
+                Box::new(res)
+            }
+        }
+    }
+}
+
 
 
 /// Oriented type
