@@ -11,6 +11,7 @@ use std::sync::Arc;
 #[cfg(test)]
 use quickcheck::{Arbitrary, Gen};
 
+use crate::indentation::{DisplayIndented, Indentation};
 use crate::types::Type;
 
 
@@ -46,6 +47,14 @@ impl Module {
     /// Retrieve a specific port by its name
     pub fn port_by_name(&self, name: &impl AsRef<str>) -> Option<&Arc<Port>> {
         self.ports.binary_search_by_key(&name.as_ref(), |p| p.name.as_ref()).ok().map(|i| &self.ports[i])
+    }
+}
+
+impl DisplayIndented for Module {
+    fn fmt<W: fmt::Write>(&self, indentation: &mut Indentation, f: &mut W) -> fmt::Result {
+        writeln!(f, "{}module {}:", indentation.lock(), self.name())?;
+        let mut indentation = indentation.sub();
+        self.ports().try_for_each(|p| DisplayIndented::fmt(p, &mut indentation, f))
     }
 }
 
