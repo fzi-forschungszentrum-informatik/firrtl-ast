@@ -81,6 +81,18 @@ pub fn op<'i>(operator: &'static str) -> impl nom::Parser<&'i str, (), Error<'i>
 }
 
 
+/// Create a parser which discards any space before applying another parser
+///
+/// This function wraps the given parser in another parser which will be
+/// returned to the caller. The returned parser will consume any spaces and
+/// tabs, then apply the wrapped parser.
+pub fn spaced<'i, O>(
+    inner: impl nom::Parser<&'i str, O, Error<'i>>
+) -> impl nom::Parser<&'i str, O, Error<'i>> {
+    preceded(space0, inner)
+}
+
+
 /// Check whether the character is allowed in identifiers
 fn is_identifier_char(c: char) -> bool {
     c.is_alphanumeric() || c == '_'
