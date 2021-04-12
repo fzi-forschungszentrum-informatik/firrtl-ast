@@ -86,6 +86,12 @@ impl Port {
     }
 }
 
+impl fmt::Display for Port {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} {}: {}", self.direction(), self.name(), self.r#type())
+    }
+}
+
 
 /// Direction of an I/O port
 #[derive(Copy, Clone, Debug, PartialEq)]
