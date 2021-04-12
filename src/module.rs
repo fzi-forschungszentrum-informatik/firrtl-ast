@@ -1,5 +1,6 @@
 //! Module specific definitions and functions
 
+use std::fmt;
 use std::sync::Arc;
 
 use crate::types::Type;
@@ -83,5 +84,21 @@ impl Port {
 pub enum Direction {
     Input,
     Output,
+}
+
+impl Direction {
+    /// Retrieve the keyword associated with the direction value
+    pub fn keyword(&self) -> &'static str {
+        match self {
+            Self::Input => "input",
+            Self::Output => "output",
+        }
+    }
+}
+
+impl fmt::Display for Direction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self.keyword(), f)
+    }
 }
 
