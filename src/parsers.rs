@@ -23,22 +23,15 @@ pub type Error<'i> = nom::error::VerboseError<&'i str>;
 /// The parser will consume the longest sequence of alphanumeric characters and
 /// '_'. However, the parser will return an error if the first character is a
 /// numeric character.
-///
-/// The returned parser will consume any spaces and tabs preceding the identifier.
 pub fn identifier(input: &str) -> IResult<&str> {
     context(
         "expected identifier",
-        nom::combinator::map(
-            tuple((space0, peek(not(satisfy(char::is_numeric))), take_while(is_identifier_char))),
-            |(_, _, s)| s
-        )
+        preceded(peek(not(satisfy(char::is_numeric))), take_while(is_identifier_char))
     )(input)
 }
 
 
 /// Parse a decimal numeral
-///
-/// The returned parser will consume any spaces preceding the decimal.
 pub fn decimal<O>(input: &str) -> IResult<O>
     where O: std::str::FromStr
 {
@@ -50,7 +43,7 @@ pub fn decimal<O>(input: &str) -> IResult<O>
     context(
         "expected decimal numeral",
         nom::combinator::map_res(
-            preceded(space0, recognize(tuple((sign, take_while(char::is_numeric))))),
+            recognize(tuple((sign, take_while(char::is_numeric)))),
             str::parse
         )
     )(input)
@@ -63,10 +56,8 @@ pub fn decimal<O>(input: &str) -> IResult<O>
 /// that a parser for identifiers would also accept a keyword. I.e. they consist
 /// of characters which could appear in an identifier. Hence, they need to be
 /// separated from identifiers by whitespace.
-///
-/// The returned parser will consume any spaces and tabs preceding the keyword.
 pub fn kw<'i>(keyword: &'static str) -> impl nom::Parser<&'i str, (), Error<'i>> {
-    value((), tuple((space0, tag(keyword), peek(not(satisfy(is_identifier_char))))))
+    value((), tuple((tag(keyword), peek(not(satisfy(is_identifier_char))))))
 }
 
 
@@ -74,10 +65,8 @@ pub fn kw<'i>(keyword: &'static str) -> impl nom::Parser<&'i str, (), Error<'i>>
 ///
 /// Operators are strings which do not contain characters which could appear in
 /// an identifier.
-///
-/// The returned parser will consume any spaces and tabs preceding the operator.
 pub fn op<'i>(operator: &'static str) -> impl nom::Parser<&'i str, (), Error<'i>> {
-    value((), tuple((space0, tag(operator))))
+    value((), tag(operator))
 }
 
 
