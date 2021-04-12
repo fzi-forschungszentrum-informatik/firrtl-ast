@@ -4,8 +4,8 @@
 mod tests;
 
 
-use nom::bytes::streaming::{tag, take_while};
-use nom::character::streaming::{satisfy, space0};
+use nom::bytes::complete::{tag, take_while};
+use nom::character::complete::{satisfy, space0};
 use nom::combinator::{not, peek, value};
 use nom::error::context;
 use nom::sequence::{preceded, tuple};
