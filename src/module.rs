@@ -1,5 +1,7 @@
 //! Module specific definitions and functions
 
+pub mod parsers;
+
 use std::fmt;
 use std::sync::Arc;
 
