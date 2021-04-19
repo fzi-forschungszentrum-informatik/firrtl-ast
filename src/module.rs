@@ -14,9 +14,7 @@ pub struct Module {
 
 impl Module {
     /// Create a new module
-    pub fn new(name: String, ports: impl IntoIterator<Item = (String, Type, Direction)>) -> Self {
-        let name: Arc<str> = name.into();
-
+    pub fn new(name: Arc<str>, ports: impl IntoIterator<Item = (String, Type, Direction)>) -> Self {
         let mut ports: Vec<_> = ports
             .into_iter()
             .map(|(n, t, d)| Arc::new(Port {module: name.clone(), name: n, r#type: t, direction: d}))
