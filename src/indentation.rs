@@ -19,6 +19,19 @@ impl Indentation {
     /// Lock the indentation to a concrete value
     ///
     /// If the `Indentation` represents only a lower bound, this function will
+    /// set an exact value which will be some fixed value above the parent
+    /// indentation level. If the `Indentation` is already locked, this function
+    /// doesn't have any effect.
+    ///
+    /// The function returns a `LockedIndentation` reflecting the excact
+    /// indentation length.
+    pub fn lock(&mut self) -> LockedIndentation {
+        self.lock_with(NonZeroUsize::new(INDENTATION_STEP).expect("Invalid indentation width"))
+    }
+
+    /// Lock the indentation to a concrete value
+    ///
+    /// If the `Indentation` represents only a lower bound, this function will
     /// set an exact value which will be `steps` above the parent indentation
     /// level. If the `Indentation` is already locked, this function doesn't
     /// have any effect.
@@ -73,4 +86,8 @@ impl From<LockedIndentation> for usize {
         i.0
     }
 }
+
+
+/// Default number of spaces for one indentation step
+const INDENTATION_STEP: usize = 2;
 
