@@ -171,3 +171,25 @@ impl<'i> nom::Parser<&'i str, (), parsers::Error<'i>> for IndentationParser<'_> 
 /// Default number of spaces for one indentation step
 const INDENTATION_STEP: usize = 2;
 
+
+
+
+#[cfg(test)]
+mod tests {
+    use nom::Finish;
+    use nom::combinator::all_consuming;
+
+    use crate::tests::Equivalence;
+
+    use super::Indentation;
+
+    #[quickcheck]
+    fn parse_indentation(mut base: Indentation) -> Result<Equivalence<Indentation>, String> {
+        let mut original = base.sub();
+        let mut parsed = base.sub();
+        let s = original.lock().to_string();
+        all_consuming(parsed.parser())(&s).finish().map_err(|e| e.to_string())?;
+        Ok(Equivalence::of(original, parsed))
+    }
+}
+
