@@ -4,6 +4,21 @@ use std::fmt;
 use std::num::NonZeroUsize;
 
 
+/// Print with indentation
+pub trait DisplayIndented {
+    /// Print the instance with the given indentation
+    fn fmt<W: fmt::Write>(&self, indentation: &mut Indentation, f: &mut W) -> fmt::Result;
+}
+
+impl<T> DisplayIndented for T
+    where T: fmt::Display
+{
+    fn fmt<W: fmt::Write>(&self, indentation: &mut Indentation, f: &mut W) -> fmt::Result {
+        writeln!(f, "{}{}", indentation.lock(), self)
+    }
+}
+
+
 /// Indentation
 ///
 /// Instances of this type represent either a lower bound or an exact length of
