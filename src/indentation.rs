@@ -3,6 +3,7 @@
 use std::fmt;
 use std::num::NonZeroUsize;
 
+use crate::parsers;
 
 /// Print with indentation
 pub trait DisplayIndented {
@@ -79,6 +80,11 @@ impl Indentation {
     pub fn root() -> Self {
         Self::Exact(0)
     }
+
+    /// Create a parser for this Indentation
+    pub fn parser(&mut self) -> IndentationParser {
+        IndentationParser{inner: self}
+    }
 }
 
 impl Default for Indentation {
@@ -115,6 +121,30 @@ impl fmt::Display for LockedIndentation {
         use std::fmt::Write;
 
         (0..self.0).try_for_each(|_| f.write_char(' '))
+    }
+}
+
+
+/// Indentation parser
+///
+/// This parser consumes sequences of space characters. The sequence is only
+/// accepted if the length-requirement represented by the associated
+/// `Indentation` is met.
+pub struct IndentationParser<'a> {
+    inner: &'a mut Indentation
+}
+
+impl<'i> nom::Parser<&'i str, (), parsers::Error<'i>> for IndentationParser<'_> {
+    fn parse(&mut self, input: &'i str) -> parsers::IResult<'i, ()> {
+        use nom::error::ParseError;
+
+        let (rest, len) = nom::multi::many0_count(nom::character::complete::char(' '))(input)?;
+        match self.inner {
+            Indentation::MoreThan(l) if len > *l => *self.inner = Indentation::Exact(len),
+            Indentation::Exact(l) if len == *l => (),
+           _ => return Err(nom::Err::Error(parsers::Error::from_error_kind(input, nom::error::ErrorKind::Many1Count))),
+        };
+        Ok((rest, ()))
     }
 }
 
