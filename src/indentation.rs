@@ -1,5 +1,6 @@
 //! Indentation utilities
 
+use std::fmt;
 use std::num::NonZeroUsize;
 
 
@@ -91,6 +92,14 @@ impl From<&LockedIndentation> for usize {
 impl From<LockedIndentation> for usize {
     fn from(i: LockedIndentation) -> Self {
         i.0
+    }
+}
+
+impl fmt::Display for LockedIndentation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use std::fmt::Write;
+
+        (0..self.0).try_for_each(|_| f.write_char(' '))
     }
 }
 
