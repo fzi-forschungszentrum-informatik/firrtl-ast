@@ -16,7 +16,7 @@ use crate::types::Type;
 
 
 /// A hardware block
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Module {
     name: Arc<str>,
     ports: Vec<Arc<Port>>,
@@ -90,7 +90,7 @@ impl Arbitrary for Module {
 
 
 /// An I/O port of a module
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Port {
     module: Arc<str>,
     name: String,
