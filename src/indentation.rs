@@ -16,6 +16,13 @@ pub enum Indentation {
 }
 
 impl Indentation {
+    /// Create a new `Indentation` with a lower (i.e. nested) level
+    ///
+    /// This function locks the `Indentation`.
+    pub fn sub(&mut self) -> Self {
+        self.lock().sub()
+    }
+
     /// Lock the indentation to a concrete value
     ///
     /// If the `Indentation` represents only a lower bound, this function will
