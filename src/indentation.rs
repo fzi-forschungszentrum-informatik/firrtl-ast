@@ -3,6 +3,9 @@
 use std::fmt;
 use std::num::NonZeroUsize;
 
+#[cfg(test)]
+use quickcheck::{Arbitrary, Gen};
+
 use crate::parsers;
 
 /// Print with indentation
@@ -90,6 +93,22 @@ impl Indentation {
 impl Default for Indentation {
     fn default() -> Self {
         Self::root()
+    }
+}
+
+#[cfg(test)]
+impl Arbitrary for Indentation {
+    fn arbitrary(g: &mut Gen) -> Self {
+        // Testing huge widths will (probably) not yield any benefits.
+        let i = u8::arbitrary(g) as usize;
+        g.choose(&[Self::MoreThan(i), Self::Exact(i)]).unwrap().clone()
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        match self {
+            Self::MoreThan(i) => Box::new(i.shrink().map(Self::MoreThan)),
+            Self::Exact(i)    => Box::new(i.shrink().map(Self::Exact)),
+        }
     }
 }
 
