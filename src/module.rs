@@ -58,6 +58,36 @@ impl DisplayIndented for Module {
     }
 }
 
+#[cfg(test)]
+impl Arbitrary for Module {
+    fn arbitrary(g: &mut Gen) -> Self {
+        use crate::tests::Identifier;
+
+        let name = Identifier::arbitrary(g).to_string().into();
+
+        // We don't just call `arbitrary()` on a `Vec` because we really have to
+        // keep the number of ports low. Otherwise, tests will take forever.
+        let len = usize::arbitrary(g) % 16;
+        let ports = (0..len)
+            .map(|_| <(Identifier, Type, Direction)>::arbitrary(&mut Gen::new(g.size() / len)))
+            .map(|(n, t, d)| (n.to_string(), t, d));
+        Module::new(name, ports)
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        use crate::tests::Identifier;
+
+        let name: Arc<str> = self.name().into();
+        let res = self
+            .ports()
+            .map(|p| (p.name().into(), p.r#type().clone(), p.direction()))
+            .collect::<Vec<(Identifier, Type, Direction)>>()
+            .shrink()
+            .map(move |p| Module::new(name.clone(), p.into_iter().map(|(n, t, d)| (n.to_string(), t, d))));
+        Box::new(res)
+    }
+}
+
 
 /// An I/O port of a module
 #[derive(Clone, Debug)]
