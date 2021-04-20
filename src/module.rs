@@ -5,6 +5,9 @@ pub mod parsers;
 use std::fmt;
 use std::sync::Arc;
 
+#[cfg(test)]
+use quickcheck::{Arbitrary, Gen};
+
 use crate::types::Type;
 
 
@@ -101,6 +104,13 @@ impl Direction {
 impl fmt::Display for Direction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(self.keyword(), f)
+    }
+}
+
+#[cfg(test)]
+impl Arbitrary for Direction {
+    fn arbitrary(g: &mut Gen) -> Self {
+        *g.choose(&[Self::Input, Self::Output]).unwrap()
     }
 }
 
