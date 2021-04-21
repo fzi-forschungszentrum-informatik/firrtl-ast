@@ -1,12 +1,22 @@
 //! Module specific definitions and functions
 
+pub mod parsers;
+
+#[cfg(test)]
+mod tests;
+
+use std::fmt;
 use std::sync::Arc;
 
+#[cfg(test)]
+use quickcheck::{Arbitrary, Gen};
+
+use crate::indentation::{DisplayIndented, Indentation};
 use crate::types::Type;
 
 
 /// A hardware block
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Module {
     name: Arc<str>,
     ports: Vec<Arc<Port>>,
@@ -40,9 +50,47 @@ impl Module {
     }
 }
 
+impl DisplayIndented for Module {
+    fn fmt<W: fmt::Write>(&self, indentation: &mut Indentation, f: &mut W) -> fmt::Result {
+        writeln!(f, "{}module {}:", indentation.lock(), self.name())?;
+        let mut indentation = indentation.sub();
+        self.ports().try_for_each(|p| DisplayIndented::fmt(p, &mut indentation, f))
+    }
+}
+
+#[cfg(test)]
+impl Arbitrary for Module {
+    fn arbitrary(g: &mut Gen) -> Self {
+        use crate::tests::Identifier;
+
+        let name = Identifier::arbitrary(g).to_string().into();
+
+        // We don't just call `arbitrary()` on a `Vec` because we really have to
+        // keep the number of ports low. Otherwise, tests will take forever.
+        let len = usize::arbitrary(g) % 16;
+        let ports = (0..len)
+            .map(|_| <(Identifier, Type, Direction)>::arbitrary(&mut Gen::new(g.size() / len)))
+            .map(|(n, t, d)| (n.to_string(), t, d));
+        Module::new(name, ports)
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        use crate::tests::Identifier;
+
+        let name: Arc<str> = self.name().into();
+        let res = self
+            .ports()
+            .map(|p| (p.name().into(), p.r#type().clone(), p.direction()))
+            .collect::<Vec<(Identifier, Type, Direction)>>()
+            .shrink()
+            .map(move |p| Module::new(name.clone(), p.into_iter().map(|(n, t, d)| (n.to_string(), t, d))));
+        Box::new(res)
+    }
+}
+
 
 /// An I/O port of a module
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Port {
     module: Arc<str>,
     name: String,
@@ -77,11 +125,40 @@ impl Port {
     }
 }
 
+impl fmt::Display for Port {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} {}: {}", self.direction(), self.name(), self.r#type())
+    }
+}
+
 
 /// Direction of an I/O port
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Direction {
     Input,
     Output,
+}
+
+impl Direction {
+    /// Retrieve the keyword associated with the direction value
+    pub fn keyword(&self) -> &'static str {
+        match self {
+            Self::Input => "input",
+            Self::Output => "output",
+        }
+    }
+}
+
+impl fmt::Display for Direction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self.keyword(), f)
+    }
+}
+
+#[cfg(test)]
+impl Arbitrary for Direction {
+    fn arbitrary(g: &mut Gen) -> Self {
+        *g.choose(&[Self::Input, Self::Output]).unwrap()
+    }
 }
 
