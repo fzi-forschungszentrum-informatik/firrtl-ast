@@ -1,7 +1,9 @@
 //! Circuit specific definitions and functions
 
+use std::fmt;
 use std::sync::Arc;
 
+use crate::indentation;
 use crate::module::Module;
 
 
@@ -29,6 +31,16 @@ impl Circuit {
     /// Get the top level module
     pub fn top_module(&self) -> &Arc<Module> {
         &self.top
+    }
+}
+
+impl fmt::Display for Circuit {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use indentation::DisplayIndented;
+
+        writeln!(f, "circuit {}:", self.top_module().name())?;
+        let mut indent = indentation::Indentation::root().sub();
+        self.modules().try_for_each(|m| m.fmt(&mut indent, f))
     }
 }
 
