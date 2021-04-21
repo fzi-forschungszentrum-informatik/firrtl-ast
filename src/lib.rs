@@ -7,6 +7,7 @@ mod circuit;
 mod module;
 mod parsers;
 mod types;
+mod indentation;
 
 #[cfg(test)]
 mod tests;
