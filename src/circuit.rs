@@ -16,7 +16,7 @@ use crate::module::Module;
 ///
 /// A `Circuit` is the top level construct in FIRRTL. It contains an arbitrary
 /// number of modules, one of which is defined as the "top" module.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Circuit {
     modules: Vec<Arc<Module>>,
     top: Arc<Module>
