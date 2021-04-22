@@ -1,7 +1,7 @@
 //! FIRRTL data structure
 //!
-//! [FIRRTL](https://chisel-lang.org/firrtl/) is a simple HDL
-//! register-transfer level.
+//! [FIRRTL](https://chisel-lang.org/firrtl/) is a simple register-transfer
+//! level HDL.
 
 mod circuit;
 mod module;
