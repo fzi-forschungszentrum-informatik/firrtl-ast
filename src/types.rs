@@ -177,6 +177,12 @@ impl TypeEq for Type {
     }
 }
 
+impl From<GroundType> for Type {
+    fn from(g: GroundType) -> Self {
+        Self::GroundType(g)
+    }
+}
+
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
