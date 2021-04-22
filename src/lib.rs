@@ -18,6 +18,7 @@ mod tests;
 extern crate quickcheck_macros;
 
 pub use circuit::Circuit;
+pub use circuit::parsers::circuit as parse;
 pub use module::{Direction, Module, Port};
 pub use types::{GroundType, Orientation, OrientedType, Type, TypeEq};
 
