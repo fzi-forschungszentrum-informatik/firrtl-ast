@@ -1,7 +1,17 @@
 //! Circuit specific definitions and functions
 
+pub mod parsers;
+
+#[cfg(test)]
+mod tests;
+
+use std::fmt;
 use std::sync::Arc;
 
+#[cfg(test)]
+use quickcheck::{Arbitrary, Gen};
+
+use crate::indentation;
 use crate::module::Module;
 
 
@@ -9,7 +19,7 @@ use crate::module::Module;
 ///
 /// A `Circuit` is the top level construct in FIRRTL. It contains an arbitrary
 /// number of modules, one of which is defined as the "top" module.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Circuit {
     modules: Vec<Arc<Module>>,
     top: Arc<Module>
@@ -29,6 +39,30 @@ impl Circuit {
     /// Get the top level module
     pub fn top_module(&self) -> &Arc<Module> {
         &self.top
+    }
+}
+
+impl fmt::Display for Circuit {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use indentation::DisplayIndented;
+
+        writeln!(f, "circuit {}:", self.top_module().name())?;
+        let mut indent = indentation::Indentation::root().sub();
+        self.modules().try_for_each(|m| m.fmt(&mut indent, f))
+    }
+}
+
+#[cfg(test)]
+impl Arbitrary for Circuit {
+    fn arbitrary(g: &mut Gen) -> Self {
+        let top: Arc<Module> = Arbitrary::arbitrary(g);
+
+        // We don't just call `arbitrary()` on a `Vec` because we really have to
+        // keep the number of ports low. Otherwise, tests will take forever.
+        let len = usize::arbitrary(g) % 16;
+        let mods = std::iter::once(top.clone())
+            .chain((0..len).map(|_| Arbitrary::arbitrary(&mut Gen::new(g.size() / len))));
+        Self::new(top, mods)
     }
 }
 
