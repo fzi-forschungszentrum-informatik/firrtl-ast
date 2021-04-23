@@ -4,6 +4,7 @@
 //! level HDL.
 
 mod circuit;
+mod expr;
 mod module;
 mod parsers;
 mod types;
