@@ -28,6 +28,18 @@ pub enum Expression<R: Reference> {
     PrimitiveOp(primitive::Operation<R>),
 }
 
+impl<R: Reference> From<R> for Expression<R> {
+    fn from(reference: R) -> Self {
+        Self::Reference(reference)
+    }
+}
+
+impl<R: Reference> From<primitive::Operation<R>> for Expression<R> {
+    fn from(op: primitive::Operation<R>) -> Self {
+        Self::PrimitiveOp(op)
+    }
+}
+
 
 /// A reference to a named entity
 pub trait Reference {
