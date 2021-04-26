@@ -245,19 +245,19 @@ impl Arbitrary for Type {
 /// A field in a bundle
 #[derive(Clone, PartialEq, Debug)]
 pub struct BundleField {
-    name: String,
+    name: Arc<str>,
     r#type: Type,
     orientation: Orientation,
 }
 
 impl BundleField {
     /// Create a new field with the given name, type and orientation
-    pub fn new(name: String, r#type: Type, orientation: Orientation) -> Self {
+    pub fn new(name: Arc<str>, r#type: Type, orientation: Orientation) -> Self {
         Self {name, r#type, orientation}
     }
 
     /// Retrieve the field's name
-    pub fn name(&self) -> &String {
+    pub fn name(&self) -> &Arc<str> {
         &self.name
     }
 
@@ -287,7 +287,11 @@ impl Arbitrary for BundleField {
     fn arbitrary(g: &mut Gen) -> Self {
         use crate::tests::Identifier;
 
-        Self::new(Identifier::arbitrary(g).to_string(), Arbitrary::arbitrary(g), Arbitrary::arbitrary(g))
+        Self::new(
+            Identifier::arbitrary(g).to_string().into(),
+            Arbitrary::arbitrary(g),
+            Arbitrary::arbitrary(g)
+        )
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
@@ -308,7 +312,7 @@ impl Arbitrary for BundleField {
 pub enum OrientedType {
     GroundType(GroundType, Orientation),
     Vector(Arc<Self>, VecWidth),
-    Bundle(Arc<[(String, Self)]>),
+    Bundle(Arc<[(Arc<str>, Self)]>),
 }
 
 impl OrientedType {
