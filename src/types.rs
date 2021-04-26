@@ -9,6 +9,7 @@ mod tests;
 
 
 use std::fmt;
+use std::sync::Arc;
 
 #[cfg(test)]
 use quickcheck::{Arbitrary, Gen};
@@ -135,8 +136,8 @@ impl Arbitrary for GroundType {
 #[derive(Clone, PartialEq, Debug)]
 pub enum Type {
     GroundType(GroundType),
-    Vector(Box<Self>, VecWidth),
-    Bundle(Vec<BundleField>),
+    Vector(Arc<Self>, VecWidth),
+    Bundle(Arc<[BundleField]>),
 }
 
 impl Type {
@@ -144,7 +145,7 @@ impl Type {
     pub fn with_orientation(&self, orientation: Orientation) -> OrientedType {
         match self {
             Self::GroundType(g) => OrientedType::GroundType(*g, orientation),
-            Self::Vector(t, w)  => OrientedType::Vector(Box::new(t.with_orientation(orientation)), *w),
+            Self::Vector(t, w)  => OrientedType::Vector(Arc::new(t.with_orientation(orientation)), *w),
             Self::Bundle(v)     => OrientedType::Bundle(
                 v.iter()
                     .map(|f| (f.name().clone(), f.r#type().with_orientation(f.orientation() + orientation)))
@@ -233,7 +234,9 @@ impl Arbitrary for Type {
                     .flat_map(move |t| w.shrink().map(move |w| Self::Vector(t.clone(), w)));
                 Box::new(res)
             },
-            Self::Bundle(v) => Box::new(v.shrink().filter(move |v| !v.is_empty()).map(Self::Bundle))
+            Self::Bundle(v) => Box::new(
+                v.to_vec().shrink().filter(move |v| !v.is_empty()).map(Into::into).map(Self::Bundle)
+            )
         }
     }
 }
@@ -304,8 +307,8 @@ impl Arbitrary for BundleField {
 #[derive(Clone, PartialEq, Debug)]
 pub enum OrientedType {
     GroundType(GroundType, Orientation),
-    Vector(Box<Self>, VecWidth),
-    Bundle(Vec<(String, Self)>),
+    Vector(Arc<Self>, VecWidth),
+    Bundle(Arc<[(String, Self)]>),
 }
 
 impl OrientedType {
@@ -313,7 +316,7 @@ impl OrientedType {
     pub fn flipped(&self) -> Self {
         match self {
             Self::GroundType(g, o) => Self::GroundType(*g, *o + Orientation::Flipped),
-            Self::Vector(t, w)     => Self::Vector(Box::new(t.flipped()), *w),
+            Self::Vector(t, w)     => Self::Vector(Arc::new(t.flipped()), *w),
             Self::Bundle(v)        => Self::Bundle(v.iter().map(|(n, t)| (n.clone(), t.flipped())).collect()),
         }
     }

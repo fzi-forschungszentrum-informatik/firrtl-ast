@@ -1,5 +1,7 @@
 //! Parsers for types
 
+use std::sync::Arc;
+
 use nom::branch::alt;
 use nom::combinator::{map, opt, value};
 use nom::sequence::{preceded, tuple};
@@ -41,7 +43,7 @@ pub fn r#type(input: &str) -> IResult<super::Type> {
     let (input, res) = alt((
         map(
             tuple((op("{"), separated_list1(spaced(op(",")), spaced(field)), spaced(op("}")))),
-            |(_, v, _)| T::Bundle(v)
+            |(_, v, _)| T::Bundle(v.into())
         ),
         map(ground_type, T::GroundType),
     ))(input)?;
@@ -49,7 +51,7 @@ pub fn r#type(input: &str) -> IResult<super::Type> {
     fold_many0(
         spaced(tuple((op("["), spaced(decimal), spaced(op("]"))))),
         res,
-        |t, (_, w, _)| T::Vector(Box::new(t), w)
+        |t, (_, w, _)| T::Vector(Arc::new(t), w)
     )(input)
 }
 
