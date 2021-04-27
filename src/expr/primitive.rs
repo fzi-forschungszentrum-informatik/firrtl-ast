@@ -1,5 +1,6 @@
 //! Primitive operations
 
+use std::fmt;
 use std::num::NonZeroU16;
 use std::sync::Arc;
 
@@ -73,5 +74,52 @@ pub enum Operation<R: Reference> {
     DecPrecision(Arc<Expression<R>>, NonZeroU16),
     /// Set precision (of "fixed")
     SetPrecision(Arc<Expression<R>>, i16),
+}
+
+impl<R: Reference> fmt::Display for Operation<R> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use types::GroundType as GT;
+
+        match self {
+            Self::Add(lhs, rhs)                 => write!(f, "add({}, {})", lhs, rhs),
+            Self::Sub(lhs, rhs)                 => write!(f, "sub({}, {})", lhs, rhs),
+            Self::Mul(lhs, rhs)                 => write!(f, "mul({}, {})", lhs, rhs),
+            Self::Div(lhs, rhs)                 => write!(f, "div({}, {})", lhs, rhs),
+            Self::Rem(lhs, rhs)                 => write!(f, "rem({}, {})", lhs, rhs),
+            Self::Lt(lhs, rhs)                  => write!(f, "lt({}, {})", lhs, rhs),
+            Self::LEq(lhs, rhs)                 => write!(f, "leq({}, {})", lhs, rhs),
+            Self::Gt(lhs, rhs)                  => write!(f, "gt({}, {})", lhs, rhs),
+            Self::GEq(lhs, rhs)                 => write!(f, "geq({}, {})", lhs, rhs),
+            Self::Eq(lhs, rhs)                  => write!(f, "eq({}, {})", lhs, rhs),
+            Self::NEq(lhs, rhs)                 => write!(f, "neq({}, {})", lhs, rhs),
+            Self::Pad(sub, bits)                => write!(f, "pad({}, {})", sub, bits),
+            Self::Cast(sub, GT::UInt(..))       => write!(f, "asUInt({})", sub),
+            Self::Cast(sub, GT::SInt(..))       => write!(f, "asSInt({})", sub),
+            Self::Cast(sub, GT::Fixed(..))      => write!(f, "asFixed({})", sub),
+            Self::Cast(sub, GT::Clock)          => write!(f, "asClock({})", sub),
+            Self::Cast(..)                      => Err(Default::default()),
+            Self::Shl(sub, bits)                => write!(f, "shl({}, {})", sub, bits),
+            Self::Shr(sub, bits)                => write!(f, "shr({}, {})", sub, bits),
+            Self::DShl(sub, bits)               => write!(f, "dshl({}, {})", sub, bits),
+            Self::DShr(sub, bits)               => write!(f, "dshr({}, {})", sub, bits),
+            Self::Cvt(sub)                      => write!(f, "cvt({})", sub),
+            Self::Neg(sub)                      => write!(f, "neg({})", sub),
+            Self::Not(sub)                      => write!(f, "not({})", sub),
+            Self::And(lhs, rhs)                 => write!(f, "and({}, {})", lhs, rhs),
+            Self::Or(lhs, rhs)                  => write!(f, "or({}, {})", lhs, rhs),
+            Self::Xor(lhs, rhs)                 => write!(f, "xor({}, {})", lhs, rhs),
+            Self::AndReduce(sub)                => write!(f, "andr({})", sub),
+            Self::OrReduce(sub)                 => write!(f, "orr({})", sub),
+            Self::XorReduce(sub)                => write!(f, "xorr({})", sub),
+            Self::Cat(lhs, rhs)                 => write!(f, "cat({}, {})", lhs, rhs),
+            Self::Bits(sub, Some(l), Some(h))   => write!(f, "bits({}, {}, {})", sub, l, h),
+            Self::Bits(sub, None, Some(high))   => write!(f, "head({}, {})", sub, high),
+            Self::Bits(sub, Some(low), None)    => write!(f, "tail({}, {})", sub, low),
+            Self::Bits(..)                      => Err(Default::default()),
+            Self::IncPrecision(sub, bits)       => write!(f, "incp({}, {})", sub, bits),
+            Self::DecPrecision(sub, bits)       => write!(f, "decp({}, {})", sub, bits),
+            Self::SetPrecision(sub, bits)       => write!(f, "setp({}, {})", sub, bits),
+        }
+    }
 }
 

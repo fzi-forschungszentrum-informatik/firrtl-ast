@@ -2,6 +2,7 @@
 
 mod primitive;
 
+use std::fmt;
 use std::sync::Arc;
 
 
@@ -37,6 +38,22 @@ impl<R: Reference> From<R> for Expression<R> {
 impl<R: Reference> From<primitive::Operation<R>> for Expression<R> {
     fn from(op: primitive::Operation<R>) -> Self {
         Self::PrimitiveOp(op)
+    }
+}
+
+impl<R: Reference> fmt::Display for Expression<R> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::UIntLiteral{value, width} => write!(f, "UInt<{}>({})", width, value),
+            Self::SIntLiteral{value, width} => write!(f, "SInt<{}>({})", width, value),
+            Self::Reference(reference)      => fmt::Display::fmt(reference.name(), f),
+            Self::SubField{base, index}     => write!(f, "{}.{}", base, index),
+            Self::SubIndex{base, index}     => write!(f, "{}[{}]", base, index),
+            Self::SubAccess{base, index}    => write!(f, "{}[{}]", base, index),
+            Self::Mux{sel, a, b}            => write!(f, "mux({}, {}, {})", sel, a, b),
+            Self::ValidIf{sel, value}       => write!(f, "validif({}, {})", sel, value),
+            Self::PrimitiveOp(op)           => fmt::Display::fmt(op, f),
+        }
     }
 }
 
