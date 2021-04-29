@@ -19,7 +19,7 @@ use quickcheck::{Arbitrary, Gen};
 ///
 /// A bit-width may be undefined in some instances, i.e. they may need to be
 /// inferred later. However, if it is defined, it can never be zero.
-pub type BitWidth = Option<NonZeroU16>;
+pub type BitWidth = Option<u16>;
 
 /// Number of elements in a vector
 pub type VecWidth = NonZeroU16;
