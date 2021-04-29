@@ -1,5 +1,6 @@
 //! Datatypes and utilities specific to expressions
 
+mod parsers;
 mod primitive;
 
 use std::fmt;
