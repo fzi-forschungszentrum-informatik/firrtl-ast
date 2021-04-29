@@ -22,7 +22,7 @@ use quickcheck::{Arbitrary, Gen};
 pub type BitWidth = Option<u16>;
 
 /// Number of elements in a vector
-pub type VecWidth = NonZeroU16;
+pub type VecWidth = u16;
 
 
 /// Orientation
