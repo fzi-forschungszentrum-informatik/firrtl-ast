@@ -248,6 +248,63 @@ impl Arbitrary for Type {
 }
 
 
+/// A field in a bundle
+#[derive(Clone, PartialEq, Debug)]
+pub struct BundleField {
+    name: String,
+    r#type: Type,
+    orientation: Orientation,
+}
+
+impl BundleField {
+    /// Create a new field with the given name, type and orientation
+    pub fn new(name: String, r#type: Type, orientation: Orientation) -> Self {
+        Self {name, r#type, orientation}
+    }
+
+    /// Retrieve the field's name
+    pub fn name(&self) -> &String {
+        &self.name
+    }
+
+    /// Retrieve the field's type
+    pub fn r#type(&self) -> &Type {
+        &self.r#type
+    }
+
+    /// Retrieve the field's orientation
+    pub fn orientation(&self) -> Orientation {
+        self.orientation
+    }
+}
+
+impl fmt::Display for BundleField {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.orientation == Orientation::Flipped {
+            write!(f, "flip ")?;
+        }
+
+        write!(f, "{}: {}", self.name, self.r#type)
+    }
+}
+
+#[cfg(test)]
+impl Arbitrary for BundleField {
+    fn arbitrary(g: &mut Gen) -> Self {
+        use crate::tests::Identifier;
+
+        Self::new(Identifier::arbitrary(g).to_string(), Arbitrary::arbitrary(g), Arbitrary::arbitrary(g))
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        let n = self.name.clone();
+        let o = self.orientation;
+        Box::new(self.r#type.shrink().map(move |t| Self::new(n.clone(), t, o)))
+    }
+}
+
+
+
 
 /// Oriented type
 ///
