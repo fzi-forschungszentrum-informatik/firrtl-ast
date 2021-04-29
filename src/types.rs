@@ -9,7 +9,6 @@ mod tests;
 
 
 use std::fmt;
-use std::num::NonZeroU16;
 
 #[cfg(test)]
 use quickcheck::{Arbitrary, Gen};
