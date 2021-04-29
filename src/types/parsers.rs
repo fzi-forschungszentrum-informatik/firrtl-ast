@@ -31,7 +31,11 @@ pub fn r#type(input: &str) -> IResult<super::Type> {
 
     let field = map(
         tuple((opt(kw("flip")), spaced(identifier), spaced(op(":")), spaced(r#type))),
-        |(o, n, _, t)| (n.to_string(), t, o.map(|_| super::Orientation::Flipped).unwrap_or_default())
+        |(o, n, _, t)| super::BundleField::new(
+            n.to_string(),
+            t,
+            o.map(|_| super::Orientation::Flipped).unwrap_or_default()
+        )
     );
 
     let (input, res) = alt((

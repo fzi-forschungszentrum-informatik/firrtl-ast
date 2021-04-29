@@ -136,7 +136,7 @@ impl Arbitrary for GroundType {
 pub enum Type {
     GroundType(GroundType),
     Vector(Box<Self>, VecWidth),
-    Bundle(Vec<(String, Self, Orientation)>),
+    Bundle(Vec<BundleField>),
 }
 
 impl Type {
@@ -146,7 +146,9 @@ impl Type {
             Self::GroundType(g) => OrientedType::GroundType(*g, orientation),
             Self::Vector(t, w)  => OrientedType::Vector(Box::new(t.with_orientation(orientation)), *w),
             Self::Bundle(v)     => OrientedType::Bundle(
-                v.iter().map(|(n, t, o)| (n.clone(), t.with_orientation(*o + orientation))).collect()
+                v.iter()
+                    .map(|f| (f.name().clone(), f.r#type().with_orientation(f.orientation() + orientation)))
+                    .collect()
             ),
         }
     }
@@ -168,7 +170,9 @@ impl TypeEq for Type {
             (Self::Bundle(v1), Self::Bundle(v2)) => if v1.len() == v2.len() {
                 v1.iter()
                     .zip(v2.iter())
-                    .all(|((n1, t1, o1), (n2, t2, o2))| n1 == n2 && TypeEq::eq(t1, t2) && o1 == o2)
+                    .all(|(f1, f2)| f1.name() == f2.name() &&
+                        TypeEq::eq(f1.r#type(), f2.r#type()) &&
+                        f1.orientation() == f1.orientation())
             } else {
                 false
             },
@@ -189,7 +193,7 @@ impl fmt::Display for Type {
             Self::GroundType(g) => fmt::Display::fmt(g, f),
             Self::Vector(t, w)  => write!(f, "{}[{}]", t, w),
             Self::Bundle(v)     => {
-                let mut fields = v.iter().map(display::BundleField::from);
+                let mut fields = v.iter();
                 write!(f, "{{")?;
                 fields.next().map(|field| fmt::Display::fmt(&field, f)).transpose().map(|_| ())?;
                 fields.try_for_each(|field| write!(f, ", {}", field))?;
@@ -202,19 +206,13 @@ impl fmt::Display for Type {
 #[cfg(test)]
 impl Arbitrary for Type {
     fn arbitrary(g: &mut Gen) -> Self {
-        use crate::tests::Identifier;
-
         let opts: [&dyn Fn(&mut Gen) -> Self; 3] = [
             &|g| Self::GroundType(Arbitrary::arbitrary(g)),
             &|g| Self::Vector(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
             &|g| {
                 let len = u8::arbitrary(g).saturating_add(1);
                 let mut g = Gen::new(g.size() / len as usize);
-                Self::Bundle((0..len).map(|_| (
-                    Identifier::arbitrary(&mut g).to_string(),
-                    Arbitrary::arbitrary(&mut g),
-                    Arbitrary::arbitrary(&mut g)
-                )).collect())
+                Self::Bundle((0..len).map(|_| Arbitrary::arbitrary(&mut g)).collect())
             },
         ];
         if g.size() > 0 {
@@ -235,14 +233,7 @@ impl Arbitrary for Type {
                     .flat_map(move |t| w.shrink().map(move |w| Self::Vector(t.clone(), w)));
                 Box::new(res)
             },
-            Self::Bundle(v) => {
-                let ident_valid = |i: &str| i.chars().nth(0).map(|c| !c.is_numeric()).unwrap_or(false);
-                let res = v
-                    .shrink()
-                    .filter(move |v| !v.is_empty() && v.iter().all(|(n, _, _)| ident_valid(n.as_ref())))
-                    .map(Self::Bundle);
-                Box::new(res)
-            }
+            Self::Bundle(v) => Box::new(v.shrink().filter(move |v| !v.is_empty()).map(Self::Bundle))
         }
     }
 }
