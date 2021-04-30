@@ -3,6 +3,9 @@
 mod parsers;
 mod primitive;
 
+#[cfg(test)]
+mod tests;
+
 use std::fmt;
 use std::sync::Arc;
 
