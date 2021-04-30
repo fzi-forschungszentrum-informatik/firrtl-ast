@@ -61,6 +61,12 @@ impl From<&str> for Identifier {
     }
 }
 
+impl AsRef<str> for Identifier {
+    fn as_ref(&self) -> &str {
+        self.data.as_ref()
+    }
+}
+
 impl fmt::Display for Identifier {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(&self.data, f)
