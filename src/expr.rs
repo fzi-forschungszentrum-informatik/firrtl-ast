@@ -7,6 +7,9 @@ use std::fmt;
 use std::sync::Arc;
 
 #[cfg(test)]
+use quickcheck::{Arbitrary, Gen};
+
+#[cfg(test)]
 use crate::tests::Identifier;
 
 
@@ -57,6 +60,35 @@ impl<R: Reference> fmt::Display for Expression<R> {
             Self::Mux{sel, a, b}            => write!(f, "mux({}, {}, {})", sel, a, b),
             Self::ValidIf{sel, value}       => write!(f, "validif({}, {})", sel, value),
             Self::PrimitiveOp(op)           => fmt::Display::fmt(op, f),
+        }
+    }
+}
+
+#[cfg(test)]
+impl Arbitrary for Expression<Identifier> {
+    fn arbitrary(g: &mut Gen) -> Self {
+        let opts: [&dyn Fn(&mut Gen) -> Self; 9] = [
+            &|g| Self::UIntLiteral{value: Arbitrary::arbitrary(g), width: Arbitrary::arbitrary(g)},
+            &|g| Self::SIntLiteral{value: Arbitrary::arbitrary(g), width: Arbitrary::arbitrary(g)},
+            &|g| Self::Reference(Arbitrary::arbitrary(g)),
+            &|g| Self::SubField{
+                base: Arbitrary::arbitrary(g),
+                index: Identifier::arbitrary(g).to_string().into()
+            },
+            &|g| Self::SubIndex{base: Arbitrary::arbitrary(g), index: Arbitrary::arbitrary(g)},
+            &|g| Self::SubAccess{base: Arbitrary::arbitrary(g), index: Arbitrary::arbitrary(g)},
+            &|g| Self::Mux{
+                sel: Arbitrary::arbitrary(g),
+                a: Arbitrary::arbitrary(g),
+                b: Arbitrary::arbitrary(g)
+            },
+            &|g| Self::ValidIf{sel: Arbitrary::arbitrary(g), value: Arbitrary::arbitrary(g)},
+            &|g| Self::PrimitiveOp(Arbitrary::arbitrary(g)),
+        ];
+        if g.size() > 0 {
+            g.choose(&opts).unwrap()(&mut Gen::new(g.size() / 2))
+        } else {
+            Self::UIntLiteral{value: 0, width: 0}
         }
     }
 }
