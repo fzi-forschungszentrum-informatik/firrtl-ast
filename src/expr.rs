@@ -91,6 +91,28 @@ impl Arbitrary for Expression<Identifier> {
             Self::UIntLiteral{value: 0, width: 0}
         }
     }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        use std::iter::once;
+
+        let from_vec = |v: Vec<Arc<Self>>| Box::new(
+            v.into_iter().flat_map(|i| once(i.clone()).chain(i.shrink())).map(|e| e.as_ref().clone())
+        );
+        let from_single = |e: &Arc<Self>| Box::new(
+            once(e.clone()).chain(e.shrink()).map(|e| e.as_ref().clone())
+        );
+
+        match self {
+            Self::Reference(reference)      => Box::new(reference.shrink().map(Self::Reference)),
+            Self::SubField{base, ..}        => from_single(base),
+            Self::SubIndex{base, ..}        => from_single(base),
+            Self::SubAccess{base, index}    => from_vec(vec![base.clone(), index.clone()]),
+            Self::Mux{sel, a, b}            => from_vec(vec![sel.clone(), a.clone(), b.clone()]),
+            Self::ValidIf{sel, value}       => from_vec(vec![sel.clone(), value.clone()]),
+            Self::PrimitiveOp(op)           => Box::new(from_vec(op.sub_exprs())),
+            _                               => Box::new(std::iter::empty()),
+        }
+    }
 }
 
 
