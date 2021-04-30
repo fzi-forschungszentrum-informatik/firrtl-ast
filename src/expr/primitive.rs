@@ -79,6 +79,46 @@ pub enum Operation<R: Reference> {
     SetPrecision(Arc<Expression<R>>, i16),
 }
 
+impl<R: Reference> Operation<R> {
+    /// Retrieve all subexpressions used in the operation
+    ///
+    pub fn sub_exprs(&self) -> Vec<Arc<Expression<R>>> {
+        match self {
+            Self::Add(lhs, rhs)         => vec![lhs.clone(), rhs.clone()],
+            Self::Sub(lhs, rhs)         => vec![lhs.clone(), rhs.clone()],
+            Self::Mul(lhs, rhs)         => vec![lhs.clone(), rhs.clone()],
+            Self::Div(lhs, rhs)         => vec![lhs.clone(), rhs.clone()],
+            Self::Rem(lhs, rhs)         => vec![lhs.clone(), rhs.clone()],
+            Self::Lt(lhs, rhs)          => vec![lhs.clone(), rhs.clone()],
+            Self::LEq(lhs, rhs)         => vec![lhs.clone(), rhs.clone()],
+            Self::Gt(lhs, rhs)          => vec![lhs.clone(), rhs.clone()],
+            Self::GEq(lhs, rhs)         => vec![lhs.clone(), rhs.clone()],
+            Self::Eq(lhs, rhs)          => vec![lhs.clone(), rhs.clone()],
+            Self::NEq(lhs, rhs)         => vec![lhs.clone(), rhs.clone()],
+            Self::Pad(sub, ..)          => vec![sub.clone()],
+            Self::Cast(sub, ..)         => vec![sub.clone()],
+            Self::Shl(sub, ..)          => vec![sub.clone()],
+            Self::Shr(sub, ..)          => vec![sub.clone()],
+            Self::DShl(sub, index)      => vec![sub.clone(), index.clone()],
+            Self::DShr(sub, index)      => vec![sub.clone(), index.clone()],
+            Self::Cvt(sub)              => vec![sub.clone()],
+            Self::Neg(sub)              => vec![sub.clone()],
+            Self::Not(sub)              => vec![sub.clone()],
+            Self::And(lhs, rhs)         => vec![lhs.clone(), rhs.clone()],
+            Self::Or(lhs, rhs)          => vec![lhs.clone(), rhs.clone()],
+            Self::Xor(lhs, rhs)         => vec![lhs.clone(), rhs.clone()],
+            Self::AndReduce(sub)        => vec![sub.clone()],
+            Self::OrReduce(sub)         => vec![sub.clone()],
+            Self::XorReduce(sub)        => vec![sub.clone()],
+            Self::Cat(lhs, rhs)         => vec![lhs.clone(), rhs.clone()],
+            Self::Bits(sub, ..)         => vec![sub.clone()],
+            Self::IncPrecision(sub, ..) => vec![sub.clone()],
+            Self::DecPrecision(sub, ..) => vec![sub.clone()],
+            Self::SetPrecision(sub, ..) => vec![sub.clone()],
+        }
+    }
+}
+
 impl<R: Reference> fmt::Display for Operation<R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use types::GroundType as GT;
