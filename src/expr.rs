@@ -6,6 +6,9 @@ mod primitive;
 use std::fmt;
 use std::sync::Arc;
 
+#[cfg(test)]
+use crate::tests::Identifier;
+
 
 /// A FIRRTL expression
 #[derive(Clone, Debug, PartialEq)]
@@ -63,5 +66,12 @@ impl<R: Reference> fmt::Display for Expression<R> {
 pub trait Reference {
     /// Retrieve the name of the referenced entity
     fn name(&self) -> &str;
+}
+
+#[cfg(test)]
+impl Reference for Identifier {
+    fn name(&self) -> &str {
+        self.as_ref()
+    }
 }
 
