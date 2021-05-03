@@ -219,5 +219,78 @@ impl Arbitrary for Operation<crate::tests::Identifier> {
             Self::Not(Arbitrary::arbitrary(g))
         }
     }
+
+    /// Shrink the expressions within this primitive op
+    ///
+    /// Note that for primitive operations, our shrinking goal deviates from our
+    /// usual goal for recursive structures.
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        use crate::tests::Identifier;
+
+        let bin_shrink = |l: &Arc<Expression<Identifier>>, r: &Arc<Expression<Identifier>>| {
+            let r = r.clone();
+            l.shrink()
+                .flat_map(move |l| std::iter::once(r.clone()).chain(r.shrink()).map(move |r| (l.clone(), r)))
+        };
+
+        match self {
+            Self::Add(lhs, rhs)         => Box::new(bin_shrink(lhs, rhs).map(|(l, r)| Self::Add(l, r))),
+            Self::Sub(lhs, rhs)         => Box::new(bin_shrink(lhs, rhs).map(|(l, r)| Self::Sub(l, r))),
+            Self::Mul(lhs, rhs)         => Box::new(bin_shrink(lhs, rhs).map(|(l, r)| Self::Mul(l, r))),
+            Self::Div(lhs, rhs)         => Box::new(bin_shrink(lhs, rhs).map(|(l, r)| Self::Div(l, r))),
+            Self::Rem(lhs, rhs)         => Box::new(bin_shrink(lhs, rhs).map(|(l, r)| Self::Rem(l, r))),
+            Self::Lt(lhs, rhs)          => Box::new(bin_shrink(lhs, rhs).map(|(l, r)| Self::Lt(l, r))),
+            Self::LEq(lhs, rhs)         => Box::new(bin_shrink(lhs, rhs).map(|(l, r)| Self::LEq(l, r))),
+            Self::Gt(lhs, rhs)          => Box::new(bin_shrink(lhs, rhs).map(|(l, r)| Self::Gt(l, r))),
+            Self::GEq(lhs, rhs)         => Box::new(bin_shrink(lhs, rhs).map(|(l, r)| Self::GEq(l, r))),
+            Self::Eq(lhs, rhs)          => Box::new(bin_shrink(lhs, rhs).map(|(l, r)| Self::Eq(l, r))),
+            Self::NEq(lhs, rhs)         => Box::new(bin_shrink(lhs, rhs).map(|(l, r)| Self::NEq(l, r))),
+            Self::Pad(sub, bits)        => {
+                let b = *bits;
+                Box::new(sub.shrink().map(move |e| Self::Pad(e, b)))
+            },
+            Self::Cast(sub, t)          => {
+                let t = *t;
+                Box::new(sub.shrink().map(move |e| Self::Cast(e, t)))
+            },
+            Self::Shl(sub, bits)        => {
+                let b = *bits;
+                Box::new(sub.shrink().map(move |e| Self::Shl(e, b)))
+            },
+            Self::Shr(sub, bits)        => {
+                let b = *bits;
+                Box::new(sub.shrink().map(move |e| Self::Shr(e, b)))
+            },
+            Self::DShl(sub, i)          => Box::new(bin_shrink(sub, i).map(|(l, r)| Self::DShl(l, r))),
+            Self::DShr(sub, i)          => Box::new(bin_shrink(sub, i).map(|(l, r)| Self::DShr(l, r))),
+            Self::Cvt(sub)              => Box::new(sub.shrink().map(Self::Cvt)),
+            Self::Neg(sub)              => Box::new(sub.shrink().map(Self::Neg)),
+            Self::Not(sub)              => Box::new(sub.shrink().map(Self::Not)),
+            Self::And(lhs, rhs)         => Box::new(bin_shrink(lhs, rhs).map(|(l, r)| Self::And(l, r))),
+            Self::Or(lhs, rhs)          => Box::new(bin_shrink(lhs, rhs).map(|(l, r)| Self::Or(l, r))),
+            Self::Xor(lhs, rhs)         => Box::new(bin_shrink(lhs, rhs).map(|(l, r)| Self::Xor(l, r))),
+            Self::AndReduce(sub)        => Box::new(sub.shrink().map(Self::AndReduce)),
+            Self::OrReduce(sub)         => Box::new(sub.shrink().map(Self::OrReduce)),
+            Self::XorReduce(sub)        => Box::new(sub.shrink().map(Self::XorReduce)),
+            Self::Cat(lhs, rhs)         => Box::new(bin_shrink(lhs, rhs).map(|(l, r)| Self::Cat(l, r))),
+            Self::Bits(sub, h, l)       => {
+                let h = *h;
+                let l = *l;
+                Box::new(sub.shrink().map(move |e| Self::Bits(e, h, l)))
+            },
+            Self::IncPrecision(sub, b)  => {
+                let b = *b;
+                Box::new(sub.shrink().map(move |e| Self::IncPrecision(e, b)))
+            },
+            Self::DecPrecision(sub, b)  => {
+                let b = *b;
+                Box::new(sub.shrink().map(move |e| Self::DecPrecision(e, b)))
+            },
+            Self::SetPrecision(sub, b)  => {
+                let b = *b;
+                Box::new(sub.shrink().map(move |e| Self::SetPrecision(e, b)))
+            },
+        }
+    }
 }
 
