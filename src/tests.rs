@@ -75,27 +75,19 @@ impl fmt::Display for Identifier {
 
 impl quickcheck::Arbitrary for Identifier {
     fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        let mut data: String = Default::default();
+        // Choose some some common prefix to avoid conflicts with keywords.
+        let mut data = "T".to_string();
 
         let mut i: u128 = quickcheck::Arbitrary::arbitrary(g);
-        const N: u128 = 2*36 + 1;
-
-        data.push(match (i % N) as u8 {
-            i if i < 26 => (0x41 + i) as char,
-            i if i < 52 => (0x61 - 26 + i) as char,
-            _ => '_',
-        });
-        i = i / N;
-
         while i > 0 {
-            const M: u128 = 10 + N;
-            data.push(match (i % M) as u8 {
+            const N: u128 = 2*36 + 10 + 1;
+            data.push(match (i % N) as u8 {
                 i if i < 10 => (0x30 + i) as char,
                 i if i < 36 => (0x41 - 10 + i) as char,
                 i if i < 62 => (0x61 - 36 + i) as char,
                 _ => '_',
             });
-            i = i / M;
+            i = i / N;
         }
 
         Self {data}
