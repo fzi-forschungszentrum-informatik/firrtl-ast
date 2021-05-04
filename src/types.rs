@@ -75,7 +75,7 @@ pub enum GroundType {
     Analog(BitWidth),
 }
 
-impl TypeEq for GroundType {
+impl TypeExt for GroundType {
     fn eq(&self, rhs: &Self) -> bool {
         match (self, rhs) {
             (Self::UInt(_),     Self::UInt(_))     => true,
@@ -159,20 +159,20 @@ impl Type {
     /// Two `Type`s are weakly equivalent if their corresponding `OrientedType`s
     /// are (type) equivalent.
     pub fn weak_eq(&self, rhs: &Self) -> bool {
-        TypeEq::eq(&self.with_orientation(Default::default()), &rhs.with_orientation(Default::default()))
+        TypeExt::eq(&self.with_orientation(Default::default()), &rhs.with_orientation(Default::default()))
     }
 }
 
-impl TypeEq for Type {
+impl TypeExt for Type {
     fn eq(&self, rhs: &Self) -> bool {
         match (self, rhs) {
-            (Self::GroundType(t1), Self::GroundType(t2)) => TypeEq::eq(t1, t2),
-            (Self::Vector(t1, w1), Self::Vector(t2, w2)) => TypeEq::eq(t1.as_ref(), t2.as_ref()) && w1 == w2,
+            (Self::GroundType(t1), Self::GroundType(t2)) => TypeExt::eq(t1, t2),
+            (Self::Vector(t1, w1), Self::Vector(t2, w2)) => TypeExt::eq(t1.as_ref(), t2.as_ref()) && w1 == w2,
             (Self::Bundle(v1), Self::Bundle(v2)) => if v1.len() == v2.len() {
                 v1.iter()
                     .zip(v2.iter())
                     .all(|(f1, f2)| f1.name() == f2.name() &&
-                        TypeEq::eq(f1.r#type(), f2.r#type()) &&
+                        TypeExt::eq(f1.r#type(), f2.r#type()) &&
                         f1.orientation() == f1.orientation())
             } else {
                 false
@@ -326,13 +326,13 @@ impl OrientedType {
     }
 }
 
-impl TypeEq for OrientedType {
+impl TypeExt for OrientedType {
     fn eq(&self, rhs: &Self) -> bool {
         match (self, rhs) {
-            (Self::GroundType(t1, o1), Self::GroundType(t2, o2)) => TypeEq::eq(t1, t2) && o1 == o2,
-            (Self::Vector(t1, w1), Self::Vector(t2, w2)) => TypeEq::eq(t1.as_ref(), t2.as_ref()) && w1 == w2,
+            (Self::GroundType(t1, o1), Self::GroundType(t2, o2)) => TypeExt::eq(t1, t2) && o1 == o2,
+            (Self::Vector(t1, w1), Self::Vector(t2, w2)) => TypeExt::eq(t1.as_ref(), t2.as_ref()) && w1 == w2,
             (Self::Bundle(v1), Self::Bundle(v2)) => if v1.len() == v2.len() {
-                v1.iter().zip(v2.iter()).all(|((n1, t1), (n2, t2))| n1 == n2 && TypeEq::eq(t1, t2))
+                v1.iter().zip(v2.iter()).all(|((n1, t1), (n2, t2))| n1 == n2 && TypeExt::eq(t1, t2))
             } else {
                 false
             },
@@ -348,16 +348,16 @@ impl From<&Type> for OrientedType {
 }
 
 
-/// Trait representing the type equivalence concept in FIRRTL
-///
-/// The FIRRTL specification defines some specific rules for type equivalence.
-/// Types implementing this trait express those rules via their implementation
-/// of the `eq` function.
-///
-/// In order to avoid confusion with `PartialEq` and `Eq`, users are encouraged
-/// to call `eq` as an associated function, e.g. as `TypeEq::eq(a, b)`.
-pub trait TypeEq {
+/// Trait representing common FIRRTL type concepts
+pub trait TypeExt {
     /// Check whether this type is type equivalent to another one
+    ///
+    /// The FIRRTL specification contains a definition of type equivalence. This
+    /// function determines whether two types are equivalent under that
+    /// definition.
+    ///
+    /// In order to avoid confusion with `PartialEq` and `Eq`, users are encouraged
+    /// to call `eq` as an associated function, e.g. as `TypeEq::eq(a, b)`.
     fn eq(&self, rhs: &Self) -> bool;
 }
 
