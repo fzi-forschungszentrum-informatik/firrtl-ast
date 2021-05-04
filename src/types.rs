@@ -86,6 +86,11 @@ impl TypeExt for GroundType {
             _ => false
         }
     }
+
+    #[inline(always)]
+    fn is_passive(&self) -> bool {
+        true
+    }
 }
 
 impl fmt::Display for GroundType {
@@ -178,6 +183,16 @@ impl TypeExt for Type {
                 false
             },
             _ => false
+        }
+    }
+
+    fn is_passive(&self) -> bool {
+        match self {
+            Self::GroundType(t) => t.is_passive(),
+            Self::Vector(t, _) => t.is_passive(),
+            Self::Bundle(v) => v
+                .iter()
+                .all(|f| f.orientation() == Orientation::Normal && f.r#type().is_passive()),
         }
     }
 }
@@ -339,6 +354,14 @@ impl TypeExt for OrientedType {
             _ => false
         }
     }
+
+    fn is_passive(&self) -> bool {
+        match self {
+            Self::GroundType(t, o) => t.is_passive() && *o == Orientation::Normal,
+            Self::Vector(t, _) => t.is_passive(),
+            Self::Bundle(v) => v.iter().all(|(_, t)| t.is_passive()),
+        }
+    }
 }
 
 impl From<&Type> for OrientedType {
@@ -359,5 +382,10 @@ pub trait TypeExt {
     /// In order to avoid confusion with `PartialEq` and `Eq`, users are encouraged
     /// to call `eq` as an associated function, e.g. as `TypeEq::eq(a, b)`.
     fn eq(&self, rhs: &Self) -> bool;
+
+    /// Check whether the type is passive
+    ///
+    /// A type is passive if it contains no flipped sub-types or fields.
+    fn is_passive(&self) -> bool;
 }
 
