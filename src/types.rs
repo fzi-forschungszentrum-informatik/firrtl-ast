@@ -9,6 +9,7 @@ mod tests;
 
 
 use std::fmt;
+use std::sync::Arc;
 
 #[cfg(test)]
 use quickcheck::{Arbitrary, Gen};
@@ -74,7 +75,7 @@ pub enum GroundType {
     Analog(BitWidth),
 }
 
-impl TypeEq for GroundType {
+impl TypeExt for GroundType {
     fn eq(&self, rhs: &Self) -> bool {
         match (self, rhs) {
             (Self::UInt(_),     Self::UInt(_))     => true,
@@ -84,6 +85,11 @@ impl TypeEq for GroundType {
             (Self::Analog(_),   Self::Analog(_))   => true,
             _ => false
         }
+    }
+
+    #[inline(always)]
+    fn is_passive(&self) -> bool {
+        true
     }
 }
 
@@ -135,8 +141,8 @@ impl Arbitrary for GroundType {
 #[derive(Clone, PartialEq, Debug)]
 pub enum Type {
     GroundType(GroundType),
-    Vector(Box<Self>, VecWidth),
-    Bundle(Vec<(String, Self, Orientation)>),
+    Vector(Arc<Self>, VecWidth),
+    Bundle(Arc<[BundleField]>),
 }
 
 impl Type {
@@ -144,9 +150,11 @@ impl Type {
     pub fn with_orientation(&self, orientation: Orientation) -> OrientedType {
         match self {
             Self::GroundType(g) => OrientedType::GroundType(*g, orientation),
-            Self::Vector(t, w)  => OrientedType::Vector(Box::new(t.with_orientation(orientation)), *w),
+            Self::Vector(t, w)  => OrientedType::Vector(Arc::new(t.with_orientation(orientation)), *w),
             Self::Bundle(v)     => OrientedType::Bundle(
-                v.iter().map(|(n, t, o)| (n.clone(), t.with_orientation(*o + orientation))).collect()
+                v.iter()
+                    .map(|f| (f.name().clone(), f.r#type().with_orientation(f.orientation() + orientation)))
+                    .collect()
             ),
         }
     }
@@ -156,24 +164,42 @@ impl Type {
     /// Two `Type`s are weakly equivalent if their corresponding `OrientedType`s
     /// are (type) equivalent.
     pub fn weak_eq(&self, rhs: &Self) -> bool {
-        TypeEq::eq(&self.with_orientation(Default::default()), &rhs.with_orientation(Default::default()))
+        TypeExt::eq(&self.with_orientation(Default::default()), &rhs.with_orientation(Default::default()))
     }
 }
 
-impl TypeEq for Type {
+impl TypeExt for Type {
     fn eq(&self, rhs: &Self) -> bool {
         match (self, rhs) {
-            (Self::GroundType(t1), Self::GroundType(t2)) => TypeEq::eq(t1, t2),
-            (Self::Vector(t1, w1), Self::Vector(t2, w2)) => TypeEq::eq(t1.as_ref(), t2.as_ref()) && w1 == w2,
+            (Self::GroundType(t1), Self::GroundType(t2)) => TypeExt::eq(t1, t2),
+            (Self::Vector(t1, w1), Self::Vector(t2, w2)) => TypeExt::eq(t1.as_ref(), t2.as_ref()) && w1 == w2,
             (Self::Bundle(v1), Self::Bundle(v2)) => if v1.len() == v2.len() {
                 v1.iter()
                     .zip(v2.iter())
-                    .all(|((n1, t1, o1), (n2, t2, o2))| n1 == n2 && TypeEq::eq(t1, t2) && o1 == o2)
+                    .all(|(f1, f2)| f1.name() == f2.name() &&
+                        TypeExt::eq(f1.r#type(), f2.r#type()) &&
+                        f1.orientation() == f1.orientation())
             } else {
                 false
             },
             _ => false
         }
+    }
+
+    fn is_passive(&self) -> bool {
+        match self {
+            Self::GroundType(t) => t.is_passive(),
+            Self::Vector(t, _) => t.is_passive(),
+            Self::Bundle(v) => v
+                .iter()
+                .all(|f| f.orientation() == Orientation::Normal && f.r#type().is_passive()),
+        }
+    }
+}
+
+impl From<GroundType> for Type {
+    fn from(g: GroundType) -> Self {
+        Self::GroundType(g)
     }
 }
 
@@ -183,7 +209,7 @@ impl fmt::Display for Type {
             Self::GroundType(g) => fmt::Display::fmt(g, f),
             Self::Vector(t, w)  => write!(f, "{}[{}]", t, w),
             Self::Bundle(v)     => {
-                let mut fields = v.iter().map(display::BundleField::from);
+                let mut fields = v.iter();
                 write!(f, "{{")?;
                 fields.next().map(|field| fmt::Display::fmt(&field, f)).transpose().map(|_| ())?;
                 fields.try_for_each(|field| write!(f, ", {}", field))?;
@@ -196,19 +222,13 @@ impl fmt::Display for Type {
 #[cfg(test)]
 impl Arbitrary for Type {
     fn arbitrary(g: &mut Gen) -> Self {
-        use crate::tests::Identifier;
-
         let opts: [&dyn Fn(&mut Gen) -> Self; 3] = [
             &|g| Self::GroundType(Arbitrary::arbitrary(g)),
             &|g| Self::Vector(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
             &|g| {
                 let len = u8::arbitrary(g).saturating_add(1);
                 let mut g = Gen::new(g.size() / len as usize);
-                Self::Bundle((0..len).map(|_| (
-                    Identifier::arbitrary(&mut g).to_string(),
-                    Arbitrary::arbitrary(&mut g),
-                    Arbitrary::arbitrary(&mut g)
-                )).collect())
+                Self::Bundle((0..len).map(|_| Arbitrary::arbitrary(&mut g)).collect())
             },
         ];
         if g.size() > 0 {
@@ -229,17 +249,73 @@ impl Arbitrary for Type {
                     .flat_map(move |t| w.shrink().map(move |w| Self::Vector(t.clone(), w)));
                 Box::new(res)
             },
-            Self::Bundle(v) => {
-                let ident_valid = |i: &str| i.chars().nth(0).map(|c| !c.is_numeric()).unwrap_or(false);
-                let res = v
-                    .shrink()
-                    .filter(move |v| !v.is_empty() && v.iter().all(|(n, _, _)| ident_valid(n.as_ref())))
-                    .map(Self::Bundle);
-                Box::new(res)
-            }
+            Self::Bundle(v) => Box::new(
+                v.to_vec().shrink().filter(move |v| !v.is_empty()).map(Into::into).map(Self::Bundle)
+            )
         }
     }
 }
+
+
+/// A field in a bundle
+#[derive(Clone, PartialEq, Debug)]
+pub struct BundleField {
+    name: Arc<str>,
+    r#type: Type,
+    orientation: Orientation,
+}
+
+impl BundleField {
+    /// Create a new field with the given name, type and orientation
+    pub fn new(name: Arc<str>, r#type: Type, orientation: Orientation) -> Self {
+        Self {name, r#type, orientation}
+    }
+
+    /// Retrieve the field's name
+    pub fn name(&self) -> &Arc<str> {
+        &self.name
+    }
+
+    /// Retrieve the field's type
+    pub fn r#type(&self) -> &Type {
+        &self.r#type
+    }
+
+    /// Retrieve the field's orientation
+    pub fn orientation(&self) -> Orientation {
+        self.orientation
+    }
+}
+
+impl fmt::Display for BundleField {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.orientation == Orientation::Flipped {
+            write!(f, "flip ")?;
+        }
+
+        write!(f, "{}: {}", self.name, self.r#type)
+    }
+}
+
+#[cfg(test)]
+impl Arbitrary for BundleField {
+    fn arbitrary(g: &mut Gen) -> Self {
+        use crate::tests::Identifier;
+
+        Self::new(
+            Identifier::arbitrary(g).to_string().into(),
+            Arbitrary::arbitrary(g),
+            Arbitrary::arbitrary(g)
+        )
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        let n = self.name.clone();
+        let o = self.orientation;
+        Box::new(self.r#type.shrink().map(move |t| Self::new(n.clone(), t, o)))
+    }
+}
+
 
 
 
@@ -250,8 +326,8 @@ impl Arbitrary for Type {
 #[derive(Clone, PartialEq, Debug)]
 pub enum OrientedType {
     GroundType(GroundType, Orientation),
-    Vector(Box<Self>, VecWidth),
-    Bundle(Vec<(String, Self)>),
+    Vector(Arc<Self>, VecWidth),
+    Bundle(Arc<[(Arc<str>, Self)]>),
 }
 
 impl OrientedType {
@@ -259,23 +335,31 @@ impl OrientedType {
     pub fn flipped(&self) -> Self {
         match self {
             Self::GroundType(g, o) => Self::GroundType(*g, *o + Orientation::Flipped),
-            Self::Vector(t, w)     => Self::Vector(Box::new(t.flipped()), *w),
+            Self::Vector(t, w)     => Self::Vector(Arc::new(t.flipped()), *w),
             Self::Bundle(v)        => Self::Bundle(v.iter().map(|(n, t)| (n.clone(), t.flipped())).collect()),
         }
     }
 }
 
-impl TypeEq for OrientedType {
+impl TypeExt for OrientedType {
     fn eq(&self, rhs: &Self) -> bool {
         match (self, rhs) {
-            (Self::GroundType(t1, o1), Self::GroundType(t2, o2)) => TypeEq::eq(t1, t2) && o1 == o2,
-            (Self::Vector(t1, w1), Self::Vector(t2, w2)) => TypeEq::eq(t1.as_ref(), t2.as_ref()) && w1 == w2,
+            (Self::GroundType(t1, o1), Self::GroundType(t2, o2)) => TypeExt::eq(t1, t2) && o1 == o2,
+            (Self::Vector(t1, w1), Self::Vector(t2, w2)) => TypeExt::eq(t1.as_ref(), t2.as_ref()) && w1 == w2,
             (Self::Bundle(v1), Self::Bundle(v2)) => if v1.len() == v2.len() {
-                v1.iter().zip(v2.iter()).all(|((n1, t1), (n2, t2))| n1 == n2 && TypeEq::eq(t1, t2))
+                v1.iter().zip(v2.iter()).all(|((n1, t1), (n2, t2))| n1 == n2 && TypeExt::eq(t1, t2))
             } else {
                 false
             },
             _ => false
+        }
+    }
+
+    fn is_passive(&self) -> bool {
+        match self {
+            Self::GroundType(t, o) => t.is_passive() && *o == Orientation::Normal,
+            Self::Vector(t, _) => t.is_passive(),
+            Self::Bundle(v) => v.iter().all(|(_, t)| t.is_passive()),
         }
     }
 }
@@ -287,16 +371,21 @@ impl From<&Type> for OrientedType {
 }
 
 
-/// Trait representing the type equivalence concept in FIRRTL
-///
-/// The FIRRTL specification defines some specific rules for type equivalence.
-/// Types implementing this trait express those rules via their implementation
-/// of the `eq` function.
-///
-/// In order to avoid confusion with `PartialEq` and `Eq`, users are encouraged
-/// to call `eq` as an associated function, e.g. as `TypeEq::eq(a, b)`.
-pub trait TypeEq {
+/// Trait representing common FIRRTL type concepts
+pub trait TypeExt {
     /// Check whether this type is type equivalent to another one
+    ///
+    /// The FIRRTL specification contains a definition of type equivalence. This
+    /// function determines whether two types are equivalent under that
+    /// definition.
+    ///
+    /// In order to avoid confusion with `PartialEq` and `Eq`, users are encouraged
+    /// to call `eq` as an associated function, e.g. as `TypeEq::eq(a, b)`.
     fn eq(&self, rhs: &Self) -> bool;
+
+    /// Check whether the type is passive
+    ///
+    /// A type is passive if it contains no flipped sub-types or fields.
+    fn is_passive(&self) -> bool;
 }
 

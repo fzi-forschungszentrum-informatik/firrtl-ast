@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-use super::{BitWidth, Orientation};
+use super::BitWidth;
 
 
 /// Utility type for formatting bit widths
@@ -49,30 +49,6 @@ impl From<Option<i16>> for PointOff {
 impl fmt::Display for PointOff {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.off.map(|w| write!(f, "<<{}>>", w)).unwrap_or(Ok(()))
-    }
-}
-
-
-/// Utility for formatting a field in a bundle
-pub struct BundleField<'a, I: fmt::Display> {
-    name: &'a str,
-    inner: &'a I,
-    orientation: Orientation,
-}
-
-impl<'a, I: fmt::Display> From<&'a (String, I, Orientation)> for BundleField<'a, I> {
-    fn from((name, inner, orientation): &'a (String, I, Orientation)) -> Self {
-        Self {name: name.as_ref(), inner, orientation: *orientation}
-    }
-}
-
-impl<I: fmt::Display> fmt::Display for BundleField<'_, I> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.orientation == Orientation::Flipped {
-            write!(f, "flip ")?;
-        }
-
-        write!(f, "{}: {}", self.name, self.inner)
     }
 }
 

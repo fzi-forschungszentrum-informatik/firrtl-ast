@@ -4,7 +4,7 @@ use nom::combinator::all_consuming;
 
 use crate::tests::Equivalence;
 
-use super::{GroundType, Type, parsers};
+use super::{GroundType, Type, TypeExt, parsers};
 
 
 #[quickcheck]
@@ -30,5 +30,11 @@ fn parse_type(original: Type) -> Result<Equivalence<Type>, String> {
         .map(|(_, parsed)| Equivalence::of(original, parsed))
         .map_err(|e| e.to_string());
     res
+}
+
+
+#[quickcheck]
+fn passive_oriented_eq(base: Type) -> Equivalence<bool> {
+    Equivalence::of(base.is_passive(), super::OrientedType::from(&base).is_passive())
 }
 
