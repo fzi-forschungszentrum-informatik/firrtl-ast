@@ -14,7 +14,6 @@ use crate::parsers::{IResult, decimal, identifier, kw, op, spaced};
 pub fn ground_type(input: &str) -> IResult<super::GroundType> {
     use super::GroundType as G;
 
-    let bitwidth = |i| opt(map(spaced(tuple((op("<"), decimal, op(">")))), |(_, w, _)| w))(i);
     let point_offset = |i| opt(spaced(map(tuple((op("<<"), decimal, op(">>"))), |(_, w, _)| w)))(i);
 
     alt((
@@ -24,6 +23,14 @@ pub fn ground_type(input: &str) -> IResult<super::GroundType> {
         value(G::Clock, kw("Clock")),
         map(preceded(kw("Analog"), bitwidth), G::Analog),
     ))(input)
+}
+
+
+/// Parse a BitWidth
+///
+/// This function parses an optional bit-width encapsulated in `<` and `>`.
+pub fn bitwidth(input: &str) -> IResult<super::BitWidth> {
+    opt(map(spaced(tuple((op("<"), decimal, op(">")))), |(_, w, _)| w))(input)
 }
 
 
