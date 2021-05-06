@@ -77,13 +77,14 @@ impl Arbitrary for Module {
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         use crate::tests::Identifier;
 
-        let name: Arc<str> = self.name().into();
-        let res = self
-            .ports()
-            .map(|p| (p.name().into(), p.r#type().clone(), p.direction()))
-            .collect::<Vec<(Identifier, Type, Direction)>>()
-            .shrink()
-            .map(move |p| Module::new(name.clone(), p.into_iter().map(|(n, t, d)| (n.to_string(), t, d))));
+        let name: Identifier = self.name().into();
+        let ports = self.ports.clone();
+        let res = std::iter::once(name.clone())
+            .chain(name.shrink())
+            .flat_map(move |n| ports
+                .shrink()
+                .map(move |p| Module::new(n.clone().into(), p.into_iter().map(|p| p.as_ref().clone())))
+            );
         Box::new(res)
     }
 }
