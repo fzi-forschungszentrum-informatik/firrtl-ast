@@ -4,6 +4,7 @@ pub mod parsers;
 
 mod display;
 mod ground;
+mod orientation;
 mod oriented;
 mod r#type;
 
@@ -11,12 +12,10 @@ mod r#type;
 mod tests;
 
 
-#[cfg(test)]
-use quickcheck::{Arbitrary, Gen};
-
-pub use oriented::OrientedType;
-pub use r#type::{BundleField, Type};
 pub use ground::GroundType;
+pub use oriented::OrientedType;
+pub use orientation::Orientation;
+pub use r#type::{BundleField, Type};
 
 
 /// Bit-width of a ground-type, i.e. the number of "physical" wires or signals
@@ -27,40 +26,6 @@ pub type BitWidth = Option<u16>;
 
 /// Number of elements in a vector
 pub type VecWidth = u16;
-
-
-/// Orientation
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub enum Orientation {
-    Normal,
-    Flipped
-}
-
-impl Default for Orientation {
-    fn default() -> Self {
-        Self::Normal
-    }
-}
-
-impl std::ops::Add for Orientation {
-    type Output = Self;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        match (self, rhs) {
-            (Self::Normal,  Self::Normal)  => Self::Normal,
-            (Self::Normal,  Self::Flipped) => Self::Flipped,
-            (Self::Flipped, Self::Normal)  => Self::Flipped,
-            (Self::Flipped, Self::Flipped) => Self::Normal,
-        }
-    }
-}
-
-#[cfg(test)]
-impl Arbitrary for Orientation {
-    fn arbitrary(g: &mut Gen) -> Self {
-        *g.choose(&[Self::Normal, Self::Flipped]).unwrap()
-    }
-}
 
 
 /// Trait representing common FIRRTL type concepts
