@@ -130,6 +130,26 @@ impl fmt::Display for Port {
     }
 }
 
+#[cfg(test)]
+impl Arbitrary for Port {
+    fn arbitrary(g: &mut Gen) -> Self {
+        use crate::tests::Identifier;
+
+        Self::new(Identifier::arbitrary(g).to_string(), Arbitrary::arbitrary(g), Arbitrary::arbitrary(g))
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        use crate::tests::Identifier;
+
+        let r#type = self.r#type.clone();
+        let direction = self.direction;
+        let res = std::iter::once(self.name().into())
+            .chain(Identifier::from(self.name()).shrink())
+            .flat_map(move |n| r#type.shrink().map(move |t| Self::new(n.to_string(), t, direction)));
+        Box::new(res)
+    }
+}
+
 
 /// Direction of an I/O port
 #[derive(Copy, Clone, Debug, PartialEq)]
