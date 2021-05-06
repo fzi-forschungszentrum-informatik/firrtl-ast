@@ -27,7 +27,7 @@ impl Module {
     pub fn new(name: Arc<str>, ports: impl IntoIterator<Item = (String, Type, Direction)>) -> Self {
         let mut ports: Vec<_> = ports
             .into_iter()
-            .map(|(n, t, d)| Arc::new(Port {module: name.clone(), name: n, r#type: t, direction: d}))
+            .map(|(name, r#type, direction)| Arc::new(Port {name, r#type, direction}))
             .collect();
         ports.sort_unstable_by_key(|p| p.name.clone());
 
@@ -92,18 +92,12 @@ impl Arbitrary for Module {
 /// An I/O port of a module
 #[derive(Clone, Debug, PartialEq)]
 pub struct Port {
-    module: Arc<str>,
     name: String,
     r#type: Type,
     direction: Direction,
 }
 
 impl Port {
-    /// Retrieve the module this I/O port is associated with
-    pub fn module(&self) -> &str {
-        self.module.as_ref()
-    }
-
     /// Retrieve the I/O port's name
     pub fn name(&self) -> &str {
         self.name.as_ref()
