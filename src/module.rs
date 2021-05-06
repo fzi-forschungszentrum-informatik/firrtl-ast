@@ -24,11 +24,8 @@ pub struct Module {
 
 impl Module {
     /// Create a new module
-    pub fn new(name: Arc<str>, ports: impl IntoIterator<Item = (String, Type, Direction)>) -> Self {
-        let mut ports: Vec<_> = ports
-            .into_iter()
-            .map(|(n, t, d)| Arc::new(Port {module: name.clone(), name: n, r#type: t, direction: d}))
-            .collect();
+    pub fn new(name: Arc<str>, ports: impl IntoIterator<Item = Port>) -> Self {
+        let mut ports: Vec<_> = ports.into_iter().map(Arc::new).collect();
         ports.sort_unstable_by_key(|p| p.name.clone());
 
         Self {name, ports}
@@ -69,21 +66,21 @@ impl Arbitrary for Module {
         // keep the number of ports low. Otherwise, tests will take forever.
         let len = usize::arbitrary(g) % 16;
         let ports = (0..len)
-            .map(|_| <(Identifier, Type, Direction)>::arbitrary(&mut Gen::new(g.size() / len)))
-            .map(|(n, t, d)| (n.to_string(), t, d));
+            .map(|_| Port::arbitrary(&mut Gen::new(g.size() / len)));
         Module::new(name, ports)
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         use crate::tests::Identifier;
 
-        let name: Arc<str> = self.name().into();
-        let res = self
-            .ports()
-            .map(|p| (p.name().into(), p.r#type().clone(), p.direction()))
-            .collect::<Vec<(Identifier, Type, Direction)>>()
-            .shrink()
-            .map(move |p| Module::new(name.clone(), p.into_iter().map(|(n, t, d)| (n.to_string(), t, d))));
+        let name: Identifier = self.name().into();
+        let ports = self.ports.clone();
+        let res = std::iter::once(name.clone())
+            .chain(name.shrink())
+            .flat_map(move |n| ports
+                .shrink()
+                .map(move |p| Module::new(n.clone().into(), p.into_iter().map(|p| p.as_ref().clone())))
+            );
         Box::new(res)
     }
 }
@@ -92,16 +89,15 @@ impl Arbitrary for Module {
 /// An I/O port of a module
 #[derive(Clone, Debug, PartialEq)]
 pub struct Port {
-    module: Arc<str>,
     name: String,
     r#type: Type,
     direction: Direction,
 }
 
 impl Port {
-    /// Retrieve the module this I/O port is associated with
-    pub fn module(&self) -> &str {
-        self.module.as_ref()
+    /// Create a new port
+    pub fn new(name: String, r#type: Type, direction: Direction) -> Self {
+        Self {name, r#type, direction}
     }
 
     /// Retrieve the I/O port's name
@@ -128,6 +124,26 @@ impl Port {
 impl fmt::Display for Port {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} {}: {}", self.direction(), self.name(), self.r#type())
+    }
+}
+
+#[cfg(test)]
+impl Arbitrary for Port {
+    fn arbitrary(g: &mut Gen) -> Self {
+        use crate::tests::Identifier;
+
+        Self::new(Identifier::arbitrary(g).to_string(), Arbitrary::arbitrary(g), Arbitrary::arbitrary(g))
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        use crate::tests::Identifier;
+
+        let r#type = self.r#type.clone();
+        let direction = self.direction;
+        let res = std::iter::once(self.name().into())
+            .chain(Identifier::from(self.name()).shrink())
+            .flat_map(move |n| r#type.shrink().map(move |t| Self::new(n.to_string(), t, direction)));
+        Box::new(res)
     }
 }
 
