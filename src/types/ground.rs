@@ -39,6 +39,11 @@ impl super::TypeExt for GroundType {
     fn is_passive(&self) -> bool {
         true
     }
+
+    #[inline(always)]
+    fn ground_type(&self) -> Option<GroundType> {
+        Some(self.clone())
+    }
 }
 
 impl fmt::Display for GroundType {

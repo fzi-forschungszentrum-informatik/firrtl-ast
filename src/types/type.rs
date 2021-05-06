@@ -66,6 +66,14 @@ impl TypeExt for Type {
                 .all(|f| f.orientation() == Orientation::Normal && f.r#type().is_passive()),
         }
     }
+
+    fn ground_type(&self) -> Option<GroundType> {
+        if let Self::GroundType(g) = self {
+            Some(*g)
+        } else {
+            None
+        }
+    }
 }
 
 impl From<GroundType> for Type {
