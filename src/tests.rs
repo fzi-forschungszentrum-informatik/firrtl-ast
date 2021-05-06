@@ -61,6 +61,12 @@ impl From<&str> for Identifier {
     }
 }
 
+impl From<Identifier> for std::sync::Arc<str> {
+    fn from(ident: Identifier) -> Self {
+        ident.data.into()
+    }
+}
+
 impl AsRef<str> for Identifier {
     fn as_ref(&self) -> &str {
         self.data.as_ref()

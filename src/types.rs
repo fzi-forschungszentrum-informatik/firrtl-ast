@@ -302,11 +302,7 @@ impl Arbitrary for BundleField {
     fn arbitrary(g: &mut Gen) -> Self {
         use crate::tests::Identifier;
 
-        Self::new(
-            Identifier::arbitrary(g).to_string().into(),
-            Arbitrary::arbitrary(g),
-            Arbitrary::arbitrary(g)
-        )
+        Self::new(Identifier::arbitrary(g).into(), Arbitrary::arbitrary(g), Arbitrary::arbitrary(g))
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
