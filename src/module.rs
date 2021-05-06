@@ -63,7 +63,7 @@ impl Arbitrary for Module {
     fn arbitrary(g: &mut Gen) -> Self {
         use crate::tests::Identifier;
 
-        let name = Identifier::arbitrary(g).to_string().into();
+        let name = Identifier::arbitrary(g).into();
 
         // We don't just call `arbitrary()` on a `Vec` because we really have to
         // keep the number of ports low. Otherwise, tests will take forever.
