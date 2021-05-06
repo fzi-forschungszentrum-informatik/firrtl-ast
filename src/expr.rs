@@ -42,6 +42,25 @@ pub enum Expression<R: Reference> {
     PrimitiveOp(primitive::Operation<R>),
 }
 
+impl<R> Expression<R>
+where Self: Typed<Type = types::Type, Err = Expression<R>> + Clone,
+      R: Reference,
+{
+    /// Determine the flow of this expression
+    pub fn flow(&self) -> Result<Flow, <Self as types::Typed>::Err> {
+        match self {
+            Self::Reference(reference)  => Ok(reference.flow()),
+            Self::SubField{base, index} => base.flow().and_then(|f| base
+                .r#type()
+                .and_then(|b| b.field(index.as_ref()).map(|b| f + b.orientation()).ok_or(self.clone()))
+            ),
+            Self::SubIndex{base, ..}    => base.flow(),
+            Self::SubAccess{base, ..}   => base.flow(),
+            _                           => Ok(Flow::Source),
+        }
+    }
+}
+
 impl<R: Reference> From<R> for Expression<R> {
     fn from(reference: R) -> Self {
         Self::Reference(reference)
