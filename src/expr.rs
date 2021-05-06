@@ -147,3 +147,35 @@ impl Reference for Identifier {
     }
 }
 
+
+/// Possible data flow
+pub enum Flow {
+    Source,
+    Sink,
+    Duplex,
+}
+
+impl Flow {
+    /// Determine whether the flow allows an entity to serve as a source of data
+    ///
+    /// This function returns true if the flow is either `Source` or `Duplex`.
+    pub fn is_source(&self) -> bool {
+        match self {
+            Self::Source => true,
+            Self::Sink   => false,
+            Self::Duplex => true,
+        }
+    }
+
+    /// Determine whether the flow allows an entity to serve as a fink for data
+    ///
+    /// This function returns true if the flow is either `Sink` or `Duplex`.
+    pub fn is_sink(&self) -> bool {
+        match self {
+            Self::Source => false,
+            Self::Sink   => true,
+            Self::Duplex => true,
+        }
+    }
+}
+
