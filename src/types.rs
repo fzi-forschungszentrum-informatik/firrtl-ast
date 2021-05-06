@@ -54,3 +54,22 @@ pub trait TypeExt {
     fn ground_type(&self) -> Option<GroundType>;
 }
 
+
+/// A typed entity
+pub trait Typed: Sized {
+    /// Error type
+    type Err;
+
+    /// Type of type for this class of entities
+    type Type: TypeExt;
+
+    /// Determine the base type of this entity
+    ///
+    /// This function determines the basic type of the entity, i.e. without
+    /// any widths inferred. The type returned will not contain any width which
+    /// may conflict with the inferred type for the entity.
+    ///
+    /// This function is not required to perform an exhaustive type-check.
+    fn r#type(&self) -> Result<Self::Type, Self::Err>;
+}
+
