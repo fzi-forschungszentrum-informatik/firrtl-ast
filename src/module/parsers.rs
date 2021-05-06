@@ -26,7 +26,7 @@ pub fn module<'i>(input: &'i str, indentation: &'_ mut Indentation) -> IResult<'
 
 
 /// Parse the elements of a port
-fn port<'i>(input: &str) -> IResult<super::Port> {
+pub fn port<'i>(input: &str) -> IResult<super::Port> {
     map(
         tuple((direction, spaced(identifier), spaced(op(":")), spaced(r#type))),
         |(direction, name, _, r#type)| super::Port::new(name.to_string(), r#type, direction)
