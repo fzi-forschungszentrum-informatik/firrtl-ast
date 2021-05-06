@@ -76,7 +76,7 @@ impl Arbitrary for Expression<Identifier> {
             &|g| Self::Reference(Arbitrary::arbitrary(g)),
             &|g| Self::SubField{
                 base: Arbitrary::arbitrary(g),
-                index: Identifier::arbitrary(g).to_string().into()
+                index: Identifier::arbitrary(g).into()
             },
             &|g| Self::SubIndex{base: Arbitrary::arbitrary(g), index: Arbitrary::arbitrary(g)},
             &|g| Self::SubAccess{base: Arbitrary::arbitrary(g), index: Arbitrary::arbitrary(g)},
