@@ -138,12 +138,19 @@ impl<R: 'static + tests::TypedRef + Clone> Arbitrary for Expression<R> {
 pub trait Reference {
     /// Retrieve the name of the referenced entity
     fn name(&self) -> &str;
+
+    /// Retrieve the flow associated with the referenced entity
+    fn flow(&self) -> Flow;
 }
 
 #[cfg(test)]
 impl Reference for Identifier {
     fn name(&self) -> &str {
         self.as_ref()
+    }
+
+    fn flow(&self) -> Flow {
+        Flow::Duplex
     }
 }
 
