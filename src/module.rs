@@ -98,6 +98,11 @@ pub struct Port {
 }
 
 impl Port {
+    /// Create a new port
+    pub fn new(name: String, r#type: Type, direction: Direction) -> Self {
+        Self {name, r#type, direction}
+    }
+
     /// Retrieve the I/O port's name
     pub fn name(&self) -> &str {
         self.name.as_ref()
