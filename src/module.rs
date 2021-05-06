@@ -24,11 +24,8 @@ pub struct Module {
 
 impl Module {
     /// Create a new module
-    pub fn new(name: Arc<str>, ports: impl IntoIterator<Item = (String, Type, Direction)>) -> Self {
-        let mut ports: Vec<_> = ports
-            .into_iter()
-            .map(|(name, r#type, direction)| Arc::new(Port {name, r#type, direction}))
-            .collect();
+    pub fn new(name: Arc<str>, ports: impl IntoIterator<Item = Port>) -> Self {
+        let mut ports: Vec<_> = ports.into_iter().map(Arc::new).collect();
         ports.sort_unstable_by_key(|p| p.name.clone());
 
         Self {name, ports}
@@ -69,8 +66,7 @@ impl Arbitrary for Module {
         // keep the number of ports low. Otherwise, tests will take forever.
         let len = usize::arbitrary(g) % 16;
         let ports = (0..len)
-            .map(|_| <(Identifier, Type, Direction)>::arbitrary(&mut Gen::new(g.size() / len)))
-            .map(|(n, t, d)| (n.to_string(), t, d));
+            .map(|_| Port::arbitrary(&mut Gen::new(g.size() / len)));
         Module::new(name, ports)
     }
 

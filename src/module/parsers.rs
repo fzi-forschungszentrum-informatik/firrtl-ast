@@ -6,7 +6,6 @@ use nom::combinator::{iterator, map, value};
 use nom::sequence::tuple;
 
 use crate::parsers::{IResult, identifier, kw, op, spaced};
-use crate::types::Type;
 use crate::types::parsers::r#type;
 use crate::indentation::Indentation;
 
@@ -27,10 +26,10 @@ pub fn module<'i>(input: &'i str, indentation: &'_ mut Indentation) -> IResult<'
 
 
 /// Parse the elements of a port
-fn port<'i>(input: &str) -> IResult<(String, Type, super::Direction)> {
+fn port<'i>(input: &str) -> IResult<super::Port> {
     map(
         tuple((direction, spaced(identifier), spaced(op(":")), spaced(r#type))),
-        |(direction, name, _, r#type)| (name.to_string(), r#type, direction)
+        |(direction, name, _, r#type)| super::Port::new(name.to_string(), r#type, direction)
     )(input)
 }
 
