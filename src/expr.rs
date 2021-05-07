@@ -112,7 +112,7 @@ impl Arbitrary for Expression<Identifier> {
             Self::SubAccess{base, index}    => from_vec(vec![base.clone(), index.clone()]),
             Self::Mux{sel, a, b}            => from_vec(vec![sel.clone(), a.clone(), b.clone()]),
             Self::ValidIf{sel, value}       => from_vec(vec![sel.clone(), value.clone()]),
-            Self::PrimitiveOp(op)           => Box::new(from_vec(op.sub_exprs())),
+            Self::PrimitiveOp(op)           => from_vec(op.sub_exprs()),
             _                               => Box::new(std::iter::empty()),
         }
     }
