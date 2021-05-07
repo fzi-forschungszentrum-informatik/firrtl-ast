@@ -13,6 +13,7 @@ use std::sync::Arc;
 use quickcheck::{Arbitrary, Gen};
 
 use crate::types;
+use types::Typed;
 
 #[cfg(test)]
 use crate::tests::Identifier;
@@ -50,6 +51,39 @@ impl<R: Reference> From<R> for Expression<R> {
 impl<R: Reference> From<primitive::Operation<R>> for Expression<R> {
     fn from(op: primitive::Operation<R>) -> Self {
         Self::PrimitiveOp(op)
+    }
+}
+
+impl<R> Typed for Expression<R>
+    where R: Reference + Typed + Clone,
+          R::Type: Into<types::Type>,
+{
+    type Err = Self;
+
+    type Type = types::Type;
+
+    fn r#type(&self) -> Result<Self::Type, Self::Err> {
+        use types::{Combinator, GroundType as GT, MaxWidth};
+
+        match self {
+            Self::UIntLiteral{width, ..}    => Ok(GT::UInt(Some(*width)).into()),
+            Self::SIntLiteral{width, ..}    => Ok(GT::SInt(Some(*width)).into()),
+            Self::Reference(reference)      => reference.r#type().map(Into::into).map_err(|_| self.clone()),
+            Self::SubField{base, index}     => base
+                .r#type()
+                .and_then(|t| t.field(index.as_ref()).map(|f| f.r#type().clone()).ok_or(self.clone())),
+            Self::SubIndex{base, ..}        => base
+                .r#type()
+                .and_then(|t| t.vector_base().map(|b| b.as_ref().clone()).ok_or(self.clone())),
+            Self::SubAccess{base, ..}       => base
+                .r#type()
+                .and_then(|t| t.vector_base().map(|b| b.as_ref().clone()).ok_or(self.clone())),
+            Self::Mux{a, b, ..}             => MaxWidth::new()
+                .combine(&a.r#type()?, &b.r#type()?)
+                .map_err(|_| self.clone()),
+            Self::ValidIf{value, ..}        => value.r#type(),
+            Self::PrimitiveOp(op)           => op.r#type().map(Into::into).map_err(|_| self.clone()),
+        }
     }
 }
 
