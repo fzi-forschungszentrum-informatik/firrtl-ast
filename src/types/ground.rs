@@ -23,6 +23,22 @@ pub enum GroundType {
     Analog(BitWidth),
 }
 
+impl GroundType {
+    /// Retrieve the width of the ground type
+    ///
+    /// This function returns the width, i.e. the number of physical wires,
+    /// corresponding to the type.
+    pub fn width(&self) -> BitWidth {
+        match self {
+            Self::UInt(w)     => *w,
+            Self::SInt(w)     => *w,
+            Self::Fixed(w, _) => *w,
+            Self::Clock       => Some(1),
+            Self::Analog(w)   => *w,
+        }
+    }
+}
+
 impl super::TypeExt for GroundType {
     fn eq(&self, rhs: &Self) -> bool {
         match (self, rhs) {
