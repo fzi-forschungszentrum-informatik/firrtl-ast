@@ -100,7 +100,10 @@ pub fn primitive_op<'i, R: super::Reference + Clone>(
         "pad"       => map(tuple((&sub, comma, spaced(decimal))), |(e, _, b)| PO::Pad(e, b))(input)?,
         "asUInt"    => map(&sub, |e| PO::Cast(e, GT::UInt(None)))(input)?,
         "asSInt"    => map(&sub, |e| PO::Cast(e, GT::SInt(None)))(input)?,
-        "asFixed"   => map(&sub, |e| PO::Cast(e, GT::Fixed(None, None)))(input)?,
+        "asFixed"   => map(
+            tuple((&sub, comma, spaced(decimal))),
+            |(e, _, p)| PO::Cast(e, GT::Fixed(None, Some(p)))
+        )(input)?,
         "asClock"   => map(&sub, |e| PO::Cast(e, GT::Clock))(input)?,
         "shl"       => map(tuple((&sub, comma, spaced(decimal))), |(e, _, b)| PO::Shl(e, b))(input)?,
         "shr"       => map(tuple((&sub, comma, spaced(decimal))), |(e, _, b)| PO::Shr(e, b))(input)?,
