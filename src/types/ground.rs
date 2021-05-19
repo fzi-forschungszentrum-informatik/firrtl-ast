@@ -37,6 +37,21 @@ impl GroundType {
             Self::Analog(w)   => *w,
         }
     }
+
+    /// Create a copy of the type with the given width
+    ///
+    /// This function returns a copy of the type, with the width replaced by the
+    /// given one. In the case of `Fixed`, the point will be preserved; in the
+    /// case of `Clock`, this function will return a simple copy.
+    pub fn with_width(&self, width: BitWidth) -> Self {
+        match self {
+            Self::UInt(_)     => Self::UInt(width),
+            Self::SInt(_)     => Self::SInt(width),
+            Self::Fixed(_, p) => Self::Fixed(width, *p),
+            Self::Clock       => Self::Clock,
+            Self::Analog(_)   => Self::Analog(width),
+        }
+    }
 }
 
 impl super::TypeExt for GroundType {
