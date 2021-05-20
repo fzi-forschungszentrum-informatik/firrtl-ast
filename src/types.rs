@@ -13,6 +13,7 @@ mod r#type;
 mod tests;
 
 
+pub use combinator::Combinator;
 pub use ground::GroundType;
 pub use orientation::Orientation;
 pub use oriented::OrientedType;
