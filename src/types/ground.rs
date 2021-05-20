@@ -5,7 +5,7 @@ use std::fmt;
 #[cfg(test)]
 use quickcheck::{Arbitrary, Gen};
 
-use super::BitWidth;
+use super::{BitWidth, Combinator};
 
 
 /// FIRRTL ground type
@@ -74,6 +74,28 @@ impl super::TypeExt for GroundType {
     #[inline(always)]
     fn ground_type(&self) -> Option<GroundType> {
         Some(self.clone())
+    }
+}
+
+/// Combinator impl for BitWidth combination of ground types
+///
+/// This `Combinator` combines `UInt`s, `SInt`s und `Analog` based on `BitWidth`
+/// combination. `Clock`s are combined to a `Clock`. Combination of different
+/// `GroundType` variants or `Fixed` will result in an `Err`.
+impl<C: Combinator<BitWidth>> Combinator<GroundType> for C {
+    fn combine<'a>(
+        &self,
+        lhs: &'a GroundType,
+        rhs: &'a GroundType,
+    ) -> Result<GroundType, (&'a GroundType, &'a GroundType)> {
+        let combine = |l, r| self.combine(l, r).map_err(|_| (lhs, rhs));
+        match (lhs, rhs) {
+            (GroundType::UInt(l),   GroundType::UInt(r))   => combine(l, r).map(GroundType::UInt),
+            (GroundType::SInt(l),   GroundType::SInt(r))   => combine(l, r).map(GroundType::SInt),
+            (GroundType::Clock,     GroundType::Clock)     => Ok(GroundType::Clock),
+            (GroundType::Analog(l), GroundType::Analog(r)) => combine(l, r).map(GroundType::Analog),
+            _ => Err((lhs, rhs))
+        }
     }
 }
 
