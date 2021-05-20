@@ -13,8 +13,8 @@ mod tests;
 
 
 pub use ground::GroundType;
-pub use oriented::OrientedType;
 pub use orientation::Orientation;
+pub use oriented::OrientedType;
 pub use r#type::{BundleField, Type};
 
 
