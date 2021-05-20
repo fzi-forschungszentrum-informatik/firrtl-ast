@@ -74,6 +74,12 @@ impl From<GroundType> for Type {
     }
 }
 
+impl From<Vec<BundleField>> for Type {
+    fn from(v: Vec<BundleField>) -> Self {
+        Self::Bundle(v.into())
+    }
+}
+
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
