@@ -1,5 +1,6 @@
 //! Types
 
+pub mod combinator;
 pub mod parsers;
 
 mod display;
