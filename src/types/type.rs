@@ -37,6 +37,30 @@ impl Type {
     pub fn weak_eq(&self, rhs: &Self) -> bool {
         TypeExt::eq(&self.with_orientation(Default::default()), &rhs.with_orientation(Default::default()))
     }
+
+    /// If this type is a vector type, return the base type
+    ///
+    /// This function returns the type of a vector element or `None`, if called
+    /// on a type not a vector type.
+    pub fn vector_base(&self) -> Option<&Arc<Self>> {
+        if let Self::Vector(t, _) = self {
+            Some(t)
+        } else {
+            None
+        }
+    }
+
+    /// Return the bundle field with the given name
+    ///
+    /// If the type is not a bundle type or the bundle does not contain a field
+    /// with the given name, this function returns `None`.
+    pub fn field(&self, field: &str) -> Option<&BundleField> {
+        if let Self::Bundle(v) = self {
+            v.iter().find(|f| f.name().as_ref() == field)
+        } else {
+            None
+        }
+    }
 }
 
 impl TypeExt for Type {
@@ -66,11 +90,25 @@ impl TypeExt for Type {
                 .all(|f| f.orientation() == Orientation::Normal && f.r#type().is_passive()),
         }
     }
+
+    fn ground_type(&self) -> Option<GroundType> {
+        if let Self::GroundType(g) = self {
+            Some(*g)
+        } else {
+            None
+        }
+    }
 }
 
 impl From<GroundType> for Type {
     fn from(g: GroundType) -> Self {
         Self::GroundType(g)
+    }
+}
+
+impl From<Vec<BundleField>> for Type {
+    fn from(v: Vec<BundleField>) -> Self {
+        Self::Bundle(v.into())
     }
 }
 

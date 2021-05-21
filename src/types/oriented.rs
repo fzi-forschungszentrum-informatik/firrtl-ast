@@ -48,6 +48,14 @@ impl TypeExt for OrientedType {
             Self::Bundle(v) => v.iter().all(|(_, t)| t.is_passive()),
         }
     }
+
+    fn ground_type(&self) -> Option<super::GroundType> {
+        if let Self::GroundType(g, _) = self {
+            Some(*g)
+        } else {
+            None
+        }
+    }
 }
 
 impl From<&super::Type> for OrientedType {

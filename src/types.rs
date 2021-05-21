@@ -13,8 +13,8 @@ mod tests;
 
 
 pub use ground::GroundType;
-pub use oriented::OrientedType;
 pub use orientation::Orientation;
+pub use oriented::OrientedType;
 pub use r#type::{BundleField, Type};
 
 
@@ -44,5 +44,8 @@ pub trait TypeExt {
     ///
     /// A type is passive if it contains no flipped sub-types or fields.
     fn is_passive(&self) -> bool;
+
+    /// If the type refers to a ground type, return that ground type
+    fn ground_type(&self) -> Option<GroundType>;
 }
 
