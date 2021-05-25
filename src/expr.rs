@@ -179,3 +179,18 @@ impl Flow {
     }
 }
 
+impl std::ops::Add<types::Orientation> for Flow {
+    type Output = Self;
+
+    fn add(self, rhs: types::Orientation) -> Self::Output {
+        use types::Orientation as O;
+
+        match (self, rhs) {
+            (v,            O::Normal ) => v,
+            (Self::Source, O::Flipped) => Self::Sink,
+            (Self::Sink,   O::Flipped) => Self::Source,
+            (Self::Duplex, O::Flipped) => Self::Duplex,
+        }
+    }
+}
+
