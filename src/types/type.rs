@@ -6,7 +6,7 @@ use std::sync::Arc;
 #[cfg(test)]
 use quickcheck::{Arbitrary, Gen};
 
-use super::{GroundType, Orientation, OrientedType, TypeExt};
+use super::{Combinator, GroundType, Orientation, OrientedType, TypeExt};
 
 /// FIRRTL Type
 #[derive(Clone, PartialEq, Debug)]
@@ -97,6 +97,33 @@ impl TypeExt for Type {
         } else {
             None
         }
+    }
+}
+
+impl<C: Combinator<GroundType>> Combinator<Type> for C {
+    fn combine<'a>(&self, lhs: &'a Type, rhs: &'a Type) -> Result<Type, (&'a Type, &'a Type)> {
+        match (lhs, rhs) {
+            (Type::GroundType(t1), Type::GroundType(t2)) => self.combine(t1, t2)
+                .map_err(|_| (lhs, rhs))
+                .map(Into::into),
+            (Type::Vector(t1, w1), Type::Vector(t2, w2)) if w1 == w2 =>
+                <Self as Combinator<Type>>::combine(self, t1.as_ref(), t2.as_ref())
+                    .map(|t| Type::Vector(Arc::new(t), *w1)),
+            (Type::Bundle(v1), Type::Bundle(v2)) if v1.len() == v2.len() => {
+                let mut res: Vec<_> = Default::default();
+               v1.iter().zip(v2.iter()).try_for_each(|(f1, f2)|
+                    <Self as Combinator<BundleField>>::combine(self, f1, f2).map(|f| res.push(f))
+                ).map_err(|_| (lhs, rhs))?;
+                Ok(res.into())
+            },
+            _ => Err((lhs, rhs))
+        }.map(|res| if res == *lhs {
+            lhs.clone()
+        } else if res == *rhs {
+            rhs.clone()
+        } else {
+            res
+        })
     }
 }
 
@@ -193,6 +220,22 @@ impl BundleField {
     /// Retrieve the field's orientation
     pub fn orientation(&self) -> Orientation {
         self.orientation
+    }
+}
+
+impl<C: Combinator<Type>> Combinator<BundleField> for C {
+    fn combine<'a>(
+        &self,
+        lhs: &'a BundleField,
+        rhs: &'a BundleField,
+    ) -> Result<BundleField, (&'a BundleField, &'a BundleField)> {
+        if lhs.name() == rhs.name() && lhs.orientation() == rhs.orientation() {
+            <Self as Combinator<Type>>::combine(self, lhs.r#type(), rhs.r#type())
+                .map(|t| BundleField::new(lhs.name().clone(), t, rhs.orientation()))
+                .map_err(|_| (lhs, rhs))
+        } else {
+            Err((lhs, rhs))
+        }
     }
 }
 
