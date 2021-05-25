@@ -4,7 +4,7 @@ use nom::combinator::all_consuming;
 
 use crate::tests::Equivalence;
 
-use super::{GroundType, Type, TypeExt, combinator, parsers};
+use super::{BitWidth, GroundType, Type, TypeExt, combinator, parsers};
 use combinator::Combinator;
 
 
@@ -46,6 +46,24 @@ fn dummy_combine_self(t: Type) -> Result<Equivalence<Type>, (Type, Type)> {
         .combine(&t, &t)
         .map_err(|(l, r)| (l.clone(), r.clone()))
         .map(|c| Equivalence::of(t, c))
+}
+
+
+#[quickcheck]
+fn bitwidth_max_combine_self(width: BitWidth) -> Result<Equivalence<BitWidth>, (BitWidth, BitWidth)> {
+    combinator::FnWidth::from(std::cmp::max)
+        .combine(&width, &width)
+        .map_err(|(l, r)| (l.clone(), r.clone()))
+        .map(|c| Equivalence::of(width, c))
+}
+
+
+#[quickcheck]
+fn bitwidth_min_combine_self(width: BitWidth) -> Result<Equivalence<BitWidth>, (BitWidth, BitWidth)> {
+    combinator::FnWidth::from(std::cmp::min)
+        .combine(&width, &width)
+        .map_err(|(l, r)| (l.clone(), r.clone()))
+        .map(|c| Equivalence::of(width, c))
 }
 
 
