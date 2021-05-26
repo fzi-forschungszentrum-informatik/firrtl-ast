@@ -42,6 +42,12 @@ pub trait TypedRef: super::Reference {
     fn with_type(r#type: types::Type, g: &mut Gen) -> Self;
 }
 
+impl TypedRef for Identifier {
+    fn with_type(_type: types::Type, g: &mut Gen) -> Self {
+        Arbitrary::arbitrary(g)
+    }
+}
+
 
 /// Generate an expression which could have the given type
 pub fn expr_with_type<R, T>(r#type: T, g: &mut Gen) -> Expression<R>
