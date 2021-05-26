@@ -2,8 +2,10 @@
 
 use nom::combinator::all_consuming;
 use nom::Finish;
+use quickcheck::Gen;
 
 use crate::tests::{Equivalence, Identifier};
+use crate::types;
 
 use super::{Expression, parsers, primitive};
 
@@ -29,5 +31,12 @@ fn parse_primitive_op(
         .map(|(_, parsed)| Equivalence::of(original, parsed))
         .map_err(|e| e.to_string());
     res
+}
+
+
+/// Utility trait for generating references with a given type
+pub trait TypedRef: super::Reference {
+    /// Generate a reference with the given type
+    fn with_type(r#type: types::Type, g: &mut Gen) -> Self;
 }
 
