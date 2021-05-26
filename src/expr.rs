@@ -68,45 +68,24 @@ impl<R: Reference> fmt::Display for Expression<R> {
 }
 
 #[cfg(test)]
-impl Arbitrary for Expression<Identifier> {
+impl<R: 'static + tests::TypedRef + Clone> Arbitrary for Expression<R> {
     fn arbitrary(g: &mut Gen) -> Self {
-        let opts: [&dyn Fn(&mut Gen) -> Self; 9] = [
-            &|g| Self::UIntLiteral{value: Arbitrary::arbitrary(g), width: Arbitrary::arbitrary(g)},
-            &|g| Self::SIntLiteral{value: Arbitrary::arbitrary(g), width: Arbitrary::arbitrary(g)},
-            &|g| Self::Reference(Arbitrary::arbitrary(g)),
-            &|g| Self::SubField{
-                base: Arbitrary::arbitrary(g),
-                index: Identifier::arbitrary(g).into()
-            },
-            &|g| Self::SubIndex{base: Arbitrary::arbitrary(g), index: Arbitrary::arbitrary(g)},
-            &|g| Self::SubAccess{base: Arbitrary::arbitrary(g), index: Arbitrary::arbitrary(g)},
-            &|g| Self::Mux{
-                sel: Arbitrary::arbitrary(g),
-                a: Arbitrary::arbitrary(g),
-                b: Arbitrary::arbitrary(g)
-            },
-            &|g| Self::ValidIf{sel: Arbitrary::arbitrary(g), value: Arbitrary::arbitrary(g)},
-            &|g| Self::PrimitiveOp(Arbitrary::arbitrary(g)),
-        ];
-        if g.size() > 0 {
-            g.choose(&opts).unwrap()(&mut Gen::new(g.size() / 2))
-        } else {
-            Self::UIntLiteral{value: 0, width: 0}
-        }
+        tests::expr_with_type(crate::types::Type::arbitrary(&mut Gen::new(g.size() / 10)), g)
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         use std::iter::once;
 
         let from_vec = |v: Vec<Arc<Self>>| Box::new(
-            v.into_iter().flat_map(|i| once(i.clone()).chain(i.shrink())).map(|e| e.as_ref().clone())
+            v.into_iter()
+                .flat_map(|i| once(i.clone()).chain(i.shrink().map(Arc::new)))
+                .map(|e| e.as_ref().clone())
         );
         let from_single = |e: &Arc<Self>| Box::new(
-            once(e.clone()).chain(e.shrink()).map(|e| e.as_ref().clone())
+            once(e.clone()).chain(e.shrink().map(Arc::new)).map(|e| e.as_ref().clone())
         );
 
         match self {
-            Self::Reference(reference)      => Box::new(reference.shrink().map(Self::Reference)),
             Self::SubField{base, ..}        => from_single(base),
             Self::SubIndex{base, ..}        => from_single(base),
             Self::SubAccess{base, index}    => from_vec(vec![base.clone(), index.clone()]),
