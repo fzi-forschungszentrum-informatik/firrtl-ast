@@ -93,6 +93,38 @@ impl<R: 'static + TypedRef + Clone> Arbitrary for TypedExpr<R> {
 }
 
 
+/// Entity to use as a Reference for tests involving typing
+///
+/// Unlike Identifier, this implements `Typed`, i.e. it can hold a type.
+#[derive(Clone, Debug, PartialEq)]
+struct Entity {
+    name: Identifier,
+    r#type: types::Type,
+}
+
+impl TypedRef for Entity {
+    fn with_type(r#type: types::Type, g: &mut Gen) -> Self {
+        Self {name: Arbitrary::arbitrary(g), r#type}
+    }
+}
+
+impl super::Typed for Entity {
+    type Err = ();
+
+    type Type = types::Type;
+
+    fn r#type(&self) -> Result<Self::Type, Self::Err> {
+        Ok(self.r#type.clone())
+    }
+}
+
+impl super::Reference for Entity {
+    fn name(&self) -> &str {
+        self.name.name()
+    }
+}
+
+
 /// Utility trait for generating references with a given type
 pub trait TypedRef: super::Reference {
     /// Generate a reference with the given type
