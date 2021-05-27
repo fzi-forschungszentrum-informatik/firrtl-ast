@@ -142,3 +142,21 @@ impl Arbitrary for GroundType {
     }
 }
 
+
+/// Compute the max width parameter for a combination of two fixed
+///
+/// This function effectively computes `max(lw - lp, rw - rp) + max(lp, rp)`
+/// (cmp. section 10 of the FIRRTL spec), but tries to avoid underflow issues.
+/// If the result doesn't fit into an `u16`, the function returns `None`.
+pub fn combine_fixed_max(lhs: (u16, i16), rhs: (u16, i16)) -> BitWidth {
+    use std::cmp::max;
+
+    use std::convert::TryInto;
+
+    let lw = lhs.0 as i32;
+    let lp = lhs.1 as i32;
+    let rw = rhs.0 as i32;
+    let rp = rhs.1 as i32;
+    (max(lw - lp, rw - rp) + max(lp, rp)).try_into().ok()
+}
+
