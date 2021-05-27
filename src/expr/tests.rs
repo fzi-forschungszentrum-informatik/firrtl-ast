@@ -36,6 +36,63 @@ fn parse_primitive_op(
 }
 
 
+/// Helper for expressions preserving the type used for generation
+///
+/// Expressions are generated from a type, but the `Arbitrary` impl discards the
+/// type after generation. This struct, however, preserves that type, allowing
+/// additional checks.
+#[derive(Clone, Debug)]
+struct TypedExpr<R: TypedRef> {
+    pub expr: Expression<R>,
+    pub r#type: types::Type,
+}
+
+impl<R: 'static + TypedRef + Clone> Arbitrary for TypedExpr<R> {
+    fn arbitrary(g: &mut Gen) -> Self {
+        // The type of the expression may be considerably less complex than the
+        // expression itself.
+        let r#type: types::Type = Arbitrary::arbitrary(&mut Gen::new(g.size() / 10));
+        let expr = expr_with_type(r#type.clone(), g);
+        Self {expr, r#type}
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        use std::iter::once;
+
+        match &self.expr {
+            Expression::SubField{base, index} => {
+                let r#type = vec![
+                    types::BundleField::new(index.clone(), self.r#type.clone(), Default::default())
+                ].into();
+                Box::new(once(Self { expr: base.as_ref().clone(), r#type}))
+            },
+            Expression::SubIndex{base, ..} => Box::new(once(Self {
+                expr: base.as_ref().clone(),
+                r#type: types::Type::Vector(Arc::new(self.r#type.clone()), 1)
+            })),
+            Expression::SubAccess{base, index} => Box::new(vec![
+                Self {expr: index.as_ref().clone(), r#type: types::GroundType::UInt(None).into()},
+                Self {
+                    expr: base.as_ref().clone(),
+                    r#type: types::Type::Vector(Arc::new(self.r#type.clone()), 1)
+                },
+            ].into_iter()),
+            Expression::Mux{sel, a, b} => Box::new(vec![
+                Self {expr: sel.as_ref().clone(), r#type: types::GroundType::UInt(Some(1)).into()},
+                Self {expr: a.as_ref().clone(), r#type: self.r#type.clone()},
+                Self {expr: b.as_ref().clone(), r#type: self.r#type.clone()},
+            ].into_iter()),
+            Expression::ValidIf{sel, value} => Box::new(vec![
+                Self {expr: sel.as_ref().clone(), r#type: types::GroundType::UInt(Some(1)).into()},
+                Self {expr: value.as_ref().clone(), r#type: self.r#type.clone()},
+            ].into_iter()),
+            // TODO: try shrinking primitive operations
+            _ => Box::new(std::iter::empty()),
+        }
+    }
+}
+
+
 /// Utility trait for generating references with a given type
 pub trait TypedRef: super::Reference {
     /// Generate a reference with the given type
