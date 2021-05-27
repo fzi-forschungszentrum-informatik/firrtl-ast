@@ -142,3 +142,59 @@ impl Arbitrary for GroundType {
     }
 }
 
+
+/// Maximum width Combinator
+///
+/// Creating an `FnWidth` from `std::cmp::max` will yield a combinator which
+/// selects the maximum width of the input `GroundType`s. However, it will yield
+/// an error for fixed types.
+///
+/// This `Combinator` extends the `FnWidth` for fixed types. For two `Fixed`
+/// variants, the combinator computes a fixed type, taking into account both
+/// point offsets. All other combinations are forwarded to an `FnWidth`.
+pub struct MaxWidth {}
+
+impl MaxWidth {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl Combinator<GroundType> for MaxWidth {
+    fn combine<'a>(
+        &self,
+        lhs: &'a GroundType,
+        rhs: &'a GroundType,
+    ) -> Result<GroundType, (&'a GroundType, &'a GroundType)> {
+        use std::cmp::max;
+
+        use GroundType as GT;
+
+        match (lhs, rhs) {
+            (GT::Fixed(Some(lw), Some(lp)), GT::Fixed(Some(rw), Some(rp))) => Ok(
+                GT::Fixed(combine_fixed_max((*lw, *lp), (*rw, *rp)), Some(max(*lp, *rp)))
+            ),
+            (GT::Fixed(..), GT::Fixed(..)) => Ok(GT::Fixed(None, None)),
+            (l, r) => super::combinator::FnWidth::from(max).combine(l, r),
+        }
+    }
+}
+
+
+/// Compute the max width parameter for a combination of two fixed
+///
+/// This function effectively computes `max(lw - lp, rw - rp) + max(lp, rp)`
+/// (cmp. section 10 of the FIRRTL spec), but tries to avoid underflow issues.
+/// If the result doesn't fit into an `u16`, the function returns `None`.
+pub fn combine_fixed_max(lhs: (u16, i16), rhs: (u16, i16)) -> BitWidth {
+    use std::cmp::max;
+
+    use std::convert::TryInto;
+
+    let lw = lhs.0 as i32;
+    let lp = lhs.1 as i32;
+    let rw = rhs.0 as i32;
+    let rp = rhs.1 as i32;
+    (max(lw - lp, rw - rp) + max(lp, rp)).try_into().ok()
+}
+
