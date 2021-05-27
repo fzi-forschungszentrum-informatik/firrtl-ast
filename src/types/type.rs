@@ -139,6 +139,13 @@ impl From<Vec<BundleField>> for Type {
     }
 }
 
+#[cfg(test)]
+impl From<std::collections::HashMap<Arc<str>, BundleField>> for Type {
+    fn from(v: std::collections::HashMap<Arc<str>, BundleField>) -> Self {
+        Self::Bundle(v.into_iter().map(|(_, f)| f).collect())
+    }
+}
+
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -161,11 +168,7 @@ impl Arbitrary for Type {
         let opts: [&dyn Fn(&mut Gen) -> Self; 3] = [
             &|g| Self::GroundType(Arbitrary::arbitrary(g)),
             &|g| Self::Vector(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
-            &|g| {
-                let len = u8::arbitrary(g).saturating_add(1);
-                let mut g = Gen::new(g.size() / len as usize);
-                Self::Bundle((0..len).map(|_| Arbitrary::arbitrary(&mut g)).collect())
-            },
+            &|g| bundle_fields(u8::arbitrary(g).saturating_add(1) as usize, g).into(),
         ];
         if g.size() > 0 {
             g.choose(&opts).unwrap()(g)
@@ -261,6 +264,23 @@ impl Arbitrary for BundleField {
         let n = self.name.clone();
         let o = self.orientation;
         Box::new(self.r#type.shrink().map(move |t| Self::new(n.clone(), t, o)))
+    }
+}
+
+
+/// Generate a hashmap containing `BundleField`s, mapped to by their name
+///
+/// Naturally, the `BundleField`s are guranteed to have unique names.
+#[cfg(test)]
+pub fn bundle_fields(max_size: usize, g: &mut Gen) -> std::collections::HashMap<Arc<str>, BundleField> {
+    if max_size == 0 {
+        Default::default()
+    } else {
+        let mut g = Gen::new(g.size() / max_size);
+        (0..max_size)
+            .map(|_| Arbitrary::arbitrary(&mut g))
+            .map(|f: BundleField| (f.name().clone(), f))
+            .collect()
     }
 }
 
