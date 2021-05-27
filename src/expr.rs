@@ -12,6 +12,8 @@ use std::sync::Arc;
 #[cfg(test)]
 use quickcheck::{Arbitrary, Gen};
 
+use crate::types;
+
 #[cfg(test)]
 use crate::tests::Identifier;
 
@@ -70,7 +72,7 @@ impl<R: Reference> fmt::Display for Expression<R> {
 #[cfg(test)]
 impl<R: 'static + tests::TypedRef + Clone> Arbitrary for Expression<R> {
     fn arbitrary(g: &mut Gen) -> Self {
-        tests::expr_with_type(crate::types::Type::arbitrary(&mut Gen::new(g.size() / 10)), g)
+        tests::expr_with_type(types::Type::arbitrary(&mut Gen::new(g.size() / 10)), g)
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
