@@ -139,6 +139,13 @@ impl From<Vec<BundleField>> for Type {
     }
 }
 
+#[cfg(test)]
+impl From<std::collections::HashMap<Arc<str>, BundleField>> for Type {
+    fn from(v: std::collections::HashMap<Arc<str>, BundleField>) -> Self {
+        Self::Bundle(v.into_iter().map(|(_, f)| f).collect())
+    }
+}
+
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
