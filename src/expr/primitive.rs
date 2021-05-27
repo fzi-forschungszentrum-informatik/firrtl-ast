@@ -171,53 +171,15 @@ impl Arbitrary for Operation<crate::tests::Identifier> {
     fn arbitrary(g: &mut Gen) -> Self {
         use types::GroundType as GT;
 
-        let opts: [&dyn Fn(&mut Gen) -> Self; 36] = [
-            &|g| Self::Add(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
-            &|g| Self::Sub(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
-            &|g| Self::Mul(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
-            &|g| Self::Div(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
-            &|g| Self::Rem(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
-            &|g| Self::Lt(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
-            &|g| Self::LEq(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
-            &|g| Self::Gt(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
-            &|g| Self::GEq(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
-            &|g| Self::Eq(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
-            &|g| Self::NEq(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
-            &|g| Self::Pad(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
-            &|g| Self::Cast(Arbitrary::arbitrary(g), GT::UInt(None)),
-            &|g| Self::Cast(Arbitrary::arbitrary(g), GT::SInt(None)),
-            &|g| Self::Cast(Arbitrary::arbitrary(g), GT::Fixed(None, Some(Arbitrary::arbitrary(g)))),
-            &|g| Self::Cast(Arbitrary::arbitrary(g), GT::Clock),
-            &|g| Self::Shl(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
-            &|g| Self::Shr(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
-            &|g| Self::DShl(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
-            &|g| Self::DShr(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
-            &|g| Self::Cvt(Arbitrary::arbitrary(g)),
-            &|g| Self::Neg(Arbitrary::arbitrary(g)),
-            &|g| Self::Not(Arbitrary::arbitrary(g)),
-            &|g| Self::And(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
-            &|g| Self::Or(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
-            &|g| Self::Xor(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
-            &|g| Self::AndReduce(Arbitrary::arbitrary(g)),
-            &|g| Self::OrReduce(Arbitrary::arbitrary(g)),
-            &|g| Self::XorReduce(Arbitrary::arbitrary(g)),
-            &|g| Self::Cat(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
-            &|g| Self::Bits(
-                Arbitrary::arbitrary(g),
-                Some(Arbitrary::arbitrary(g)),
-                Some(Arbitrary::arbitrary(g))
-            ),
-            &|g| Self::Bits(Arbitrary::arbitrary(g), None, Some(Arbitrary::arbitrary(g))),
-            &|g| Self::Bits(Arbitrary::arbitrary(g), Some(Arbitrary::arbitrary(g)), None),
-            &|g| Self::IncPrecision(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
-            &|g| Self::DecPrecision(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
-            &|g| Self::SetPrecision(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
+        // We want to exclude the analog types
+        let opts = [
+            GT::UInt(Arbitrary::arbitrary(g)),
+            GT::SInt(Arbitrary::arbitrary(g)),
+            GT::Fixed(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
+            GT::Clock,
         ];
-        if g.size() > 0 {
-            g.choose(&opts).unwrap()(&mut Gen::new(g.size() / 2))
-        } else {
-            Self::Not(Arbitrary::arbitrary(g))
-        }
+
+        super::tests::primitive_op_with_type(*Gen::new(g.size() / 10).choose(&opts).unwrap(), g)
     }
 
     /// Shrink the expressions within this primitive op
