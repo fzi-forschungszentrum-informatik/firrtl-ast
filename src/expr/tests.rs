@@ -36,6 +36,20 @@ fn parse_primitive_op(
 }
 
 
+#[quickcheck]
+fn expr_typing(expr: TypedExpr<Entity>) -> Result<bool, String> {
+    use types::Typed;
+
+    // The type retrieved from the expression may not match the type used to
+    // generate the expression perfectly. Widths may differ. However, the types
+    // must match structurally.
+    expr.expr
+        .r#type()
+        .map_err(|e| format!("{:?}", e))
+        .map(|t| crate::TypeExt::eq(&expr.r#type, &t))
+}
+
+
 /// Helper for expressions preserving the type used for generation
 ///
 /// Expressions are generated from a type, but the `Arbitrary` impl discards the
