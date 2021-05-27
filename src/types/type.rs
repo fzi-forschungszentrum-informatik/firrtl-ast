@@ -264,3 +264,20 @@ impl Arbitrary for BundleField {
     }
 }
 
+
+/// Generate a hashmap containing `BundleField`s, mapped to by their name
+///
+/// Naturally, the `BundleField`s are guranteed to have unique names.
+#[cfg(test)]
+pub fn bundle_fields(max_size: usize, g: &mut Gen) -> std::collections::HashMap<Arc<str>, BundleField> {
+    if max_size == 0 {
+        Default::default()
+    } else {
+        let mut g = Gen::new(g.size() / max_size);
+        (0..max_size)
+            .map(|_| Arbitrary::arbitrary(&mut g))
+            .map(|f: BundleField| (f.name().clone(), f))
+            .collect()
+    }
+}
+

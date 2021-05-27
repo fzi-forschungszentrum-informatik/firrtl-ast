@@ -19,6 +19,9 @@ pub use orientation::Orientation;
 pub use oriented::OrientedType;
 pub use r#type::{BundleField, Type};
 
+#[cfg(test)]
+pub use r#type::bundle_fields;
+
 
 /// Bit-width of a ground-type, i.e. the number of "physical" wires or signals
 ///
