@@ -13,11 +13,11 @@ use super::{Expression, parsers, primitive};
 
 
 #[quickcheck]
-fn parse_expr(original: Expression<Identifier>) -> Result<Equivalence<Expression<Identifier>>, String> {
-    let s = original.to_string();
+fn parse_expr(original: TypedExpr<Identifier>) -> Result<Equivalence<Expression<Identifier>>, String> {
+    let s = original.expr.to_string();
     let res = all_consuming(|i| parsers::expr(|s| Some(s.into()), i))(&s)
         .finish()
-        .map(|(_, parsed)| Equivalence::of(original, parsed))
+        .map(|(_, parsed)| Equivalence::of(original.expr, parsed))
         .map_err(|e| e.to_string());
     res
 }
