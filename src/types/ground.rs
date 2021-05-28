@@ -130,11 +130,13 @@ impl Arbitrary for GroundType {
             Self::UInt(w)     => Box::new(w.shrink().map(Self::UInt)),
             Self::SInt(w)     => Box::new(w.shrink().map(Self::SInt)),
             Self::Fixed(w, p) => {
-                use std::iter::once;
+                let w = *w;
                 let p = *p;
-                Box::new(
-                    once(*w).chain(w.shrink()).flat_map(move |w| p.shrink().map(move |p| Self::Fixed(w, p)))
-                )
+                let res = w
+                    .shrink()
+                    .map(move |w| Self::Fixed(w, p))
+                    .chain(p.shrink().map(move |p| Self::Fixed(w, p)));
+                Box::new(res)
             },
             Self::Clock       => Box::new(std::iter::empty()),
             Self::Analog(w)   => Box::new(w.shrink().map(Self::Analog)),
