@@ -226,6 +226,16 @@ impl BundleField {
     }
 }
 
+impl super::Typed for BundleField {
+    type Err = Self;
+
+    type Type = Type;
+
+    fn r#type(&self) -> Result<Self::Type, Self::Err> {
+        Ok(self.r#type.clone())
+    }
+}
+
 impl<C: Combinator<Type>> Combinator<BundleField> for C {
     fn combine<'a>(
         &self,

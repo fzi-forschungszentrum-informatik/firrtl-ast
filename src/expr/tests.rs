@@ -36,6 +36,109 @@ fn parse_primitive_op(
 }
 
 
+#[quickcheck]
+fn expr_typing(expr: TypedExpr<Entity>) -> Result<bool, String> {
+    use types::Typed;
+
+    // The type retrieved from the expression may not match the type used to
+    // generate the expression perfectly. Widths may differ. However, the types
+    // must match structurally.
+    expr.expr
+        .r#type()
+        .map_err(|e| format!("{:?}", e))
+        .map(|t| crate::TypeExt::eq(&expr.r#type, &t))
+}
+
+
+/// Helper for expressions preserving the type used for generation
+///
+/// Expressions are generated from a type, but the `Arbitrary` impl discards the
+/// type after generation. This struct, however, preserves that type, allowing
+/// additional checks.
+#[derive(Clone, Debug)]
+struct TypedExpr<R: TypedRef> {
+    pub expr: Expression<R>,
+    pub r#type: types::Type,
+}
+
+impl<R: 'static + TypedRef + Clone> Arbitrary for TypedExpr<R> {
+    fn arbitrary(g: &mut Gen) -> Self {
+        // The type of the expression may be considerably less complex than the
+        // expression itself.
+        let r#type: types::Type = Arbitrary::arbitrary(&mut Gen::new(g.size() / 10));
+        let expr = expr_with_type(r#type.clone(), g);
+        Self {expr, r#type}
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        use std::iter::once;
+
+        match &self.expr {
+            Expression::SubField{base, index} => {
+                let r#type = vec![
+                    types::BundleField::new(index.clone(), self.r#type.clone(), Default::default())
+                ].into();
+                Box::new(once(Self { expr: base.as_ref().clone(), r#type}))
+            },
+            Expression::SubIndex{base, ..} => Box::new(once(Self {
+                expr: base.as_ref().clone(),
+                r#type: types::Type::Vector(Arc::new(self.r#type.clone()), 1)
+            })),
+            Expression::SubAccess{base, index} => Box::new(vec![
+                Self {expr: index.as_ref().clone(), r#type: types::GroundType::UInt(None).into()},
+                Self {
+                    expr: base.as_ref().clone(),
+                    r#type: types::Type::Vector(Arc::new(self.r#type.clone()), 1)
+                },
+            ].into_iter()),
+            Expression::Mux{sel, a, b} => Box::new(vec![
+                Self {expr: sel.as_ref().clone(), r#type: types::GroundType::UInt(Some(1)).into()},
+                Self {expr: a.as_ref().clone(), r#type: self.r#type.clone()},
+                Self {expr: b.as_ref().clone(), r#type: self.r#type.clone()},
+            ].into_iter()),
+            Expression::ValidIf{sel, value} => Box::new(vec![
+                Self {expr: sel.as_ref().clone(), r#type: types::GroundType::UInt(Some(1)).into()},
+                Self {expr: value.as_ref().clone(), r#type: self.r#type.clone()},
+            ].into_iter()),
+            // TODO: try shrinking primitive operations
+            _ => Box::new(std::iter::empty()),
+        }
+    }
+}
+
+
+/// Entity to use as a Reference for tests involving typing
+///
+/// Unlike Identifier, this implements `Typed`, i.e. it can hold a type.
+#[derive(Clone, Debug, PartialEq)]
+struct Entity {
+    name: Identifier,
+    r#type: types::Type,
+}
+
+impl TypedRef for Entity {
+    fn with_type(r#type: types::Type, g: &mut Gen) -> Self {
+        Self {name: Arbitrary::arbitrary(g), r#type}
+    }
+}
+
+impl super::Typed for Entity {
+    type Err = ();
+
+    type Type = types::Type;
+
+    fn r#type(&self) -> Result<Self::Type, Self::Err> {
+        Ok(self.r#type.clone())
+    }
+}
+
+impl super::Reference for Entity {
+    fn name(&self) -> &str {
+        self.name.name()
+    }
+}
+
+
 /// Utility trait for generating references with a given type
 pub trait TypedRef: super::Reference {
     /// Generate a reference with the given type

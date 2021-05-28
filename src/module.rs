@@ -12,7 +12,7 @@ use std::sync::Arc;
 use quickcheck::{Arbitrary, Gen};
 
 use crate::indentation::{DisplayIndented, Indentation};
-use crate::types::Type;
+use crate::types::{self, Type};
 
 
 /// A hardware block
@@ -118,6 +118,16 @@ impl Port {
     /// within the context of the module, at least at the top level.
     pub fn direction(&self) -> Direction {
         self.direction
+    }
+}
+
+impl types::Typed for Port {
+    type Err = Self;
+
+    type Type = Type;
+
+    fn r#type(&self) -> Result<Self::Type, Self::Err> {
+        Ok(self.r#type().clone())
     }
 }
 
