@@ -100,9 +100,68 @@ impl<R: 'static + TypedRef + Clone> Arbitrary for TypedExpr<R> {
                 Self {expr: sel.as_ref().clone(), r#type: types::GroundType::UInt(Some(1)).into()},
                 Self {expr: value.as_ref().clone(), r#type: self.r#type.clone()},
             ].into_iter()),
-            // TODO: try shrinking primitive operations
+            Expression::PrimitiveOp(op) => {
+                use types::TypeExt;
+
+                let res = self
+                    .r#type
+                    .ground_type()
+                    .map(|g| shrink_primitive_op(op, g))
+                    .unwrap_or_default()
+                    .into_iter();
+                Box::new(res)
+            },
             _ => Box::new(std::iter::empty()),
         }
+    }
+}
+
+
+fn shrink_primitive_op<R: TypedRef + Clone>(
+    op: &primitive::Operation<R>,
+    r#type: types::GroundType,
+) -> Vec<TypedExpr<R>> {
+    use primitive::Operation as PO;
+
+    let with_width = |e: &Arc<Expression<R>>, w| TypedExpr {
+        expr: e.as_ref().clone(),
+        r#type: r#type.with_width(w).into()
+    };
+    let uint = |e: &Arc<Expression<R>>| TypedExpr {
+        expr: e.as_ref().clone(),
+        r#type: types::GroundType::UInt(None).into()
+    };
+    let fixed = |e: &Arc<Expression<R>>| TypedExpr {
+        expr: e.as_ref().clone(),
+        r#type: types::GroundType::Fixed(None, None).into()
+    };
+
+    match op {
+        PO::Add(l, r)           => vec![with_width(l, None), with_width(r, None)],
+        PO::Sub(l, r)           => vec![with_width(l, None), with_width(r, None)],
+        PO::Mul(l, r)           => vec![with_width(l, None), with_width(r, None)],
+        PO::Div(l, r)           => vec![with_width(l, None), with_width(r, None)],
+        PO::Rem(l, r)           => vec![with_width(l, None), with_width(r, None)],
+        // Comparisions mask operand types
+        PO::Pad(e, _)           => vec![with_width(e, None)],
+        // For casts, we only know the target type
+        PO::Shl(e, b)           => vec![with_width(e, r#type.width().and_then(|w| w.checked_sub(b.get())))],
+        PO::Shr(e, _)           => vec![with_width(e, None)],
+        PO::DShl(e, b)          => vec![with_width(e, None), uint(b)],
+        PO::DShr(e, b)          => vec![with_width(e, None), uint(b)],
+        // Cvt operand can be SInt or UInt
+        PO::Neg(e)              => vec![with_width(e, r#type.width().and_then(|w| w.checked_sub(1)))],
+        // Not operand can be SInt or UInt
+        PO::And(l, r)           => vec![with_width(l, None), with_width(r, None)],
+        PO::Or(l, r)            => vec![with_width(l, None), with_width(r, None)],
+        PO::Xor(l, r)           => vec![with_width(l, None), with_width(r, None)],
+        // Reduction op operand can be SInt or UInt
+        PO::Cat(l, r)           => vec![with_width(l, None), with_width(r, None)],
+        PO::Bits(e, _, _)       => vec![with_width(e, None)],
+        PO::IncPrecision(e, _)  => vec![fixed(e)],
+        PO::DecPrecision(e, _)  => vec![fixed(e)],
+        PO::SetPrecision(e, _)  => vec![fixed(e)],
+        _ => Default::default(),
     }
 }
 
