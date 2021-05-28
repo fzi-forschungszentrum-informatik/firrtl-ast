@@ -24,19 +24,6 @@ fn parse_expr(original: Expression<Identifier>) -> Result<Equivalence<Expression
 
 
 #[quickcheck]
-fn parse_primitive_op(
-    original: primitive::Operation<Identifier>
-) -> Result<Equivalence<primitive::Operation<Identifier>>, String> {
-    let s = original.to_string();
-    let res = all_consuming(|i| parsers::primitive_op(|s| Some(s.into()), i))(&s)
-        .finish()
-        .map(|(_, parsed)| Equivalence::of(original, parsed))
-        .map_err(|e| e.to_string());
-    res
-}
-
-
-#[quickcheck]
 fn expr_typing(expr: TypedExpr<Entity>) -> Result<bool, String> {
     use types::Typed;
 
