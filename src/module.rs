@@ -146,13 +146,22 @@ impl Arbitrary for Port {
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
-        use crate::tests::Identifier;
-
-        let r#type = self.r#type.clone();
-        let direction = self.direction;
-        let res = std::iter::once(self.name().into())
-            .chain(Identifier::from(self.name()).shrink())
-            .flat_map(move |n| r#type.shrink().map(move |t| Self::new(n.to_string(), t, direction)));
+        let d = self.direction;
+        let res = crate::tests::Identifier::from(self.name())
+            .shrink()
+            .map({
+                let t = self.r#type.clone();
+                move |n| Self::new(n.to_string(), t.clone(), d)
+            })
+            .chain({
+                let n = self.name.clone();
+                self.r#type().shrink().map(move |t| Self::new(n.clone(), t, d))
+            })
+            .chain({
+                let n = self.name.clone();
+                let t = self.r#type().clone();
+                self.direction.shrink().map(move |d| Self::new(n.clone(), t.clone(), d))
+            });
         Box::new(res)
     }
 }
