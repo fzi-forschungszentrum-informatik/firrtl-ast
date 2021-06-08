@@ -9,9 +9,6 @@ mod tests;
 use std::fmt;
 use std::sync::Arc;
 
-#[cfg(test)]
-use quickcheck::{Arbitrary, Gen};
-
 use crate::types;
 use types::Typed;
 
@@ -99,36 +96,6 @@ impl<R: Reference> fmt::Display for Expression<R> {
             Self::Mux{sel, a, b}            => write!(f, "mux({}, {}, {})", sel, a, b),
             Self::ValidIf{sel, value}       => write!(f, "validif({}, {})", sel, value),
             Self::PrimitiveOp(op)           => fmt::Display::fmt(op, f),
-        }
-    }
-}
-
-#[cfg(test)]
-impl<R: 'static + tests::TypedRef + Clone> Arbitrary for Expression<R> {
-    fn arbitrary(g: &mut Gen) -> Self {
-        tests::expr_with_type(types::Type::arbitrary(&mut Gen::new(g.size() / 10)), g)
-    }
-
-    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
-        use std::iter::once;
-
-        let from_vec = |v: Vec<Arc<Self>>| Box::new(
-            v.into_iter()
-                .flat_map(|i| once(i.clone()).chain(i.shrink().map(Arc::new)))
-                .map(|e| e.as_ref().clone())
-        );
-        let from_single = |e: &Arc<Self>| Box::new(
-            once(e.clone()).chain(e.shrink().map(Arc::new)).map(|e| e.as_ref().clone())
-        );
-
-        match self {
-            Self::SubField{base, ..}        => from_single(base),
-            Self::SubIndex{base, ..}        => from_single(base),
-            Self::SubAccess{base, index}    => from_vec(vec![base.clone(), index.clone()]),
-            Self::Mux{sel, a, b}            => from_vec(vec![sel.clone(), a.clone(), b.clone()]),
-            Self::ValidIf{sel, value}       => from_vec(vec![sel.clone(), value.clone()]),
-            Self::PrimitiveOp(op)           => from_vec(op.sub_exprs()),
-            _                               => Box::new(std::iter::empty()),
         }
     }
 }

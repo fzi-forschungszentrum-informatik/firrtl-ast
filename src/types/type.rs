@@ -178,19 +178,24 @@ impl Arbitrary for Type {
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        use std::iter::once;
+
         match self {
             Self::GroundType(g) => Box::new(g.shrink().map(Self::GroundType)),
             Self::Vector(t, w) => {
-                use std::iter::once;
-                let w = *w;
-                let res = once(t.clone())
-                    .chain(t.shrink())
-                    .flat_map(move |t| w.shrink().map(move |w| Self::Vector(t.clone(), w)));
-                Box::new(res)
+                let t = t.clone();
+                Box::new(once(t.as_ref().clone()).chain(w.shrink().map(move |w| Self::Vector(t.clone(), w))))
             },
-            Self::Bundle(v) => Box::new(
-                v.to_vec().shrink().filter(move |v| !v.is_empty()).map(Into::into).map(Self::Bundle)
-            )
+            Self::Bundle(v) => {
+                let res = v
+                    .to_vec()
+                    .shrink()
+                    .filter(move |v| !v.is_empty())
+                    .map(Into::into)
+                    .map(Self::Bundle)
+                    .chain(v.to_vec().into_iter().map(|f| f.r#type().clone()));
+                Box::new(res)
+            }
         }
     }
 }

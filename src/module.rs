@@ -71,16 +71,16 @@ impl Arbitrary for Module {
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
-        use crate::tests::Identifier;
-
-        let name: Identifier = self.name().into();
-        let ports = self.ports.clone();
-        let res = std::iter::once(name.clone())
-            .chain(name.shrink())
-            .flat_map(move |n| ports
-                .shrink()
-                .map(move |p| Module::new(n.clone().into(), p.into_iter().map(|p| p.as_ref().clone())))
-            );
+        let p = self.ports.clone();
+        let res = crate::tests::Identifier::from(self.name())
+            .shrink()
+            .map(move |n| Self::new(n.into(), p.iter().map(|p| p.as_ref().clone())))
+            .chain({
+                let n = self.name.clone();
+                self.ports
+                    .shrink()
+                    .map(move |p| Self::new(n.clone(), p.into_iter().map(|p| p.as_ref().clone())))
+            });
         Box::new(res)
     }
 }
@@ -146,13 +146,22 @@ impl Arbitrary for Port {
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
-        use crate::tests::Identifier;
-
-        let r#type = self.r#type.clone();
-        let direction = self.direction;
-        let res = std::iter::once(self.name().into())
-            .chain(Identifier::from(self.name()).shrink())
-            .flat_map(move |n| r#type.shrink().map(move |t| Self::new(n.to_string(), t, direction)));
+        let d = self.direction;
+        let res = crate::tests::Identifier::from(self.name())
+            .shrink()
+            .map({
+                let t = self.r#type.clone();
+                move |n| Self::new(n.to_string(), t.clone(), d)
+            })
+            .chain({
+                let n = self.name.clone();
+                self.r#type().shrink().map(move |t| Self::new(n.clone(), t, d))
+            })
+            .chain({
+                let n = self.name.clone();
+                let t = self.r#type().clone();
+                self.direction.shrink().map(move |d| Self::new(n.clone(), t.clone(), d))
+            });
         Box::new(res)
     }
 }
