@@ -182,6 +182,10 @@ impl super::Reference for Entity {
     fn name(&self) -> &str {
         self.name.name()
     }
+
+    fn flow(&self) -> super::Flow {
+        self.name.flow()
+    }
 }
 
 

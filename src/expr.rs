@@ -39,6 +39,25 @@ pub enum Expression<R: Reference> {
     PrimitiveOp(primitive::Operation<R>),
 }
 
+impl<R> Expression<R>
+where Self: Typed<Type = types::Type, Err = Expression<R>> + Clone,
+      R: Reference,
+{
+    /// Determine the flow of this expression
+    pub fn flow(&self) -> Result<Flow, <Self as types::Typed>::Err> {
+        match self {
+            Self::Reference(reference)  => Ok(reference.flow()),
+            Self::SubField{base, index} => base.flow().and_then(|f| base
+                .r#type()
+                .and_then(|b| b.field(index.as_ref()).map(|b| f + b.orientation()).ok_or(self.clone()))
+            ),
+            Self::SubIndex{base, ..}    => base.flow(),
+            Self::SubAccess{base, ..}   => base.flow(),
+            _                           => Ok(Flow::Source),
+        }
+    }
+}
+
 impl<R: Reference> From<R> for Expression<R> {
     fn from(reference: R) -> Self {
         Self::Reference(reference)
@@ -105,12 +124,66 @@ impl<R: Reference> fmt::Display for Expression<R> {
 pub trait Reference {
     /// Retrieve the name of the referenced entity
     fn name(&self) -> &str;
+
+    /// Retrieve the flow associated with the referenced entity
+    fn flow(&self) -> Flow;
 }
 
 #[cfg(test)]
 impl Reference for Identifier {
     fn name(&self) -> &str {
         self.as_ref()
+    }
+
+    fn flow(&self) -> Flow {
+        Flow::Duplex
+    }
+}
+
+
+/// Possible data flow
+pub enum Flow {
+    Source,
+    Sink,
+    Duplex,
+}
+
+impl Flow {
+    /// Determine whether the flow allows an entity to serve as a source of data
+    ///
+    /// This function returns true if the flow is either `Source` or `Duplex`.
+    pub fn is_source(&self) -> bool {
+        match self {
+            Self::Source => true,
+            Self::Sink   => false,
+            Self::Duplex => true,
+        }
+    }
+
+    /// Determine whether the flow allows an entity to serve as a fink for data
+    ///
+    /// This function returns true if the flow is either `Sink` or `Duplex`.
+    pub fn is_sink(&self) -> bool {
+        match self {
+            Self::Source => false,
+            Self::Sink   => true,
+            Self::Duplex => true,
+        }
+    }
+}
+
+impl std::ops::Add<types::Orientation> for Flow {
+    type Output = Self;
+
+    fn add(self, rhs: types::Orientation) -> Self::Output {
+        use types::Orientation as O;
+
+        match (self, rhs) {
+            (v,            O::Normal ) => v,
+            (Self::Source, O::Flipped) => Self::Sink,
+            (Self::Sink,   O::Flipped) => Self::Source,
+            (Self::Duplex, O::Flipped) => Self::Duplex,
+        }
     }
 }
 
