@@ -139,6 +139,14 @@ impl From<Vec<BundleField>> for Type {
     }
 }
 
+impl std::iter::FromIterator<BundleField> for Type {
+    fn from_iter<T>(iter: T) -> Self
+        where T: IntoIterator<Item = BundleField>
+    {
+        Self::Bundle(iter.into_iter().collect())
+    }
+}
+
 #[cfg(test)]
 impl From<std::collections::HashMap<Arc<str>, BundleField>> for Type {
     fn from(v: std::collections::HashMap<Arc<str>, BundleField>) -> Self {
