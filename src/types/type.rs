@@ -218,9 +218,24 @@ pub struct BundleField {
 }
 
 impl BundleField {
-    /// Create a new field with the given name, type and orientation
-    pub fn new(name: impl Into<Arc<str>>, r#type: impl Into<Type>, orientation: Orientation) -> Self {
-        Self {name: name.into(), r#type: r#type.into(), orientation}
+    /// Create a new field with the given name and type
+    ///
+    /// The field will have default (i.e. normal) orientation.
+    pub fn new(name: impl Into<Arc<str>>, r#type: impl Into<Type>) -> Self {
+        Self {name: name.into(), r#type: r#type.into(), orientation: Default::default()}
+    }
+
+    /// Change the field orientation
+    pub fn with_orientation(self, orientation: Orientation) -> Self {
+        Self {orientation, ..self}
+    }
+
+    /// Flip the field orientation
+    ///
+    /// This function flips the field orientaiton. If the orientation is normal,
+    /// the returned field will be flipped and vice versa.
+    pub fn flipped(self) -> Self {
+        Self {orientation: self.orientation + Orientation::Flipped, ..self}
     }
 
     /// Retrieve the field's name
@@ -257,7 +272,7 @@ impl<C: Combinator<Type>> Combinator<BundleField> for C {
     ) -> Result<BundleField, (&'a BundleField, &'a BundleField)> {
         if lhs.name() == rhs.name() && lhs.orientation() == rhs.orientation() {
             <Self as Combinator<Type>>::combine(self, lhs.r#type(), rhs.r#type())
-                .map(|t| BundleField::new(lhs.name().clone(), t, rhs.orientation()))
+                .map(|t| BundleField::new(lhs.name().clone(), t).with_orientation(lhs.orientation()))
                 .map_err(|_| (lhs, rhs))
         } else {
             Err((lhs, rhs))
@@ -280,13 +295,13 @@ impl Arbitrary for BundleField {
     fn arbitrary(g: &mut Gen) -> Self {
         use crate::tests::Identifier;
 
-        Self::new(Identifier::arbitrary(g), Type::arbitrary(g), Arbitrary::arbitrary(g))
+        Self::new(Identifier::arbitrary(g), Type::arbitrary(g)).with_orientation(Arbitrary::arbitrary(g))
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         let n = self.name.clone();
         let o = self.orientation;
-        Box::new(self.r#type.shrink().map(move |t| Self::new(n.clone(), t, o)))
+        Box::new(self.r#type.shrink().map(move |t| Self::new(n.clone(), t).with_orientation(o)))
     }
 }
 
