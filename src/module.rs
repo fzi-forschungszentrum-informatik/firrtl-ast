@@ -89,15 +89,15 @@ impl Arbitrary for Module {
 /// An I/O port of a module
 #[derive(Clone, Debug, PartialEq)]
 pub struct Port {
-    name: String,
+    name: Arc<str>,
     r#type: Type,
     direction: Direction,
 }
 
 impl Port {
     /// Create a new port
-    pub fn new(name: String, r#type: Type, direction: Direction) -> Self {
-        Self {name, r#type, direction}
+    pub fn new(name: impl Into<Arc<str>>, r#type: Type, direction: Direction) -> Self {
+        Self {name: name.into(), r#type, direction}
     }
 
     /// Retrieve the I/O port's name
