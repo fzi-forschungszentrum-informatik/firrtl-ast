@@ -219,8 +219,8 @@ pub struct BundleField {
 
 impl BundleField {
     /// Create a new field with the given name, type and orientation
-    pub fn new(name: Arc<str>, r#type: Type, orientation: Orientation) -> Self {
-        Self {name, r#type, orientation}
+    pub fn new(name: impl Into<Arc<str>>, r#type: impl Into<Type>, orientation: Orientation) -> Self {
+        Self {name: name.into(), r#type: r#type.into(), orientation}
     }
 
     /// Retrieve the field's name
@@ -280,7 +280,7 @@ impl Arbitrary for BundleField {
     fn arbitrary(g: &mut Gen) -> Self {
         use crate::tests::Identifier;
 
-        Self::new(Identifier::arbitrary(g).into(), Arbitrary::arbitrary(g), Arbitrary::arbitrary(g))
+        Self::new(Identifier::arbitrary(g), Type::arbitrary(g), Arbitrary::arbitrary(g))
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
