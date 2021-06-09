@@ -2,6 +2,7 @@
 
 use std::sync::Arc;
 
+use crate::expr;
 use crate::types;
 
 
@@ -93,6 +94,16 @@ impl Memory {
     /// Retrieve the read-under-write behaviour
     pub fn read_under_write(&self) -> ReadUnderWrite {
         self.read_under_write
+    }
+}
+
+impl expr::Reference for Memory {
+    fn name(&self) -> &str {
+        self.name.as_ref()
+    }
+
+    fn flow(&self) -> expr::Flow {
+        expr::Flow::Source
     }
 }
 
