@@ -225,6 +225,11 @@ impl BundleField {
         Self {name: name.into(), r#type: r#type.into(), orientation: Default::default()}
     }
 
+    /// Change the field type
+    pub fn with_type(self, r#type: impl Into<Type>) -> Self {
+        Self {r#type: r#type.into(), ..self}
+    }
+
     /// Change the field orientation
     pub fn with_orientation(self, orientation: Orientation) -> Self {
         Self {orientation, ..self}
