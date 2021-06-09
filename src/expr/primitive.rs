@@ -175,7 +175,7 @@ impl<R> types::Typed for Operation<R>
             },
             Self::Div(lhs, ..)              => ground(lhs).and_then(|t| match t {
                 GT::UInt(w) => Ok(GT::UInt(w)),
-                GT::SInt(w) => Ok(GT::SInt(w.map(|w| w + 1))),
+                GT::SInt(w) => Ok(GT::SInt(w.and_then(|w| w.checked_add(1)))),
                 _ => Err(self.clone().into()),
             }),
             Self::Rem(lhs, rhs)             => FnWidth::from(min).combine(&ground(lhs)?, &ground(rhs)?)
