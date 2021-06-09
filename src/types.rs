@@ -73,3 +73,15 @@ pub trait Typed: Sized {
     fn r#type(&self) -> Result<Self::Type, Self::Err>;
 }
 
+
+/// Compute the width necessary to address the given number of elements
+pub fn required_address_width(num: impl Into<u128>) -> u16 {
+    let mut res = 0;
+    let mut num = num.into().saturating_sub(1);
+    while num > 0 {
+        num = num >> 1;
+        res = res + 1;
+    }
+    res
+}
+
