@@ -107,6 +107,61 @@ impl expr::Reference for Memory {
     }
 }
 
+impl types::Typed for Memory {
+    type Err = Self;
+
+    type Type = types::Type;
+
+    fn r#type(&self) -> Result<Self::Type, Self::Err> {
+        use types::{BundleField as Field, GroundType as GT, Type, required_address_width};
+
+        let addr_field  = Field::new("addr", GT::UInt(Some(required_address_width(self.depth()))));
+        let en_field    = Field::new("en", GT::UInt(Some(1)));
+        let clk_field   = Field::new("clk", GT::Clock);
+
+        fn mask(t: &Type) -> Type {
+            match t {
+                Type::GroundType(_) => GT::UInt(Some(1)).into(),
+                Type::Vector(v, w)  => Type::Vector(Arc::new(mask(v)), *w),
+                Type::Bundle(v)     => v.iter().map(|f| f.clone().with_type(mask(f.r#type()))).collect(),
+            }
+        }
+
+        let mask = mask(&self.data_type());
+
+        let port_type = |kind| match kind {
+            PortKind::Read      => vec![
+                Field::new("data", self.data_type().clone()).flipped(),
+                addr_field.clone(),
+                en_field.clone(),
+                clk_field.clone(),
+            ],
+            PortKind::Write     => vec![
+                Field::new("data", self.data_type().clone()),
+                Field::new("mask", mask.clone()),
+                addr_field.clone(),
+                en_field.clone(),
+                clk_field.clone(),
+            ],
+            PortKind::ReadWrite => vec![
+                Field::new("wmode", GT::UInt(Some(1))),
+                Field::new("rdata", self.data_type().clone()).flipped(),
+                Field::new("wdata", self.data_type().clone()),
+                Field::new("wmask", mask.clone()),
+                addr_field.clone(),
+                en_field.clone(),
+                clk_field.clone(),
+            ],
+        };
+
+        let bundle = self
+            .ports()
+            .map(|p| Field::new(p.name.clone(), port_type(p.kind)).flipped())
+            .collect();
+        Ok(bundle)
+    }
+}
+
 
 /// Depth of a memory
 type Depth = u64;
