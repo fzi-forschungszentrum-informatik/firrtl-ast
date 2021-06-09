@@ -63,7 +63,7 @@ impl<R: 'static + TypedRef + Clone> Arbitrary for TypedExpr<R> {
         match &self.expr {
             Expression::SubField{base, index} => {
                 let r#type = vec![
-                    types::BundleField::new(index.clone(), self.r#type.clone(), Default::default())
+                    types::BundleField::new(index.clone(), self.r#type.clone())
                 ].into();
                 Box::new(once(Self { expr: base.as_ref().clone(), r#type}))
             },
@@ -426,7 +426,7 @@ where R: TypedRef,
 /// Generate a bundle type with a field constructed from the given type and name
 fn bundle_with_field(r#type: types::Type, name: Arc<str>, g: &mut Gen) -> types::Type {
     let mut fields = types::bundle_fields(u8::arbitrary(g) as usize, g);
-    let field = types::BundleField::new(name.clone(), r#type, Arbitrary::arbitrary(g));
+    let field = types::BundleField::new(name.clone(), r#type).with_orientation(Arbitrary::arbitrary(g));
     fields.insert(name, field);
     fields.into()
 }
