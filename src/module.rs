@@ -11,6 +11,7 @@ use std::sync::Arc;
 #[cfg(test)]
 use quickcheck::{Arbitrary, Gen};
 
+use crate::expr;
 use crate::indentation::{DisplayIndented, Indentation};
 use crate::types::{self, Type};
 
@@ -89,15 +90,15 @@ impl Arbitrary for Module {
 /// An I/O port of a module
 #[derive(Clone, Debug, PartialEq)]
 pub struct Port {
-    name: String,
+    name: Arc<str>,
     r#type: Type,
     direction: Direction,
 }
 
 impl Port {
     /// Create a new port
-    pub fn new(name: String, r#type: Type, direction: Direction) -> Self {
-        Self {name, r#type, direction}
+    pub fn new(name: impl Into<Arc<str>>, r#type: Type, direction: Direction) -> Self {
+        Self {name: name.into(), r#type, direction}
     }
 
     /// Retrieve the I/O port's name
@@ -194,6 +195,62 @@ impl fmt::Display for Direction {
 impl Arbitrary for Direction {
     fn arbitrary(g: &mut Gen) -> Self {
         *g.choose(&[Self::Input, Self::Output]).unwrap()
+    }
+}
+
+
+/// Representation of a module instance
+///
+#[derive(Clone, Debug, PartialEq)]
+pub struct ModuleInstance {
+    name: Arc<str>,
+    module: Arc<Module>,
+}
+
+impl ModuleInstance {
+    /// Create a new module instance
+    ///
+    pub fn new(name: impl Into<Arc<str>>, module: Arc<Module>) -> Self {
+        Self {name: name.into(), module}
+    }
+
+    /// Retrieve the instantiated module
+    ///
+    pub fn module(&self) -> &Arc<Module> {
+        &self.module
+    }
+}
+
+impl expr::Reference for ModuleInstance {
+    fn name(&self) -> &str {
+        self.name.as_ref()
+    }
+
+    fn flow(&self) -> expr::Flow {
+        expr::Flow::Source
+    }
+}
+
+impl types::Typed for ModuleInstance {
+    type Err = Self;
+
+    type Type = Type;
+
+    fn r#type(&self) -> Result<Self::Type, Self::Err> {
+        use types::{BundleField, Orientation};
+
+        fn orientation(dir: Direction) -> Orientation {
+            match dir {
+                Direction::Input  => Orientation::Flipped,
+                Direction::Output => Orientation::Normal,
+            }
+        }
+
+        let res = self.module.ports().map(|p| BundleField::new(p.name.clone(), p.r#type().clone())
+            .with_orientation(orientation(p.direction()))
+        ).collect();
+
+        Ok(res)
     }
 }
 

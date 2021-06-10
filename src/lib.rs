@@ -21,6 +21,6 @@ extern crate quickcheck_macros;
 pub use circuit::Circuit;
 pub use circuit::parsers::circuit as parse;
 pub use expr::Expression;
-pub use module::{Direction, Module, Port};
+pub use module::{Direction, Module, ModuleInstance, Port};
 pub use types::{GroundType, Orientation, OrientedType, Type, TypeExt};
 
