@@ -47,3 +47,20 @@ impl expr::Reference for Arc<Entity> {
     }
 }
 
+impl types::Typed for Arc<Entity> {
+    type Err = Self;
+
+    type Type = types::Type;
+
+    fn r#type(&self) -> Result<Self::Type, Self::Err> {
+        match self.as_ref() {
+            Entity::Port(port)          => Ok(port.r#type().clone()),
+            Entity::Wire{r#type, ..}    => Ok(r#type.clone()),
+            Entity::Register(reg)       => reg.r#type().map_err(|_| self.clone()),
+            Entity::Node{value, ..}     => value.r#type().map_err(|_| self.clone()),
+            Entity::Memory(mem)         => mem.r#type().map_err(|_| self.clone()),
+            Entity::Instance(inst)      => inst.r#type().map_err(|_| self.clone()),
+        }
+    }
+}
+
