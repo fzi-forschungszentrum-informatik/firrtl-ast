@@ -202,12 +202,12 @@ impl Arbitrary for Direction {
 /// Representation of a module instance
 ///
 #[derive(Clone, Debug, PartialEq)]
-pub struct ModuleInstance {
+pub struct Instance {
     name: Arc<str>,
     module: Arc<Module>,
 }
 
-impl ModuleInstance {
+impl Instance {
     /// Create a new module instance
     ///
     pub fn new(name: impl Into<Arc<str>>, module: Arc<Module>) -> Self {
@@ -221,7 +221,7 @@ impl ModuleInstance {
     }
 }
 
-impl expr::Reference for ModuleInstance {
+impl expr::Reference for Instance {
     fn name(&self) -> &str {
         self.name.as_ref()
     }
@@ -231,7 +231,7 @@ impl expr::Reference for ModuleInstance {
     }
 }
 
-impl types::Typed for ModuleInstance {
+impl types::Typed for Instance {
     type Err = Self;
 
     type Type = Type;
