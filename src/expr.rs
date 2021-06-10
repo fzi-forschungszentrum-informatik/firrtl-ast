@@ -1,7 +1,7 @@
 //! Datatypes and utilities specific to expressions
 
 pub(crate) mod parsers;
-mod primitive;
+pub mod primitive;
 
 #[cfg(test)]
 mod tests;
