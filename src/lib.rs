@@ -5,10 +5,10 @@
 
 mod circuit;
 mod expr;
+mod indentation;
 mod module;
 mod parsers;
 mod types;
-mod indentation;
 
 #[cfg(test)]
 mod tests;
