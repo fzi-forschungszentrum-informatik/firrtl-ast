@@ -10,6 +10,7 @@ pub mod circuit;
 pub mod expr;
 pub mod memory;
 pub mod module;
+pub mod register;
 pub mod types;
 
 #[cfg(test)]
@@ -25,5 +26,6 @@ pub use circuit::parsers::circuit as parse;
 pub use expr::Expression;
 pub use memory::Memory;
 pub use module::Module;
+pub use register::Register;
 pub use types::{GroundType, Type};
 
