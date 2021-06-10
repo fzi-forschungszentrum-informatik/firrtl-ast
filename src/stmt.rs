@@ -9,6 +9,21 @@ use crate::module;
 use crate::types;
 
 
+/// FIRRTL statement
+#[derive(Clone, Debug, PartialEq)]
+pub enum Statement {
+    Connection{from: Expression, to: Expression},
+    PartialConnection{from: Expression, to: Expression},
+    Empty,
+    Declaration(Arc<Entity>),
+    Invalidate(Expression),
+    Attach(Vec<Expression>),
+    Conditional{cond: Expression, when: Arc<[Self]>, r#else: Arc<[Self]>},
+    Stop{clock: Expression, cond: Expression, code: i64},
+    Print{clock: Expression, cond: Expression, msg: Vec<PrintElement>},
+}
+
+
 /// Expression type suitable for statements
 type Expression = expr::Expression<Arc<Entity>>;
 
@@ -104,4 +119,17 @@ impl types::Typed for Arc<Entity> {
         }
     }
 }
+
+
+/// An element in a print statement
+#[derive(Clone, Debug, PartialEq)]
+pub enum PrintElement {
+    Literal(String),
+    Value(Expression, Format),
+}
+
+
+/// Foramt specifier for print statements
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum Format {Binary, Decimal, Hexadecimal}
 
