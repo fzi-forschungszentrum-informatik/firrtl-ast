@@ -33,7 +33,7 @@ fn expr_typing(expr: TypedExpr<Entity>) -> Result<bool, String> {
     expr.expr
         .r#type()
         .map_err(|e| format!("{:?}", e))
-        .map(|t| crate::TypeExt::eq(&expr.r#type, &t))
+        .map(|t| types::TypeExt::eq(&expr.r#type, &t))
 }
 
 

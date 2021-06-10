@@ -1,6 +1,6 @@
 //! Module specific definitions and functions
 
-pub mod parsers;
+pub(crate) mod parsers;
 
 #[cfg(test)]
 mod tests;
