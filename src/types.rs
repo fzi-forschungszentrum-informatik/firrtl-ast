@@ -1,7 +1,7 @@
 //! Types
 
 pub mod combinator;
-pub mod parsers;
+pub(crate) mod parsers;
 
 mod display;
 mod ground;
