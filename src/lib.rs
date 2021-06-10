@@ -12,6 +12,7 @@ pub mod expr;
 pub mod memory;
 pub mod module;
 pub mod register;
+pub mod stmt;
 pub mod types;
 
 #[cfg(test)]
