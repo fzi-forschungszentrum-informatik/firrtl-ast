@@ -122,6 +122,19 @@ impl Port {
     }
 }
 
+impl expr::Reference for Port {
+    fn name(&self) -> &str {
+        self.name.as_ref()
+    }
+
+    fn flow(&self) -> expr::Flow {
+        match self.direction {
+            Direction::Input  => expr::Flow::Source,
+            Direction::Output => expr::Flow::Sink,
+        }
+    }
+}
+
 impl types::Typed for Port {
     type Err = Self;
 
