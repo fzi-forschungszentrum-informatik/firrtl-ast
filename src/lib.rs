@@ -3,14 +3,14 @@
 //! [FIRRTL](https://chisel-lang.org/firrtl/) is a simple register-transfer
 //! level HDL.
 
-mod circuit;
-mod expr;
 mod indentation;
-mod module;
 mod parsers;
-mod types;
 
+pub mod circuit;
+pub mod expr;
 pub mod memory;
+pub mod module;
+pub mod types;
 
 #[cfg(test)]
 mod tests;
