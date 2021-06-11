@@ -1,5 +1,6 @@
 //! Register type
 
+use std::fmt;
 use std::sync::Arc;
 
 use crate::expr;
@@ -77,6 +78,18 @@ impl<R: expr::Reference> types::Typed for Register<R> {
 
     fn r#type(&self) -> Result<Self::Type, Self::Err> {
         Ok(self.r#type.clone())
+    }
+}
+
+impl<R: expr::Reference> fmt::Display for Register<R> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use expr::Reference;
+
+        write!(f, "reg {}: {}, {}", self.name(), self.r#type, self.clock())?;
+        if let Some((sig, val)) = self.reset.as_ref() {
+            write!(f, " with: (reset => ({}, {}))", sig, val)?;
+        }
+        Ok(())
     }
 }
 
