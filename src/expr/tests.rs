@@ -43,7 +43,7 @@ fn expr_typing(expr: TypedExpr<Entity>) -> Result<bool, String> {
 /// type after generation. This struct, however, preserves that type, allowing
 /// additional checks.
 #[derive(Clone, Debug)]
-struct TypedExpr<R: TypedRef> {
+pub struct TypedExpr<R: TypedRef> {
     pub expr: Expression<R>,
     pub r#type: types::Type,
 }
