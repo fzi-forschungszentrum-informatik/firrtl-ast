@@ -131,7 +131,7 @@ impl<R> types::Typed for Operation<R>
         use types::{BitWidth, Combinator, GroundType as GT, TypeExt, combinator};
         use combinator::FnWidth;
 
-        let max_width = |l: BitWidth, r: BitWidth| FnWidth::from(max).combine_widths(l, r);
+        let max_width = |l: BitWidth, r: BitWidth| types::MaxWidth::combine_widths(l, r);
         let sum_width = |l: BitWidth, r: BitWidth| FnWidth::from(<u16 as std::ops::Add<u16>>::add)
             .combine_widths(l, r);
 
