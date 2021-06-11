@@ -9,6 +9,10 @@ use crate::module;
 use crate::types;
 
 
+/// Expression type suitable for statements
+type Expression = expr::Expression<Arc<Entity>>;
+
+
 /// Referencable entity
 ///
 /// FIRRTL defines several entities which may be referenced inside an
