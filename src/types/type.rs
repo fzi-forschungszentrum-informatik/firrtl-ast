@@ -175,7 +175,10 @@ impl Arbitrary for Type {
     fn arbitrary(g: &mut Gen) -> Self {
         let opts: [&dyn Fn(&mut Gen) -> Self; 3] = [
             &|g| Self::GroundType(Arbitrary::arbitrary(g)),
-            &|g| Self::Vector(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
+            &|g| Self::Vector(
+                Arbitrary::arbitrary(&mut Gen::new(g.size().saturating_sub(1))),
+                Arbitrary::arbitrary(g)
+            ),
             &|g| bundle_fields(u8::arbitrary(g).saturating_add(1) as usize, g).into(),
         ];
         if g.size() > 0 {
