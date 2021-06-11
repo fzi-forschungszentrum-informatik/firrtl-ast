@@ -262,3 +262,23 @@ impl fmt::Display for Instance {
     }
 }
 
+#[cfg(test)]
+impl Arbitrary for Instance {
+    fn arbitrary(g: &mut Gen) -> Self {
+        use crate::tests::Identifier;
+
+        Self::new(Identifier::arbitrary(g), Arbitrary::arbitrary(g))
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        let n = self.name.clone();
+        let m = self.module().clone();
+
+        let res = crate::tests::Identifier::from(n.as_ref())
+            .shrink()
+            .map(move |n| Self::new(n, m.clone()))
+            .chain(self.module().shrink().map(move |m| Self::new(n.clone(), m)));
+        Box::new(res)
+    }
+}
+
