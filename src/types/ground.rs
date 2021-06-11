@@ -160,6 +160,15 @@ impl MaxWidth {
     pub fn new() -> Self {
         Self {}
     }
+
+    /// Combine two widths
+    pub fn combine_widths(lhs: BitWidth, rhs: BitWidth) -> BitWidth {
+        if let (Some(l), Some(r)) = (lhs, rhs) {
+            Some(std::cmp::max(l, r))
+        } else {
+            None
+        }
+    }
 }
 
 impl Combinator<GroundType> for MaxWidth {
