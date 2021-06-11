@@ -39,6 +39,11 @@ impl<R: expr::Reference> Register<R> {
         Self {reset: Some((signal.into(), value.into())), ..self}
     }
 
+    /// Add a reset signal and value
+    pub fn with_optional_reset(self, reset: Option<(expr::Expression<R>, expr::Expression<R>)>) -> Self {
+        Self {reset, ..self}
+    }
+
     /// Remove any reset signal and value
     pub fn without_reset(self) -> Self {
         Self {reset: None, ..self}
