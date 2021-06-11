@@ -147,7 +147,7 @@ impl Arbitrary for GroundType {
 
 /// Maximum width Combinator
 ///
-/// Creating an `FnWidth` from `std::cmp::max` will yield a combinator which
+/// Creating an `FnWidth` using `std::cmp::max` will yield a combinator which
 /// selects the maximum width of the input `GroundType`s. However, it will yield
 /// an error for fixed types.
 ///
@@ -159,6 +159,15 @@ pub struct MaxWidth {}
 impl MaxWidth {
     pub fn new() -> Self {
         Self {}
+    }
+
+    /// Combine two widths
+    pub fn combine_widths(lhs: BitWidth, rhs: BitWidth) -> BitWidth {
+        if let (Some(l), Some(r)) = (lhs, rhs) {
+            Some(std::cmp::max(l, r))
+        } else {
+            None
+        }
     }
 }
 
@@ -177,7 +186,7 @@ impl Combinator<GroundType> for MaxWidth {
                 GT::Fixed(combine_fixed_max((*lw, *lp), (*rw, *rp)), Some(max(*lp, *rp)))
             ),
             (GT::Fixed(..), GT::Fixed(..)) => Ok(GT::Fixed(None, None)),
-            (l, r) => super::combinator::FnWidth::from(max).combine(l, r),
+            (l, r) => super::combinator::FnWidth::from(|l, r| Some(max(l, r))).combine(l, r),
         }
     }
 }

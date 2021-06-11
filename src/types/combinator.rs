@@ -22,25 +22,25 @@ pub trait Combinator<T> {
 /// This `Combinator` will return a width from two known widths computed via a
 /// given function. If one of the width is unknown, the `Combinator` yields an
 /// unknown width (i.e. `None`). It never yields an error.
-pub struct FnWidth<F: Fn(u16, u16) -> u16> {
+pub struct FnWidth<F: Fn(u16, u16) -> Option<u16>> {
     inner: F
 }
 
-impl<F: Fn(u16, u16) -> u16> FnWidth<F> {
+impl<F: Fn(u16, u16) -> Option<u16>> FnWidth<F> {
     /// Combine two widths
     ///
     /// This function performs the combination, but returns the result bare,
     /// i.e. not as a `Result`.
     pub fn combine_widths(&self, lhs: BitWidth, rhs: BitWidth) -> BitWidth {
         if let (Some(l), Some(r)) = (lhs, rhs) {
-            Some((self.inner)(l, r))
+            (self.inner)(l, r)
         } else {
             None
         }
     }
 }
 
-impl<F: Fn(u16, u16) -> u16> Combinator<BitWidth> for FnWidth<F> {
+impl<F: Fn(u16, u16) -> Option<u16>> Combinator<BitWidth> for FnWidth<F> {
     fn combine<'a>(
         &self,
         lhs: &'a BitWidth,
@@ -50,7 +50,7 @@ impl<F: Fn(u16, u16) -> u16> Combinator<BitWidth> for FnWidth<F> {
     }
 }
 
-impl<F: Fn(u16, u16) -> u16> From<F> for FnWidth<F> {
+impl<F: Fn(u16, u16) -> Option<u16>> From<F> for FnWidth<F> {
     fn from(inner: F) -> Self {
         Self {inner}
     }

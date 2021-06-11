@@ -131,8 +131,8 @@ impl<R> types::Typed for Operation<R>
         use types::{BitWidth, Combinator, GroundType as GT, TypeExt, combinator};
         use combinator::FnWidth;
 
-        let max_width = |l: BitWidth, r: BitWidth| FnWidth::from(max).combine_widths(l, r);
-        let sum_width = |l: BitWidth, r: BitWidth| FnWidth::from(<u16 as std::ops::Add<u16>>::add)
+        let max_width = |l: BitWidth, r: BitWidth| types::MaxWidth::combine_widths(l, r);
+        let sum_width = |l: BitWidth, r: BitWidth| FnWidth::from(u16::checked_add)
             .combine_widths(l, r);
 
         let ground = |e: &Arc<Expression<R>>| e
@@ -178,7 +178,8 @@ impl<R> types::Typed for Operation<R>
                 GT::SInt(w) => Ok(GT::SInt(w.and_then(|w| w.checked_add(1)))),
                 _ => Err(self.clone().into()),
             }),
-            Self::Rem(lhs, rhs)             => FnWidth::from(min).combine(&ground(lhs)?, &ground(rhs)?)
+            Self::Rem(lhs, rhs)             => FnWidth::from(|l, r| Some(min(l, r)))
+                .combine(&ground(lhs)?, &ground(rhs)?)
                 .map_err(|_| self.clone().into()),
             Self::Lt(..)                    => Ok(GT::UInt(Some(1))),
             Self::LEq(..)                   => Ok(GT::UInt(Some(1))),

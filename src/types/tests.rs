@@ -45,7 +45,7 @@ fn dummy_combine_self(t: Type) -> Result<Equivalence<Type>, (Type, Type)> {
 
 #[quickcheck]
 fn bitwidth_max_combine_self(width: BitWidth) -> Result<Equivalence<BitWidth>, (BitWidth, BitWidth)> {
-    combinator::FnWidth::from(std::cmp::max)
+    combinator::FnWidth::from(|l, r| Some(std::cmp::max(l, r)))
         .combine(&width, &width)
         .map_err(|(l, r)| (l.clone(), r.clone()))
         .map(|c| Equivalence::of(width, c))
@@ -54,7 +54,7 @@ fn bitwidth_max_combine_self(width: BitWidth) -> Result<Equivalence<BitWidth>, (
 
 #[quickcheck]
 fn bitwidth_min_combine_self(width: BitWidth) -> Result<Equivalence<BitWidth>, (BitWidth, BitWidth)> {
-    combinator::FnWidth::from(std::cmp::min)
+    combinator::FnWidth::from(|l, r| Some(std::cmp::min(l, r)))
         .combine(&width, &width)
         .map_err(|(l, r)| (l.clone(), r.clone()))
         .map(|c| Equivalence::of(width, c))
