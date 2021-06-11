@@ -3,6 +3,7 @@ image: sim-docker.fzi.de/sim_rust
 variables:
   CARGO_HOME: $CI_PROJECT_DIR/cache
   QUICKCHECK_TESTS: 1000
+  RUST_BACKTRACE: 1
 
 cache: &general_cache
   paths:
