@@ -254,3 +254,11 @@ impl types::Typed for Instance {
     }
 }
 
+impl fmt::Display for Instance {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use expr::Reference;
+
+        write!(f, "inst {} of {}", self.name(), self.module().name())
+    }
+}
+
