@@ -25,6 +25,18 @@ pub fn module<'i>(input: &'i str, indentation: &'_ mut Indentation) -> IResult<'
 }
 
 
+/// Parse a module instance
+pub fn instance<'i>(
+    module: impl Fn(&str) -> Option<std::sync::Arc<super::Module>>,
+    input: &'i str,
+) -> IResult<'i, super::Instance> {
+    nom::combinator::map_opt(
+        tuple((kw("inst"), spaced(identifier), spaced(kw("of")), spaced(identifier))),
+        |(_, inst_name, _, mod_name)| module(mod_name).map(|m| super::Instance::new(inst_name, m)),
+    )(input)
+}
+
+
 /// Parse the elements of a port
 pub fn port<'i>(input: &str) -> IResult<super::Port> {
     map(
