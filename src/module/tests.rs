@@ -6,7 +6,7 @@ use nom::combinator::all_consuming;
 use crate::indentation::{DisplayIndented, Indentation};
 use crate::tests::Equivalence;
 
-use super::{Direction, Module, Port, parsers};
+use super::{Direction, Instance, Module, Port, parsers};
 
 
 #[quickcheck]
@@ -15,6 +15,25 @@ fn parse_module(mut base: Indentation, original: Module) -> Result<Equivalence<M
     original.fmt(&mut base, &mut s).map_err(|e| e.to_string())?;
 
     let res = all_consuming(|i| parsers::module(i, &mut base))(&s)
+        .finish()
+        .map(|(_, parsed)| Equivalence::of(original, parsed))
+        .map_err(|e| e.to_string());
+    res
+}
+
+
+#[quickcheck]
+fn parse_instance(original: Instance) -> Result<Equivalence<Instance>, String> {
+    let s = original.to_string();
+
+    let m = original.module().clone();
+    let lookup = move |n: &str| if n == m.name() {
+        Some(m.clone())
+    } else {
+        None
+    };
+
+    let res = all_consuming(|i| parsers::instance(&lookup, i))(&s)
         .finish()
         .map(|(_, parsed)| Equivalence::of(original, parsed))
         .map_err(|e| e.to_string());
