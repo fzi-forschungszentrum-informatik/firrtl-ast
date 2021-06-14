@@ -5,9 +5,15 @@ pub(crate) mod parsers;
 use std::fmt;
 use std::sync::Arc;
 
+#[cfg(test)]
+use quickcheck::{Arbitrary, Gen};
+
 use crate::expr;
 use crate::indentation::{DisplayIndented, Indentation};
 use crate::types;
+
+#[cfg(test)]
+use crate::tests::Identifier;
 
 
 /// A FIRRTL memory
@@ -210,6 +216,24 @@ impl fmt::Display for Port {
     }
 }
 
+#[cfg(test)]
+impl Arbitrary for Port {
+    fn arbitrary(g: &mut Gen) -> Self {
+        Self {name: Identifier::arbitrary(g).into(), kind: Arbitrary::arbitrary(g)}
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        let res = Identifier::from(self.name.as_ref()).shrink().map({
+            let kind = self.kind;
+            move |n| Port {name: n.into(), kind}
+        }).chain(self.kind.shrink().map({
+            let n = self.name.clone();
+            move |kind| Port {name: n.clone(), kind}
+        }));
+        Box::new(res)
+    }
+}
+
 
 /// The "kind" of a port
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -229,6 +253,13 @@ impl PortKind {
 impl fmt::Display for PortKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(self.keyword(), f)
+    }
+}
+
+#[cfg(test)]
+impl Arbitrary for PortKind {
+    fn arbitrary(g: &mut Gen) -> Self {
+        g.choose(&[Self::Read, Self::Write, Self::ReadWrite]).unwrap().clone()
     }
 }
 
