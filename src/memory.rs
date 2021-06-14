@@ -2,6 +2,9 @@
 
 pub(crate) mod parsers;
 
+#[cfg(test)]
+mod tests;
+
 use std::fmt;
 use std::sync::Arc;
 
