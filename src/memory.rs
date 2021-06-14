@@ -61,6 +61,13 @@ impl Memory {
         self.ports.push(port)
     }
 
+    /// Add a number of ports
+    ///
+    /// This function appends a the given ports, in order, to the list of ports.
+    pub fn add_ports(&mut self, ports: impl IntoIterator<Item = Port>) {
+        self.ports.extend(ports);
+    }
+
     /// Retrieve the ports
     ///
     /// The returned iterator will yield the ports in the order they were added.
