@@ -298,3 +298,10 @@ impl fmt::Display for ReadUnderWrite {
     }
 }
 
+#[cfg(test)]
+impl Arbitrary for ReadUnderWrite {
+    fn arbitrary(g: &mut Gen) -> Self {
+        g.choose(&[Self::Old, Self::New, Self::Undefined]).unwrap().clone()
+    }
+}
+
