@@ -198,7 +198,7 @@ type Latency = u16;
 
 
 /// Port of a memory
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Port {
     pub name: Arc<str>,
     pub kind: PortKind,
@@ -212,7 +212,7 @@ impl fmt::Display for Port {
 
 
 /// The "kind" of a port
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum PortKind {Read, Write, ReadWrite}
 
 impl PortKind {
