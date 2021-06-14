@@ -219,9 +219,26 @@ pub enum ReadUnderWrite {
     Undefined,
 }
 
+impl ReadUnderWrite {
+    /// Retrieve the keyword associated with the read-under-write behaviour
+    pub fn keyword(&self) -> &'static str {
+        match self {
+            Self::Old       => "old",
+            Self::New       => "new",
+            Self::Undefined => "undefined",
+        }
+    }
+}
+
 impl Default for ReadUnderWrite {
     fn default() -> Self {
         Self::Undefined
+    }
+}
+
+impl fmt::Display for ReadUnderWrite {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self.keyword(), f)
     }
 }
 
