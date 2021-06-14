@@ -13,7 +13,7 @@ use crate::types;
 
 
 /// Representation of a FIRRTL register
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Register<R: expr::Reference> {
     name: Arc<str>,
     r#type: types::Type,
