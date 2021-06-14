@@ -1,5 +1,6 @@
 //! Memory component
 
+use std::fmt;
 use std::sync::Arc;
 
 use crate::expr;
@@ -178,10 +179,33 @@ pub struct Port {
     pub kind: PortKind,
 }
 
+impl fmt::Display for Port {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} => {}", self.kind, self.name)
+    }
+}
+
 
 /// The "kind" of a port
 #[derive(Copy, Clone, Debug)]
 pub enum PortKind {Read, Write, ReadWrite}
+
+impl PortKind {
+    /// Retrieve the keyword associated with the port kind
+    pub fn keyword(&self) -> &'static str {
+        match self {
+            Self::Read      => "reader",
+            Self::Write     => "writer",
+            Self::ReadWrite => "readwriter",
+        }
+    }
+}
+
+impl fmt::Display for PortKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self.keyword(), f)
+    }
+}
 
 
 /// Read-under-write behaviour
