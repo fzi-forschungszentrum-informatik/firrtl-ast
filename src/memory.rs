@@ -11,7 +11,7 @@ use crate::types;
 
 
 /// A FIRRTL memory
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Memory {
     name: Arc<str>,
     data_type: types::Type,
