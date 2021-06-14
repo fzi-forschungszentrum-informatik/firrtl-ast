@@ -1,5 +1,7 @@
 //! Memory component
 
+pub(crate) mod parsers;
+
 use std::fmt;
 use std::sync::Arc;
 
