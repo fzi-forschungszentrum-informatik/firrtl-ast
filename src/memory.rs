@@ -234,7 +234,7 @@ impl fmt::Display for PortKind {
 
 
 /// Read-under-write behaviour
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum ReadUnderWrite {
     /// The old value will be read
     Old,
