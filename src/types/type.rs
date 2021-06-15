@@ -156,16 +156,12 @@ impl From<std::collections::HashMap<Arc<str>, BundleField>> for Type {
 
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use crate::display::CommaSeparated;
+
         match self {
             Self::GroundType(g) => fmt::Display::fmt(g, f),
             Self::Vector(t, w)  => write!(f, "{}[{}]", t, w),
-            Self::Bundle(v)     => {
-                let mut fields = v.iter();
-                write!(f, "{{")?;
-                fields.next().map(|field| fmt::Display::fmt(&field, f)).transpose().map(|_| ())?;
-                fields.try_for_each(|field| write!(f, ", {}", field))?;
-                write!(f, "}}")
-            },
+            Self::Bundle(v)     => write!(f, "{{{}}}", CommaSeparated::from(v)),
         }
     }
 }
