@@ -1,5 +1,7 @@
 //! Types and utilities related to FIRRTL statements
 
+mod display;
+
 use std::sync::Arc;
 
 use crate::expr;
