@@ -2,12 +2,14 @@
 
 mod display;
 
+use std::fmt;
 use std::sync::Arc;
 
 use crate::expr;
+use crate::indentation::{DisplayIndented, Indentation};
 use crate::memory::Memory;
-use crate::register::Register;
 use crate::module;
+use crate::register::Register;
 use crate::types;
 
 
@@ -23,6 +25,50 @@ pub enum Statement {
     Conditional{cond: Expression, when: Arc<[Self]>, r#else: Arc<[Self]>},
     Stop{clock: Expression, cond: Expression, code: i64},
     Print{clock: Expression, cond: Expression, msg: Vec<PrintElement>},
+}
+
+impl DisplayIndented for Statement {
+    fn fmt<W: fmt::Write>(&self, indent: &mut Indentation, f: &mut W) -> fmt::Result {
+        use crate::display::CommaSeparated;
+
+        fn into_expr(elem: &PrintElement) -> Option<&Expression> {
+            if let PrintElement::Value(expr, _) = elem {
+                Some(expr)
+            } else {
+                None
+            }
+        }
+
+        match self {
+            Self::Connection{from, to}              => writeln!(f, "{}{} <= {}", indent.lock(), to, from),
+            Self::PartialConnection{from, to}       => writeln!(f, "{}{} <- {}", indent.lock(), to, from),
+            Self::Empty                             => writeln!(f, "{}skip", indent.lock()),
+            Self::Declaration(entity)               => display::Entity(entity).fmt(indent, f),
+            Self::Invalidate(expr)                  => writeln!(f, "{}{} is invalid", indent.lock(), expr),
+            Self::Attach(exprs)                     =>
+                writeln!(f, "{}attach({})", indent.lock(), CommaSeparated::from(exprs)),
+            Self::Conditional{cond, when, r#else}   => {
+                let indent = indent.lock();
+                writeln!(f, "{}when {}:", indent, cond)?;
+                display::StatementList(when.as_ref()).fmt(&mut indent.sub(), f)?;
+                if r#else.len() > 0 {
+                    writeln!(f, "{}else:", indent)?;
+                    display::StatementList(r#else.as_ref()).fmt(&mut indent.sub(), f)?;
+                }
+                Ok(())
+            },
+            Self::Stop{clock, cond, code}           =>
+                writeln!(f, "{}stop({}, {}, {})", indent.lock(), clock, cond, code),
+            Self::Print{clock, cond, msg}           => writeln!(f,
+                "{}printf({}, {}, {}, {})",
+                indent.lock(),
+                clock,
+                cond,
+                display::FormatString(msg.as_ref()),
+                CommaSeparated::from(msg.iter().filter_map(into_expr)),
+            ),
+        }
+    }
 }
 
 

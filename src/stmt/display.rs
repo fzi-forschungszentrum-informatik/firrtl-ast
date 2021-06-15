@@ -47,3 +47,17 @@ impl fmt::Display for FormatString<'_> {
     }
 }
 
+
+/// Utility for displaying a list of statements
+pub struct StatementList<'a>(pub &'a [super::Statement]);
+
+impl DisplayIndented for StatementList<'_> {
+    fn fmt<W: fmt::Write>(&self, indent: &mut Indentation, f: &mut W) -> fmt::Result {
+        if self.0.len() > 0 {
+            self.0.iter().try_for_each(|s| s.fmt(indent, f))
+        } else {
+            super::Statement::Empty.fmt(indent, f)
+        }
+    }
+}
+
