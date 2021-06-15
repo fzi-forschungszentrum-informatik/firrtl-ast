@@ -1,13 +1,26 @@
 //! Memory component
 
+pub(crate) mod parsers;
+
+#[cfg(test)]
+mod tests;
+
+use std::fmt;
 use std::sync::Arc;
 
+#[cfg(test)]
+use quickcheck::{Arbitrary, Gen};
+
 use crate::expr;
+use crate::indentation::{DisplayIndented, Indentation};
 use crate::types;
+
+#[cfg(test)]
+use crate::tests::Identifier;
 
 
 /// A FIRRTL memory
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Memory {
     name: Arc<str>,
     data_type: types::Type,
@@ -57,6 +70,13 @@ impl Memory {
     /// This function appends a the given port to the list of ports.
     pub fn add_port(&mut self, port: Port) {
         self.ports.push(port)
+    }
+
+    /// Add a number of ports
+    ///
+    /// This function appends a the given ports, in order, to the list of ports.
+    pub fn add_ports(&mut self, ports: impl IntoIterator<Item = Port>) {
+        self.ports.extend(ports);
     }
 
     /// Retrieve the ports
@@ -162,6 +182,92 @@ impl types::Typed for Memory {
     }
 }
 
+impl DisplayIndented for Memory {
+    fn fmt<W: fmt::Write>(&self, indentation: &mut Indentation, f: &mut W) -> fmt::Result {
+        use expr::Reference;
+
+        writeln!(f, "{}mem {}:", indentation.lock(), self.name())?;
+        let mut indentation = indentation.sub();
+        writeln!(f, "{}data-type => {}", indentation.lock(), self.data_type())?;
+        writeln!(f, "{}depth => {}", indentation.lock(), self.depth())?;
+        self.ports().try_for_each(|p| DisplayIndented::fmt(p, &mut indentation, f))?;
+        writeln!(f, "{}read-latency => {}", indentation.lock(), self.read_latency())?;
+        writeln!(f, "{}write-latency => {}", indentation.lock(), self.write_latency())?;
+        writeln!(f, "{}read-under-write => {}", indentation.lock(), self.read_under_write())
+    }
+}
+
+#[cfg(test)]
+impl Arbitrary for Memory {
+    fn arbitrary(g: &mut Gen) -> Self {
+        let mut res = Self::new(Identifier::arbitrary(g), types::Type::arbitrary(g), Arbitrary::arbitrary(g));
+        res.add_ports((0..u8::arbitrary(g)).map(|_| Arbitrary::arbitrary(g)));
+        res.with_read_latency(Arbitrary::arbitrary(g))
+            .with_write_latency(Arbitrary::arbitrary(g))
+            .with_read_under_write(Arbitrary::arbitrary(g))
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        let d = self.depth();
+        let rl = self.read_latency();
+        let wl = self.write_latency();
+        let ruw = self.read_under_write();
+
+        let res = Identifier::from(self.name.as_ref()).shrink().map({
+            let t = self.data_type().clone();
+            let p = self.ports.clone();
+            move |n| {
+                let mut res = Self::new(n, t.clone(), d);
+                res.add_ports(p.clone());
+                res.with_read_latency(rl)
+                    .with_write_latency(wl)
+                    .with_read_under_write(ruw)
+            }
+        }).chain(self.data_type().shrink().map({
+            let n = self.name.clone();
+            let p = self.ports.clone();
+            move |t| {
+                let mut res = Self::new(n.clone(), t, d);
+                res.add_ports(p.clone());
+                res.with_read_latency(rl)
+                    .with_write_latency(wl)
+                    .with_read_under_write(ruw)
+            }
+        })).chain(self.depth().shrink().map({
+            let n = self.name.clone();
+            let t = self.data_type().clone();
+            let p = self.ports.clone();
+            move |d| {
+                let mut res = Self::new(n.clone(), t.clone(), d);
+                res.add_ports(p.clone());
+                res.with_read_latency(rl)
+                    .with_write_latency(wl)
+                    .with_read_under_write(ruw)
+            }
+        })).chain(self.ports.shrink().map({
+            let n = self.name.clone();
+            let t = self.data_type().clone();
+            move |p| {
+                let mut res = Self::new(n.clone(), t.clone(), d);
+                res.add_ports(p);
+                res.with_read_latency(rl)
+                    .with_write_latency(wl)
+                    .with_read_under_write(ruw)
+            }
+        })).chain(self.read_latency().shrink().map({
+            let mem = self.clone();
+            move |l| mem.clone().with_read_latency(l)
+        })).chain(self.write_latency().shrink().map({
+            let mem = self.clone();
+            move |l| mem.clone().with_write_latency(l)
+        })).chain(self.read_under_write().shrink().map({
+            let mem = self.clone();
+            move |ruw| mem.clone().with_read_under_write(ruw)
+        }));
+        Box::new(res)
+    }
+}
+
 
 /// Depth of a memory
 type Depth = u64;
@@ -172,20 +278,68 @@ type Latency = u16;
 
 
 /// Port of a memory
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Port {
     pub name: Arc<str>,
     pub kind: PortKind,
 }
 
+impl fmt::Display for Port {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} => {}", self.kind, self.name)
+    }
+}
+
+#[cfg(test)]
+impl Arbitrary for Port {
+    fn arbitrary(g: &mut Gen) -> Self {
+        Self {name: Identifier::arbitrary(g).into(), kind: Arbitrary::arbitrary(g)}
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        let res = Identifier::from(self.name.as_ref()).shrink().map({
+            let kind = self.kind;
+            move |n| Port {name: n.into(), kind}
+        }).chain(self.kind.shrink().map({
+            let n = self.name.clone();
+            move |kind| Port {name: n.clone(), kind}
+        }));
+        Box::new(res)
+    }
+}
+
 
 /// The "kind" of a port
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum PortKind {Read, Write, ReadWrite}
+
+impl PortKind {
+    /// Retrieve the keyword associated with the port kind
+    pub fn keyword(&self) -> &'static str {
+        match self {
+            Self::Read      => "reader",
+            Self::Write     => "writer",
+            Self::ReadWrite => "readwriter",
+        }
+    }
+}
+
+impl fmt::Display for PortKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self.keyword(), f)
+    }
+}
+
+#[cfg(test)]
+impl Arbitrary for PortKind {
+    fn arbitrary(g: &mut Gen) -> Self {
+        g.choose(&[Self::Read, Self::Write, Self::ReadWrite]).unwrap().clone()
+    }
+}
 
 
 /// Read-under-write behaviour
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum ReadUnderWrite {
     /// The old value will be read
     Old,
@@ -195,9 +349,33 @@ pub enum ReadUnderWrite {
     Undefined,
 }
 
+impl ReadUnderWrite {
+    /// Retrieve the keyword associated with the read-under-write behaviour
+    pub fn keyword(&self) -> &'static str {
+        match self {
+            Self::Old       => "old",
+            Self::New       => "new",
+            Self::Undefined => "undefined",
+        }
+    }
+}
+
 impl Default for ReadUnderWrite {
     fn default() -> Self {
         Self::Undefined
+    }
+}
+
+impl fmt::Display for ReadUnderWrite {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self.keyword(), f)
+    }
+}
+
+#[cfg(test)]
+impl Arbitrary for ReadUnderWrite {
+    fn arbitrary(g: &mut Gen) -> Self {
+        g.choose(&[Self::Old, Self::New, Self::Undefined]).unwrap().clone()
     }
 }
 
