@@ -88,6 +88,11 @@ impl Indentation {
     pub fn parser(&mut self) -> IndentationParser {
         IndentationParser{inner: self}
     }
+
+    /// Convert this indentation into an owning parser
+    pub fn into_parser(self) -> OwningParser {
+        self.into()
+    }
 }
 
 impl Default for Indentation {
@@ -164,6 +169,30 @@ impl<'i> nom::Parser<&'i str, (), parsers::Error<'i>> for IndentationParser<'_> 
            _ => return Err(nom::Err::Error(parsers::Error::from_error_kind(input, nom::error::ErrorKind::Many1Count))),
         };
         Ok((rest, ()))
+    }
+}
+
+
+/// Owning indentation parser
+///
+/// This parser wraps an `Indentation`, which it owns. It consumes sequences of
+/// space characters. A sequence is only accepted if the length-requirement
+/// represented by the wrapped `Indentation` is met. The parser yields a copy
+/// of the updated `Indentation`.
+#[derive(Clone)]
+pub struct OwningParser {
+    inner: Indentation,
+}
+
+impl From<Indentation> for OwningParser {
+    fn from(inner: Indentation) -> Self {
+        Self {inner}
+    }
+}
+
+impl<'i> nom::Parser<&'i str, Indentation, parsers::Error<'i>> for OwningParser {
+    fn parse(&mut self, input: &'i str) -> parsers::IResult<'i, Indentation> {
+        self.inner.parser().parse(input).map(|(input, _)| (input, self.inner.clone()))
     }
 }
 
