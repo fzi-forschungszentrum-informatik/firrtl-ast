@@ -1,6 +1,6 @@
 //! Types and utilities related to FIRRTL statements
 
-mod display;
+pub(crate) mod display;
 
 use std::fmt;
 use std::sync::Arc;
