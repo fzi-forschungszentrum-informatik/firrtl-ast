@@ -3,6 +3,7 @@
 //! [FIRRTL](https://chisel-lang.org/firrtl/) is a simple register-transfer
 //! level HDL.
 
+mod display;
 mod indentation;
 mod parsers;
 
