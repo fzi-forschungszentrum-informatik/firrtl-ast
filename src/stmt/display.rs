@@ -22,3 +22,28 @@ impl DisplayIndented for Entity<'_> {
     }
 }
 
+
+/// Utility for rendering a format string
+pub struct FormatString<'a>(pub &'a [super::PrintElement]);
+
+impl fmt::Display for FormatString<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use super::PrintElement as P;
+        use super::Format as F;
+
+        write!(f, "\"")?;
+        for element in self.0 {
+            match element {
+                P::Literal(s)               => s.chars().try_for_each(|c| match c {
+                    '%' => write!(f, "%%"),
+                    c   => fmt::Display::fmt(&c.escape_default(), f),
+                }),
+                P::Value(_, F::Binary)      => write!(f, "%b"),
+                P::Value(_, F::Decimal)     => write!(f, "%d"),
+                P::Value(_, F::Hexadecimal) => write!(f, "%x"),
+            }?
+        }
+        write!(f, "\"")
+    }
+}
+
