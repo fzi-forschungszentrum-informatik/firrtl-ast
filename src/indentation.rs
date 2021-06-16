@@ -88,6 +88,11 @@ impl Indentation {
     pub fn parser(&mut self) -> IndentationParser {
         IndentationParser{inner: self}
     }
+
+    /// Convert this indentation into an owning parser
+    pub fn into_parser(self) -> OwningParser {
+        self.into()
+    }
 }
 
 impl Default for Indentation {
