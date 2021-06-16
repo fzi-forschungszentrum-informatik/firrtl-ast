@@ -168,6 +168,30 @@ impl<'i> nom::Parser<&'i str, (), parsers::Error<'i>> for IndentationParser<'_> 
 }
 
 
+/// Owning indentation parser
+///
+/// This parser wraps an `Indentation`, which it owns. It consumes sequences of
+/// space characters. A sequence is only accepted if the length-requirement
+/// represented by the wrapped `Indentation` is met. The parser yields a copy
+/// of the updated `Indentation`.
+#[derive(Clone)]
+pub struct OwningParser {
+    inner: Indentation,
+}
+
+impl From<Indentation> for OwningParser {
+    fn from(inner: Indentation) -> Self {
+        Self {inner}
+    }
+}
+
+impl<'i> nom::Parser<&'i str, Indentation, parsers::Error<'i>> for OwningParser {
+    fn parse(&mut self, input: &'i str) -> parsers::IResult<'i, Indentation> {
+        self.inner.parser().parse(input).map(|(input, _)| (input, self.inner.clone()))
+    }
+}
+
+
 /// Default number of spaces for one indentation step
 const INDENTATION_STEP: usize = 2;
 
