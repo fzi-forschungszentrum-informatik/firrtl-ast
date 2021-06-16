@@ -23,6 +23,30 @@ pub enum Entity {
     Instance(module::Instance),
 }
 
+impl From<Arc<module::Port>> for Entity {
+    fn from(port: Arc<module::Port>) -> Self {
+        Self::Port(port)
+    }
+}
+
+impl From<Register<Arc<Entity>>> for Entity {
+    fn from(register: Register<Arc<Entity>>) -> Self {
+        Self::Register(register)
+    }
+}
+
+impl From<Memory> for Entity {
+    fn from(mem: Memory) -> Self {
+        Self::Memory(mem)
+    }
+}
+
+impl From<module::Instance> for Entity {
+    fn from(inst: module::Instance) -> Self {
+        Self::Instance(inst)
+    }
+}
+
 impl expr::Reference for Arc<Entity> {
     fn name(&self) -> &str {
         match self.as_ref() {
