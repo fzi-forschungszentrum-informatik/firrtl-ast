@@ -184,6 +184,12 @@ pub struct OwningParser {
     inner: Indentation,
 }
 
+impl From<OwningParser> for Indentation {
+    fn from(parser: OwningParser) -> Self {
+        parser.inner
+    }
+}
+
 impl From<Indentation> for OwningParser {
     fn from(inner: Indentation) -> Self {
         Self {inner}
