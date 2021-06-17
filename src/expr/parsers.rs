@@ -7,7 +7,7 @@ use nom::combinator::{map, map_opt, value};
 use nom::sequence::{preceded, terminated, tuple};
 use nom::multi::fold_many0;
 
-use crate::parsers::{IResult, decimal, identifier, kw, op, spaced};
+use crate::parsers::{IResult, comma, decimal, identifier, kw, lp, op, rp, spaced};
 use crate::types;
 
 
@@ -140,29 +140,5 @@ pub fn primitive_op<'i, R: super::Reference + Clone>(
     };
 
     value(op, rp)(input)
-}
-
-
-/// Parse a comma
-fn comma(input: &str) -> IResult<()> {
-    use nom::Parser;
-
-    spaced(op(",")).parse(input)
-}
-
-
-/// Parse a left parantheses
-fn lp(input: &str) -> IResult<()> {
-    use nom::Parser;
-
-    spaced(op("(")).parse(input)
-}
-
-
-/// Parse a right parantheses
-fn rp(input: &str) -> IResult<()> {
-    use nom::Parser;
-
-    spaced(op(")")).parse(input)
 }
 

@@ -4,6 +4,7 @@
 mod tests;
 
 
+use nom::Parser;
 use nom::bytes::complete::{tag, take_while};
 use nom::character::complete::{satisfy, space0};
 use nom::combinator::{not, peek, value};
@@ -47,6 +48,24 @@ pub fn decimal<O>(input: &str) -> IResult<O>
             str::parse
         )
     )(input)
+}
+
+
+/// Parse a comma, skipping preceding whitespace
+pub fn comma(input: &str) -> IResult<()> {
+    spaced(op(",")).parse(input)
+}
+
+
+/// Parse a left parantheses, skipping preceding whitespace
+pub fn lp(input: &str) -> IResult<()> {
+    spaced(op("(")).parse(input)
+}
+
+
+/// Parse a right parantheses, skipping preceding whitespace
+pub fn rp(input: &str) -> IResult<()> {
+    spaced(op(")")).parse(input)
 }
 
 
