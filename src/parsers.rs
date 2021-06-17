@@ -89,6 +89,15 @@ pub fn op<'i>(operator: &'static str) -> impl nom::Parser<&'i str, (), Error<'i>
 }
 
 
+/// Parse line endings, skipping preceding whitespace
+///
+/// This parser consumes line endings, optionally preceded by whitespace. If no
+/// line ending is recognized, this parser will yield an error.
+pub fn le<'i>(input: &'i str) -> IResult<'i, ()> {
+    nom::multi::fold_many1(spaced(nom::character::complete::line_ending), (), |_, _| ())(input)
+}
+
+
 /// Create a parser which discards any space before applying another parser
 ///
 /// This function wraps the given parser in another parser which will be
