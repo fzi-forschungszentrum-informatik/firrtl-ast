@@ -1,12 +1,11 @@
 //! Parsers related to memory elements
 
 use nom::branch::alt;
-use nom::character::complete::line_ending;
 use nom::combinator::{iterator, map, value};
 use nom::sequence::tuple;
 
 use crate::indentation::Indentation;
-use crate::parsers::{self, IResult, decimal, identifier, kw, op, spaced};
+use crate::parsers::{self, IResult, decimal, identifier, kw, le, op, spaced};
 use crate::types::Type;
 use crate::types::parsers::r#type;
 
@@ -16,12 +15,12 @@ pub fn memory<'i>(input: &'i str, indentation: &'_ mut Indentation) -> IResult<'
     use nom::error::{ErrorKind as EK, ParseError};
 
     let (input, name) = map(
-        tuple((indentation.parser(), kw("mem"), spaced(identifier), spaced(op(":")), line_ending)),
+        tuple((indentation.parser(), kw("mem"), spaced(identifier), spaced(op(":")), le)),
         |(_, _, name, ..)| name
     )(input)?;
 
     let mut indentation = indentation.sub();
-    let mut entries = iterator(input, map(tuple((indentation.parser(), entry, line_ending)), |(_, e, _)| e));
+    let mut entries = iterator(input, map(tuple((indentation.parser(), entry, le)), |(_, e, _)| e));
 
     let mut data_type: Option<Type> = Default::default();
     let mut depth: Option<super::Depth> = Default::default();
