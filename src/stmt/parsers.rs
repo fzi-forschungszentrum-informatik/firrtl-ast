@@ -2,8 +2,11 @@
 
 
 use nom::branch::alt;
-use nom::combinator::map;
-use nom::sequence::tuple;
+use nom::bytes::complete::tag;
+use nom::character::complete::{anychar, char as chr};
+use nom::combinator::{map, value};
+use nom::multi::many1;
+use nom::sequence::{preceded, tuple};
 
 use crate::expr::parsers::expr;
 use crate::indentation::Indentation;
@@ -60,5 +63,38 @@ pub fn entity_decl<'i>(
     *indentation = indent;
 
     Ok((input, entity))
+}
+
+
+/// Parser for a format string part
+fn fmt_string_part<'i>(
+    input: &'i str,
+) -> IResult<'i, FmtStrPart> {
+    use super::Format as F;
+
+    alt((
+        value(FmtStrPart::FormatSpec(F::Binary), tag("%b")),
+        value(FmtStrPart::FormatSpec(F::Decimal), tag("%d")),
+        value(FmtStrPart::FormatSpec(F::Hexadecimal), tag("%x")),
+        map(
+            many1(alt((
+                value('%', tag("%%")),
+                value('\n', tag("\\n")),
+                value('\t', tag("\\t")),
+                preceded(chr('\\'), anychar),
+            ))),
+            |v| FmtStrPart::Literal(v.into_iter().collect()),
+        )
+    ))(input)
+}
+
+
+/// Format string part
+///
+/// Instances of this type serves as prototypes for `PrintElement`s.
+#[derive(Clone, Debug)]
+enum FmtStrPart {
+    Literal(String),
+    FormatSpec(super::Format)
 }
 
