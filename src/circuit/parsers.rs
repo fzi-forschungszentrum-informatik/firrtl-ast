@@ -2,14 +2,13 @@
 
 use std::sync::Arc;
 
-use nom::character::complete::line_ending;
 use nom::combinator::{map, map_opt};
 use nom::multi::many1;
 use nom::sequence::tuple;
 
 use crate::indentation::Indentation;
 use crate::module::parsers::module;
-use crate::parsers::{IResult, identifier, kw, op, spaced};
+use crate::parsers::{IResult, identifier, kw, le, op, spaced};
 
 
 /// Parse a Circuit
@@ -20,7 +19,7 @@ pub fn circuit(input: &str) -> IResult<super::Circuit> {
             kw("circuit"),
             spaced(identifier),
             spaced(op(":")),
-            line_ending,
+            le,
             many1(map(|i| module(i, &mut indent), Arc::new))
         )),
         |(_, top_name, .., modules)| {

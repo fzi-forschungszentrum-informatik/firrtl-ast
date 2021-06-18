@@ -1,11 +1,10 @@
 //! Parsers for modules and related items
 
 use nom::branch::alt;
-use nom::character::complete::line_ending;
 use nom::combinator::{iterator, map, value};
 use nom::sequence::tuple;
 
-use crate::parsers::{IResult, identifier, kw, op, spaced};
+use crate::parsers::{IResult, identifier, kw, le, op, spaced};
 use crate::types::parsers::r#type;
 use crate::indentation::Indentation;
 
@@ -13,13 +12,13 @@ use crate::indentation::Indentation;
 /// Parse a Module
 pub fn module<'i>(input: &'i str, indentation: &'_ mut Indentation) -> IResult<'i, super::Module> {
     let (input, name) = map(
-        tuple((indentation.parser(), kw("module"), spaced(identifier), spaced(op(":")), line_ending)),
+        tuple((indentation.parser(), kw("module"), spaced(identifier), spaced(op(":")), le)),
         |(_, _, name, ..)| name.into()
     )(input)?;
 
     let mut indentation = indentation.sub();
 
-    let mut ports = iterator(input, map(tuple((indentation.parser(), port, line_ending)), |(_, p, ..)| p));
+    let mut ports = iterator(input, map(tuple((indentation.parser(), port, le)), |(_, p, ..)| p));
     let res = super::Module::new(name, &mut ports);
     ports.finish().map(|(i, _)| (i, res))
 }

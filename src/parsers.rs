@@ -4,6 +4,7 @@
 mod tests;
 
 
+use nom::Parser;
 use nom::bytes::complete::{tag, take_while};
 use nom::character::complete::{satisfy, space0};
 use nom::combinator::{not, peek, value};
@@ -50,6 +51,24 @@ pub fn decimal<O>(input: &str) -> IResult<O>
 }
 
 
+/// Parse a comma, skipping preceding whitespace
+pub fn comma(input: &str) -> IResult<()> {
+    spaced(op(",")).parse(input)
+}
+
+
+/// Parse a left parantheses, skipping preceding whitespace
+pub fn lp(input: &str) -> IResult<()> {
+    spaced(op("(")).parse(input)
+}
+
+
+/// Parse a right parantheses, skipping preceding whitespace
+pub fn rp(input: &str) -> IResult<()> {
+    spaced(op(")")).parse(input)
+}
+
+
 /// Create a parser for the specified keyword
 ///
 /// Contrary to operators, keywords are a subset of identifiers in the sense
@@ -67,6 +86,15 @@ pub fn kw<'i>(keyword: &'static str) -> impl nom::Parser<&'i str, (), Error<'i>>
 /// an identifier.
 pub fn op<'i>(operator: &'static str) -> impl nom::Parser<&'i str, (), Error<'i>> {
     value((), tag(operator))
+}
+
+
+/// Parse line endings, skipping preceding whitespace
+///
+/// This parser consumes line endings, optionally preceded by whitespace. If no
+/// line ending is recognized, this parser will yield an error.
+pub fn le<'i>(input: &'i str) -> IResult<'i, ()> {
+    nom::multi::fold_many1(spaced(nom::character::complete::line_ending), (), |_, _| ())(input)
 }
 
 
