@@ -53,7 +53,7 @@ impl<R: 'static + TypedRef + Clone> Arbitrary for TypedExpr<R> {
         // The type of the expression may be considerably less complex than the
         // expression itself.
         let r#type: types::Type = Arbitrary::arbitrary(&mut Gen::new(g.size() / 10));
-        let expr = expr_with_type(r#type.clone(), g);
+        let expr = expr_with_type(r#type.clone(), Arbitrary::arbitrary(g), g);
         Self {expr, r#type}
     }
 
@@ -160,11 +160,12 @@ fn shrink_primitive_op<R: TypedRef + Clone>(
 struct Entity {
     name: Identifier,
     r#type: types::Type,
+    flow: Flow,
 }
 
 impl TypedRef for Entity {
-    fn with_type(r#type: types::Type, g: &mut Gen) -> Self {
-        Self {name: Arbitrary::arbitrary(g), r#type}
+    fn with_type(r#type: types::Type, flow: Flow, g: &mut Gen) -> Self {
+        Self {name: Arbitrary::arbitrary(g), r#type, flow}
     }
 }
 
@@ -184,7 +185,7 @@ impl super::Reference for Entity {
     }
 
     fn flow(&self) -> Flow {
-        self.name.flow()
+        self.flow
     }
 }
 
@@ -192,55 +193,59 @@ impl super::Reference for Entity {
 /// Utility trait for generating references with a given type
 pub trait TypedRef: super::Reference {
     /// Generate a reference with the given type
-    fn with_type(r#type: types::Type, g: &mut Gen) -> Self;
+    fn with_type(r#type: types::Type, flow: Flow, g: &mut Gen) -> Self;
 }
 
 impl TypedRef for Identifier {
-    fn with_type(_type: types::Type, g: &mut Gen) -> Self {
+    fn with_type(_type: types::Type, _flow: Flow, g: &mut Gen) -> Self {
         Arbitrary::arbitrary(g)
     }
 }
 
 
 /// Generate an expression which could have the given type
-pub fn expr_with_type<R, T>(r#type: T, g: &mut Gen) -> Expression<R>
+pub fn expr_with_type<R, T>(r#type: T, flow: Flow, g: &mut Gen) -> Expression<R>
 where R: TypedRef,
       T: Into<types::Type> + types::TypeExt + Clone,
 {
     use types::{GroundType as GT};
 
     if g.size() <= 0 {
-        return Expression::Reference(TypedRef::with_type(r#type.into(), g))
+        return Expression::Reference(TypedRef::with_type(r#type.into(), flow, g))
     }
 
-    let mut opts: Vec<&dyn Fn(T, &mut Gen) -> Expression<R>> = vec![
-        &|t, g| Expression::Reference(TypedRef::with_type(t.into(), g)),
-        &|t, g| {
+    let mut opts: Vec<&dyn Fn(T, Flow, &mut Gen) -> Expression<R>> = vec![
+        &|t, f, g| Expression::Reference(TypedRef::with_type(t.into(), f, g)),
+        &|t, f, g| {
             let index: Arc<str> = Identifier::arbitrary(g).into();
+            let orientation = Arbitrary::arbitrary(g);
             let bundle = bundle_with_field(
-                types::BundleField::new(index.clone(), t.into()).with_orientation(Arbitrary::arbitrary(g)),
+                types::BundleField::new(index.clone(), t.into()).with_orientation(orientation),
                 g
             );
-            Expression::SubField{base: expr(bundle, g), index}
+            Expression::SubField{base: expr(bundle, f + orientation, g), index}
         },
-        &|t, g| Expression::SubIndex{
-            base: expr(vec_with_base(t.into(), g), g),
+        &|t, f, g| Expression::SubIndex{
+            base: expr(vec_with_base(t.into(), g), f, g),
             index: Arbitrary::arbitrary(g),
         },
-        &|t, g| Expression::SubAccess{
-            base: expr(vec_with_base(t.into(), g), g),
-            index: expr(GT::UInt(Arbitrary::arbitrary(g)), g),
+        &|t, f, g| Expression::SubAccess{
+            base: expr(vec_with_base(t.into(), g), f, g),
+            index: expr(GT::UInt(Arbitrary::arbitrary(g)), source_flow(g), g),
         },
-        &|t, g| Expression::Mux{
-            sel: expr(GT::UInt(Some(1)), g),
-            a: expr(t.clone(), g),
-            b: expr(t.clone(), g),
+        &|t, f, g| Expression::Mux{
+            sel: expr(GT::UInt(Some(1)), source_flow(g), g),
+            a: expr(t.clone(), f, g),
+            b: expr(t.clone(), f, g),
         },
-        &|t, g| Expression::ValidIf{sel: expr(GT::UInt(Some(1)), g), value: expr(t, g)},
+        &|t, f, g| Expression::ValidIf{
+            sel: expr(GT::UInt(Some(1)), source_flow(g), g),
+            value: expr(t, f, g)
+        },
     ];
 
-    if let Some(r#type) = r#type.ground_type() {
-        opts.push(&|t, g| match t.ground_type().expect("Not a ground type") {
+    if let (Some(r#type), true) = (r#type.ground_type(), flow.is_source()) {
+        opts.push(&|t, f, g| match t.ground_type().expect("Not a ground type") {
             GT::UInt(width) => Expression::UIntLiteral{
                 value: Arbitrary::arbitrary(g),
                 width: width.unwrap_or_else(|| Arbitrary::arbitrary(g))
@@ -249,17 +254,17 @@ where R: TypedRef,
                 value: Arbitrary::arbitrary(g),
                 width: width.unwrap_or_else(|| Arbitrary::arbitrary(g))
             },
-            _ => Expression::Reference(TypedRef::with_type(t.into(), g)),
+            _ => Expression::Reference(TypedRef::with_type(t.into(), f, g)),
         });
         match r#type {
             GT::Analog(_) => (),
             _ => opts.push(
-                &|t, g| primitive_op_with_type(t.ground_type().expect("Not a ground type"), g).into()
+                &|t, _, g| primitive_op_with_type(t.ground_type().expect("Not a ground type"), g).into()
             ),
         }
     }
 
-    g.choose(opts.as_ref()).unwrap()(r#type, &mut Gen::new(g.size() / 2))
+    g.choose(opts.as_ref()).unwrap()(r#type, flow, &mut Gen::new(g.size() / 2))
 }
 
 
@@ -276,6 +281,10 @@ where R: TypedRef,
 
     fn uint_sint_or_fixed(w: types::BitWidth, g: &mut Gen) -> GT {
         *g.choose(&[GT::UInt(w), GT::SInt(w), GT::Fixed(w, None)]).unwrap()
+    }
+
+    fn expr<R: TypedRef>(t: GT, g: &mut Gen) -> Arc<Expression<R>> {
+        self::expr(t, source_flow(g), g)
     }
 
     let mut opts: Vec<&dyn Fn(GT, &mut Gen) -> PO<R>> = Default::default();
@@ -418,11 +427,11 @@ where R: TypedRef,
 
 
 /// Generate an expression which could have the given type, wrapped in an Arc
-fn expr<R, T>(r#type: T, g: &mut Gen) -> Arc<Expression<R>>
+fn expr<R, T>(r#type: T, flow: Flow, g: &mut Gen) -> Arc<Expression<R>>
 where R: TypedRef,
       T: Into<types::Type> + types::TypeExt + Clone,
 {
-    Arc::new(expr_with_type(r#type, g))
+    Arc::new(expr_with_type(r#type, flow, g))
 }
 
 
