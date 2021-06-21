@@ -105,17 +105,19 @@ impl<R: expr::Reference> fmt::Display for Register<R> {
 impl<R: expr::tests::TypedRef + Clone + 'static> Arbitrary for Register<R> {
     fn arbitrary(g: &mut Gen) -> Self {
         use crate::tests::Identifier;
-        use expr::tests::expr_with_type;
+        use expr::tests::{expr_with_type, source_flow};
 
         let res = Self::new(
             Identifier::arbitrary(g),
             types::Type::arbitrary(g),
-            expr_with_type(types::GroundType::Clock, g),
+            expr_with_type(types::GroundType::Clock, source_flow(g), g),
         );
 
         if bool::arbitrary(g) {
             let val_type = res.r#type.clone();
-            res.with_reset(expr_with_type(types::GroundType::UInt(Some(1)), g), expr_with_type(val_type, g))
+            res.with_reset(
+                expr_with_type(types::GroundType::UInt(Some(1)), source_flow(g), g),
+                expr_with_type(val_type, source_flow(g), g))
         } else {
             res
         }

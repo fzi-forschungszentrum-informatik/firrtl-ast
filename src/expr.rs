@@ -176,6 +176,7 @@ impl Reference for Identifier {
 
 
 /// Possible data flow
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Flow {
     Source,
     Sink,
@@ -218,6 +219,13 @@ impl std::ops::Add<types::Orientation> for Flow {
             (Self::Sink,   O::Flipped) => Self::Source,
             (Self::Duplex, O::Flipped) => Self::Duplex,
         }
+    }
+}
+
+#[cfg(test)]
+impl quickcheck::Arbitrary for Flow {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+        g.choose(&[Self::Source, Self::Sink, Self::Duplex]).unwrap().clone()
     }
 }
 
