@@ -217,7 +217,10 @@ where R: TypedRef,
         &|t, g| Expression::Reference(TypedRef::with_type(t.into(), g)),
         &|t, g| {
             let index: Arc<str> = Identifier::arbitrary(g).into();
-            let bundle = bundle_with_field(t.into(), index.clone(), g);
+            let bundle = bundle_with_field(
+                types::BundleField::new(index.clone(), t.into()).with_orientation(Arbitrary::arbitrary(g)),
+                g
+            );
             Expression::SubField{base: expr(bundle, g), index}
         },
         &|t, g| Expression::SubIndex{
@@ -424,10 +427,12 @@ where R: TypedRef,
 
 
 /// Generate a bundle type with a field constructed from the given type and name
-fn bundle_with_field(r#type: types::Type, name: Arc<str>, g: &mut Gen) -> types::Type {
+fn bundle_with_field(
+    field: types::BundleField,
+    g: &mut Gen
+) -> types::Type {
     let mut fields = types::bundle_fields(u8::arbitrary(g) as usize, g);
-    let field = types::BundleField::new(name.clone(), r#type).with_orientation(Arbitrary::arbitrary(g));
-    fields.insert(name, field);
+    fields.insert(field.name().clone(), field);
     fields.into()
 }
 
