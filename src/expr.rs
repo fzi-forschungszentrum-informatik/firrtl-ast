@@ -56,6 +56,19 @@ where Self: Typed<Type = types::Type, Err = Expression<R>> + Clone,
             _                           => Ok(Flow::Source),
         }
     }
+
+    /// Retrieve all references in this expression
+    pub fn references(&self) -> impl Iterator<Item = R> {
+        use transiter::AutoTransIter;
+
+        // We use a depth-first search for discovering references, as a
+        // breadth-first search would probably require more elements to be
+        // buffered inside the iterator.
+        self.clone()
+            .trans_iter()
+            .depth_first_unordered()
+            .filter_map(|e| if let Self::Reference(r) = e { Some(r) } else { None })
+    }
 }
 
 impl<R: Reference> From<R> for Expression<R> {
@@ -99,6 +112,27 @@ impl<R> Typed for Expression<R>
                 .map_err(|_| self.clone()),
             Self::ValidIf{value, ..}        => value.r#type(),
             Self::PrimitiveOp(op)           => op.r#type().map(Into::into).map_err(|_| self.clone()),
+        }
+    }
+}
+
+impl<R> transiter::AutoTransIter<Expression<R>> for Expression<R>
+where Self: Clone,
+      R: Reference,
+{
+    type RecIter = Vec<Expression<R>>;
+
+    fn recurse(item: &Self) -> Self::RecIter {
+        match item {
+            Self::SubField{base, ..}        => vec![base.as_ref().clone()],
+            Self::SubIndex{base, ..}        => vec![base.as_ref().clone()],
+            Self::SubAccess{base, index}    => vec![base.as_ref().clone(), index.as_ref().clone()],
+            Self::Mux{sel, a, b}            =>
+                vec![sel.as_ref().clone(), a.as_ref().clone(), b.as_ref().clone()],
+            Self::ValidIf{sel, value}       => vec![sel.as_ref().clone(), value.as_ref().clone()],
+            Self::PrimitiveOp(op)           =>
+                op.sub_exprs().into_iter().map(|e| e.as_ref().clone()).collect(),
+            _ => Default::default(),
         }
     }
 }

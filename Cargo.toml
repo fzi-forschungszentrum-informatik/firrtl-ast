@@ -10,3 +10,4 @@ quickcheck_macros = "1"
 
 [dependencies]
 nom = "6.1"
+transiter = "0.1"
