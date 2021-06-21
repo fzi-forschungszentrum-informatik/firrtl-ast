@@ -188,3 +188,10 @@ impl std::ops::Add<types::Orientation> for Flow {
     }
 }
 
+#[cfg(test)]
+impl quickcheck::Arbitrary for Flow {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+        g.choose(&[Self::Source, Self::Sink, Self::Duplex]).unwrap().clone()
+    }
+}
+
