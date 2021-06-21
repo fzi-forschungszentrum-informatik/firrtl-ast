@@ -103,6 +103,27 @@ impl<R> Typed for Expression<R>
     }
 }
 
+impl<R> transiter::AutoTransIter<Expression<R>> for Expression<R>
+where Self: Clone,
+      R: Reference,
+{
+    type RecIter = Vec<Expression<R>>;
+
+    fn recurse(item: &Self) -> Self::RecIter {
+        match item {
+            Self::SubField{base, ..}        => vec![base.as_ref().clone()],
+            Self::SubIndex{base, ..}        => vec![base.as_ref().clone()],
+            Self::SubAccess{base, index}    => vec![base.as_ref().clone(), index.as_ref().clone()],
+            Self::Mux{sel, a, b}            =>
+                vec![sel.as_ref().clone(), a.as_ref().clone(), b.as_ref().clone()],
+            Self::ValidIf{sel, value}       => vec![sel.as_ref().clone(), value.as_ref().clone()],
+            Self::PrimitiveOp(op)           =>
+                op.sub_exprs().into_iter().map(|e| e.as_ref().clone()).collect(),
+            _ => Default::default(),
+        }
+    }
+}
+
 impl<R: Reference> fmt::Display for Expression<R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
