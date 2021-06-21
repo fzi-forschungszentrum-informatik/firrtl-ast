@@ -56,6 +56,19 @@ where Self: Typed<Type = types::Type, Err = Expression<R>> + Clone,
             _                           => Ok(Flow::Source),
         }
     }
+
+    /// Retrieve all references in this expression
+    pub fn references(&self) -> impl Iterator<Item = R> {
+        use transiter::AutoTransIter;
+
+        // We use a depth-first search for discovering references, as a
+        // breadth-first search would probably require more elements to be
+        // buffered inside the iterator.
+        self.clone()
+            .trans_iter()
+            .depth_first_unordered()
+            .filter_map(|e| if let Self::Reference(r) = e { Some(r) } else { None })
+    }
 }
 
 impl<R: Reference> From<R> for Expression<R> {
