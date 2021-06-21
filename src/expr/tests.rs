@@ -9,7 +9,7 @@ use quickcheck::{Arbitrary, Gen};
 use crate::tests::{Equivalence, Identifier};
 use crate::types;
 
-use super::{Expression, parsers, primitive};
+use super::{Expression, Flow, parsers, primitive};
 
 
 #[quickcheck]
@@ -435,5 +435,17 @@ fn bundle_with_field(r#type: types::Type, name: Arc<str>, g: &mut Gen) -> types:
 /// Generate a vector type with the given base/item type
 fn vec_with_base(r#type: types::Type, g: &mut Gen) -> types::Type {
     types::Type::Vector(Arc::new(r#type), Arbitrary::arbitrary(g))
+}
+
+
+/// Generate a Flow suitable for a source
+pub fn source_flow(g: &mut Gen) -> Flow {
+    g.choose(&[Flow::Source, Flow::Duplex]).unwrap().clone()
+}
+
+
+/// Generate a Flow suitable for a sink
+pub fn sink_flow(g: &mut Gen) -> Flow {
+    g.choose(&[Flow::Sink, Flow::Duplex]).unwrap().clone()
 }
 
