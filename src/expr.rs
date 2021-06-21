@@ -142,6 +142,7 @@ impl Reference for Identifier {
 
 
 /// Possible data flow
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Flow {
     Source,
     Sink,
