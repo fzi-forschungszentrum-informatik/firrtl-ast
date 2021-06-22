@@ -75,6 +75,104 @@ impl DisplayIndented for Statement {
     }
 }
 
+#[cfg(test)]
+impl Arbitrary for Statement {
+    fn arbitrary(g: &mut Gen) -> Self {
+        use std::iter::from_fn as fn_iter;
+
+        use expr::tests::{expr_with_type, sink_flow, source_flow};
+        use types::GroundType as GT;
+
+        if g.size() == 0 {
+            return Self::Empty
+        }
+
+        let opts: [&dyn Fn(&mut Gen) -> Self; 9] = [
+            &|g| {
+                let t = types::Type::arbitrary(g);
+                Self::Connection{
+                    from: expr_with_type(t.clone(), source_flow(g), g),
+                    to: expr_with_type(t.clone(), sink_flow(g), g),
+                }
+            },
+            &|g| {
+                let t = types::Type::arbitrary(g);
+                Self::PartialConnection{
+                    from: expr_with_type(t.clone(), source_flow(g), g),
+                    to: expr_with_type(t.clone(), sink_flow(g), g),
+                }
+            },
+            &|_| Self::Empty,
+            &|g| {
+                let e = fn_iter(|| Some(Arbitrary::arbitrary(g)))
+                    .find(Entity::is_declarable)
+                    .unwrap();
+                    Self::Declaration(Arc::new(e))
+            },
+            &|g| Self::Invalidate(expr_with_type(types::Type::arbitrary(g), expr::Flow::Source, g)),
+            &|g| {
+                let t = GT::Analog(Arbitrary::arbitrary(g));
+                let n = u8::arbitrary(g).saturating_add(1);
+                Self::Attach(fn_iter(|| Some(expr_with_type(t.clone(), Arbitrary::arbitrary(g), g)))
+                    .take(n as usize)
+                    .collect())
+            },
+            &|g| Self::Conditional {
+                cond: expr_with_type(GT::UInt(Some(1)), source_flow(g), g),
+                when: vec![Self::Empty].into(), // TODO: sequence
+                r#else: vec![].into(), // TODO: sequence
+            },
+            &|g| Self::Stop {
+                clock: expr_with_type(GT::Clock, source_flow(g), g),
+                cond: expr_with_type(GT::UInt(Some(1)), source_flow(g), g),
+                code: Arbitrary::arbitrary(g),
+            },
+            &|g| Self::Print {
+                clock: expr_with_type(GT::Clock, source_flow(g), g),
+                cond: expr_with_type(GT::UInt(Some(1)), source_flow(g), g),
+                msg: Arbitrary::arbitrary(g),
+            },
+        ];
+
+        g.choose(&opts).unwrap()(g)
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        fn bisect<T: Clone>(mut v: Vec<T>) -> Vec<Vec<T>> {
+            if v.len() > 1 {
+                let right = v.split_off(v.len() / 2);
+                vec![v.into(), right.into()]
+            } else {
+                Default::default()
+            }
+        }
+
+        match self {
+            Self::Declaration(entity)               => Box::new(entity.shrink().map(Self::Declaration)),
+            Self::Attach(exprs)                     => Box::new(
+                bisect(exprs.clone()).into_iter().map(Self::Attach)
+            ),
+            Self::Conditional{cond, when, r#else}   => {
+                let cond = cond.clone();
+                let r#else = bisect(r#else.clone().to_vec());
+
+                let res = bisect(when.clone().to_vec())
+                    .into_iter()
+                    .filter(|v| v.len() > 0)
+                    .flat_map(move |w| r#else.clone().into_iter().map(move |e| (w.clone(), e)))
+                    .map(move |(w, e)| Self::Conditional{cond: cond.clone(), when: w.clone().into(), r#else: e.into()});
+                Box::new(res)
+            },
+            Self::Print{clock, cond, msg}           => {
+                let clock = clock.clone();
+                let cond = cond.clone();
+                Box::new(msg.shrink().map(move |msg| Self::Print{clock: clock.clone(), cond: cond.clone(), msg}))
+            },
+            _ => Box::new(std::iter::empty()),
+        }
+    }
+}
+
 
 /// Expression type suitable for statements
 type Expression = expr::Expression<Arc<Entity>>;
