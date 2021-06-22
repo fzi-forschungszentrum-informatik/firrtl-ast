@@ -6,6 +6,9 @@ pub(crate) mod parsers;
 use std::fmt;
 use std::sync::Arc;
 
+#[cfg(test)]
+use quickcheck::{Arbitrary, Gen};
+
 use crate::expr;
 use crate::indentation::{DisplayIndented, Indentation};
 use crate::memory::Memory;
@@ -166,6 +169,50 @@ impl types::Typed for Arc<Entity> {
             Entity::Memory(mem)         => mem.r#type().map_err(|_| self.clone()),
             Entity::Instance(inst)      => inst.r#type().map_err(|_| self.clone()),
         }
+    }
+}
+
+#[cfg(test)]
+impl expr::tests::TypedRef for Arc<Entity> {
+    fn with_type(r#type: types::Type, flow: expr::Flow, g: &mut Gen) -> Self {
+        use crate::tests::Identifier;
+
+        use expr::tests::{expr_with_type, source_flow};
+
+        fn field_to_port(field: &types::BundleField) -> module::Port {
+            let dir = match field.orientation() {
+                types::Orientation::Normal  => module::Direction::Output,
+                types::Orientation::Flipped => module::Direction::Input,
+            };
+            module::Port::new(field.name().clone(), field.r#type().clone(), dir)
+        }
+
+        let mut opts: Vec<&dyn Fn(Identifier, types::Type, &mut Gen) -> Entity> = match flow {
+            expr::Flow::Source => vec![
+                &|n, t, _| Arc::new(module::Port::new(n.to_string(), t, module::Direction::Input)).into(),
+                &|n, t, g| Entity::Node{name: n.into(), value: expr_with_type(t, source_flow(g), g)},
+            ],
+            expr::Flow::Sink => vec![
+                &|n, t, _| Arc::new(module::Port::new(n.to_string(), t, module::Direction::Output)).into(),
+            ],
+            expr::Flow::Duplex => vec![
+                &|n, t, _| Entity::Wire{name: n.into(), r#type: t},
+                &|n, t, g| Register::new(n, t, expr_with_type(types::GroundType::Clock, source_flow(g), g))
+                    .into(),
+            ],
+        };
+
+        if let (types::Type::Bundle(_), expr::Flow::Source) = (&r#type, flow) {
+            opts.push(&|n, t, g| {
+                let m = module::Module::new(
+                    Identifier::arbitrary(g).into(),
+                    t.fields().unwrap().map(field_to_port),
+                );
+                module::Instance::new(n, Arc::new(m)).into()
+            })
+        }
+
+        Arc::new(g.choose(opts.as_ref()).unwrap()(Identifier::arbitrary(g), r#type, g))
     }
 }
 
