@@ -216,6 +216,56 @@ impl expr::tests::TypedRef for Arc<Entity> {
     }
 }
 
+#[cfg(test)]
+impl Arbitrary for Entity {
+    fn arbitrary(g: &mut Gen) -> Self {
+        use crate::tests::Identifier;
+
+        use expr::tests::{expr_with_type, source_flow};
+
+        let opts: [&dyn Fn(&mut Gen) -> Entity; 6] = [
+            &|g| Arc::new(module::Port::arbitrary(g)).into(),
+            &|g| Entity::Wire{name: Identifier::arbitrary(g).into(), r#type: Arbitrary::arbitrary(g)},
+            &|g| Register::arbitrary(g).into(),
+            &|g| Entity::Node{
+                name: Identifier::arbitrary(g).into(),
+                value: expr_with_type(types::Type::arbitrary(g), source_flow(g), g)
+            },
+            &|g| Memory::arbitrary(g).into(),
+            &|g| module::Instance::arbitrary(g).into(),
+        ];
+
+        g.choose(&opts).unwrap()(g)
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        use crate::tests::Identifier;
+
+        match self {
+            Self::Port(port)            => Box::new(port.shrink().map(Into::into)),
+            Self::Wire{name, r#type}    => {
+                let n = name.clone();
+                let t = r#type.clone();
+                let res = Identifier::from(name.as_ref())
+                    .shrink()
+                    .map(move |n| Self::Wire{name: n.into(), r#type: t.clone()})
+                    .chain(r#type.shrink().map(move |r#type| Self::Wire{name: n.clone(), r#type}));
+                Box::new(res)
+            },
+            Self::Register(reg)         => Box::new(reg.shrink().map(Into::into)),
+            Self::Node{name, value}     => {
+                let v = value.clone();
+                let res = Identifier::from(name.as_ref())
+                    .shrink()
+                    .map(move |n| Self::Node{name: n.into(), value: v.clone()});
+                Box::new(res)
+            },
+            Self::Memory(mem)           => Box::new(mem.shrink().map(Into::into)),
+            Self::Instance(inst)        => Box::new(inst.shrink().map(Into::into)),
+        }
+    }
+}
+
 
 /// An element in a print statement
 #[derive(Clone, Debug, PartialEq)]
