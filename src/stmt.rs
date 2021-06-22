@@ -274,8 +274,37 @@ pub enum PrintElement {
     Value(Expression, Format),
 }
 
+#[cfg(test)]
+impl Arbitrary for PrintElement {
+    fn arbitrary(g: &mut Gen) -> Self {
+        use expr::tests::{expr_with_type, source_flow};
+        use types::GroundType as GT;
+
+        let opts: [&dyn Fn(&mut Gen) -> Self; 2] = [
+            &|g| Self::Literal(Arbitrary::arbitrary(g)),
+            &|g| Self::Value(expr_with_type(GT::arbitrary(g), source_flow(g), g), Arbitrary::arbitrary(g)),
+        ];
+
+        g.choose(&opts).unwrap()(g)
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        match self {
+            Self::Literal(s)    => Box::new(s.shrink().map(Self::Literal)),
+            Self::Value(_, _)   => Box::new(std::iter::empty()),
+        }
+    }
+}
+
 
 /// Foramt specifier for print statements
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Format {Binary, Decimal, Hexadecimal}
+
+#[cfg(test)]
+impl Arbitrary for Format {
+    fn arbitrary(g: &mut Gen) -> Self {
+        g.choose(&[Self::Binary, Self::Decimal, Self::Hexadecimal]).unwrap().clone()
+    }
+}
 
