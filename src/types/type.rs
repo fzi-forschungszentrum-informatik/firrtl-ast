@@ -55,8 +55,15 @@ impl Type {
     /// If the type is not a bundle type or the bundle does not contain a field
     /// with the given name, this function returns `None`.
     pub fn field(&self, field: &str) -> Option<&BundleField> {
+        self.fields().and_then(|mut v| v.find(|f| f.name().as_ref() == field))
+    }
+
+    /// Retrieve an iterator over the fields in this type
+    ///
+    /// If the type is not a bundle type, this function returns `None`.
+    pub fn fields(&self) -> Option<impl Iterator<Item = &BundleField>> {
         if let Self::Bundle(v) = self {
-            v.iter().find(|f| f.name().as_ref() == field)
+            Some(v.iter())
         } else {
             None
         }
