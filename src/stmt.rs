@@ -23,6 +23,19 @@ pub enum Entity {
     Instance(module::Instance),
 }
 
+impl Entity {
+    /// Checks whether this entity can be declared via a statement
+    ///
+    /// Returns true if the entity can be declared, which will be the case for
+    /// most entities. Note that `Port`s cannot be declared.
+    pub fn is_declarable(&self) -> bool {
+        match self {
+            Self::Port(..)  => false,
+            _ => true,
+        }
+    }
+}
+
 impl From<Arc<module::Port>> for Entity {
     fn from(port: Arc<module::Port>) -> Self {
         Self::Port(port)
