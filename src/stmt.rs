@@ -122,8 +122,8 @@ impl Arbitrary for Statement {
             },
             &|g| Self::Conditional {
                 cond: expr_with_type(GT::UInt(Some(1)), source_flow(g), g),
-                when: vec![Self::Empty].into(), // TODO: sequence
-                r#else: vec![].into(), // TODO: sequence
+                when: tests::stmt_list(u8::arbitrary(g).saturating_add(1), g).into(),
+                r#else: tests::stmt_list(u8::arbitrary(g), g).into(),
             },
             &|g| Self::Stop {
                 clock: expr_with_type(GT::Clock, source_flow(g), g),

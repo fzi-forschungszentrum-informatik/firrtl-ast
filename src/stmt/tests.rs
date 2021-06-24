@@ -139,3 +139,11 @@ fn entity_exprs(entity: &Entity) -> Vec<&Expression<Arc<Entity>>> {
     }
 }
 
+
+/// Generate a list of statements with the given length
+pub fn stmt_list(len: impl Into<usize>, g: &mut Gen) -> Vec<super::Statement> {
+    let len = len.into();
+    let mut g = Gen::new(g.size() / std::cmp::max(len, 1));
+    std::iter::from_fn(|| Some(quickcheck::Arbitrary::arbitrary(&mut g))).take(len).collect()
+}
+
