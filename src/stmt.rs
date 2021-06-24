@@ -137,7 +137,11 @@ impl Arbitrary for Statement {
             },
         ];
 
-        g.choose(&opts).unwrap()(g)
+        // We want to reduce the effective generation size in order to keep
+        // statements at a reasonable size. At the same time, we don't
+        // necessarily want to take care of all our various generators to cope
+        // with a size of `0`. Hence, we need to make sure the size is non-zero.
+        g.choose(&opts).unwrap()(&mut Gen::new(std::cmp::max(g.size() / 5, 1)))
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
