@@ -34,6 +34,18 @@ pub enum Statement {
     Print{clock: Expression, cond: Expression, msg: Vec<PrintElement>},
 }
 
+impl<'a> transiter::AutoTransIter<&'a Statement> for &'a Statement {
+    type RecIter = Vec<Self>;
+
+    fn recurse(item: &Self) -> Self::RecIter {
+        if let Statement::Conditional{when, r#else, ..} = item {
+            when.iter().chain(r#else.iter()).collect()
+        } else {
+            Default::default()
+        }
+    }
+}
+
 impl DisplayIndented for Statement {
     fn fmt<W: fmt::Write>(&self, indent: &mut Indentation, f: &mut W) -> fmt::Result {
         use crate::display::CommaSeparated;
