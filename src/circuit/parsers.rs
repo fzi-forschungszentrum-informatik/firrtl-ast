@@ -24,7 +24,7 @@ pub fn circuit(input: &str) -> IResult<super::Circuit> {
         )),
         |(_, top_name, .., modules)| {
             let top = modules.iter().find(|m| m.name() == top_name)?.clone();
-            Some(super::Circuit::new(top, modules))
+            Some(super::Circuit::new(top))
         }
     )(input);
     res
