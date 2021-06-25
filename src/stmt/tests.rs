@@ -18,7 +18,7 @@ use super::{Entity, Statement};
 fn parse_stmt(mut base: Indentation, original: Statement) -> Result<TestResult, String> {
     // We depend on reference and module names to be unique. If they are not,
     // the set of names will be smaller than the corresponding list.
-    let refs: Vec<_> = stmt_exprs(&original).into_iter().flat_map(Expression::references).collect();
+    let refs: Vec<_> = stmt_exprs(&original).into_iter().flat_map(Expression::references).cloned().collect();
     if refs.iter().map(|r| r.name()).collect::<std::collections::HashSet<_>>().len() != refs.len() {
         return Ok(TestResult::discard())
     }
@@ -54,7 +54,11 @@ fn parse_entity(mut base: Indentation, original: Entity) -> Result<TestResult, S
 
     // We depend on reference names to be unique. If they are not, the set of
     // names will be smaller than the list of references.
-    let refs: Vec<_> = entity_exprs(&original).into_iter().flat_map(Expression::references).collect();
+    let refs: Vec<_> = entity_exprs(&original)
+        .into_iter()
+        .flat_map(Expression::references)
+        .cloned()
+        .collect();
     if refs.iter().map(|r| r.name()).collect::<std::collections::HashSet<_>>().len() != refs.len() {
         return Ok(TestResult::discard())
     }
