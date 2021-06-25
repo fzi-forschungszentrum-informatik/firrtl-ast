@@ -21,19 +21,13 @@ use crate::module::Module;
 /// number of modules, one of which is defined as the "top" module.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Circuit {
-    modules: Vec<Arc<Module>>,
     top: Arc<Module>
 }
 
 impl Circuit {
     /// Create a new circuit
-    pub fn new(top_module: Arc<Module>, modules: impl IntoIterator<Item = Arc<Module>>) -> Self {
-        Self {top: top_module, modules: modules.into_iter().collect()}
-    }
-
-    /// Get an iterator over all modules
-    pub fn modules(&self) -> impl Iterator<Item = &Arc<Module>> {
-        self.modules.iter()
+    pub fn new(top_module: Arc<Module>) -> Self {
+        Self {top: top_module}
     }
 
     /// Get the top level module
@@ -48,21 +42,74 @@ impl fmt::Display for Circuit {
 
         writeln!(f, "circuit {}:", self.top_module().name())?;
         let mut indent = indentation::Indentation::root().sub();
-        self.modules().try_for_each(|m| m.fmt(&mut indent, f))
+        self.top_module().fmt(&mut indent, f)
     }
 }
 
 #[cfg(test)]
 impl Arbitrary for Circuit {
     fn arbitrary(g: &mut Gen) -> Self {
-        let top: Arc<Module> = Arbitrary::arbitrary(g);
-
-        // We don't just call `arbitrary()` on a `Vec` because we really have to
-        // keep the number of ports low. Otherwise, tests will take forever.
-        let len = usize::arbitrary(g) % 16;
-        let mods = std::iter::once(top.clone())
-            .chain((0..len).map(|_| Arbitrary::arbitrary(&mut Gen::new(g.size() / len))));
-        Self::new(top, mods)
+        Self::new(Arbitrary::arbitrary(g))
     }
+}
+
+
+/// Iterator adapter/wrapper for creating a circuit
+///
+/// Instances of this type wrap an iterator over `Module`s. It allows iterating
+/// over the modules yielded by the inner iterator transparently, seeking out
+/// the top module for a target circuit by name.
+#[derive(Clone, Debug)]
+pub struct ModuleConsumer<I: Iterator<Item = Arc<Module>>> {
+    top_module: TopState,
+    modules: I,
+}
+
+impl<I: Iterator<Item = Arc<Module>>> ModuleConsumer<I> {
+    /// Create a new adapter for the given target top module name
+    pub fn new(top_name: impl Into<String>, modules: I) -> Self {
+        Self {top_module: TopState::Name(top_name.into()), modules}
+    }
+
+    /// Retrieve the circuit
+    ///
+    /// If the top module was collected, this function returns the circuit,
+    /// otherwise `None` will be returned.
+    pub fn circuit(&self) -> Option<Circuit> {
+        if let TopState::Module(m) = &self.top_module {
+            Some(Circuit::new(m.clone()))
+        } else {
+            None
+        }
+    }
+
+    /// Try to create the requested circuit, consuming the iterator
+    pub fn into_circuit(mut self) -> Option<Circuit> {
+        match self.top_module {
+            TopState::Name(n)   => self.modules.find(|m| m.name() == n),
+            TopState::Module(m) => Some(m),
+        }.map(Circuit::new)
+    }
+}
+
+impl<I: Iterator<Item = Arc<Module>>> Iterator for ModuleConsumer<I> {
+    type Item = I::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let res = self.modules.next();
+        if let (Some(m), TopState::Name(n)) = (res.as_ref(), &self.top_module) {
+            if n == m.name() {
+                self.top_module = TopState::Module(m.clone())
+            }
+        }
+        res
+    }
+}
+
+
+#[derive(Clone, Debug)]
+enum TopState {
+    Name(String),
+    Module(Arc<Module>),
 }
 
