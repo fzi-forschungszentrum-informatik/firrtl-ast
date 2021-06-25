@@ -23,7 +23,7 @@ fn parse_stmt(mut base: Indentation, original: Statement) -> Result<TestResult, 
         return Ok(TestResult::discard())
     }
 
-    let mods = stmt_modules(&original);
+    let mods: Vec<_> = original.instantiations().map(|i| i.module().clone()).collect();
     if mods.iter().map(|r| r.name()).collect::<std::collections::HashSet<_>>().len() != refs.len() {
         return Ok(TestResult::discard())
     }
@@ -105,24 +105,6 @@ fn stmt_exprs(stmt: &Statement) -> Vec<&Expression<Arc<Entity>>> {
                 None
             }))
             .collect(),
-    }
-}
-
-
-/// Retrieve all modules instanciated in a statement
-fn stmt_modules(stmt: &Statement) -> Vec<Arc<crate::module::Module>> {
-    match stmt {
-        Statement::Declaration(m) => if let Entity::Instance(m) = m.as_ref() {
-            vec![m.module().clone()]
-        } else {
-            Default::default()
-        },
-        Statement::Conditional{when, r#else, ..} => when
-            .iter()
-            .flat_map(stmt_modules)
-            .chain(r#else.iter().flat_map(stmt_modules))
-            .collect(),
-        _ => Default::default(),
     }
 }
 

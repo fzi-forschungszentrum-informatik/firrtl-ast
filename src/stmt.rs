@@ -34,6 +34,49 @@ pub enum Statement {
     Print{clock: Expression, cond: Expression, msg: Vec<PrintElement>},
 }
 
+impl Statement {
+    /// Retrieve all declarations appearing in this statement
+    ///
+    /// This function retrieves all entities declared in a given statement.
+    /// Obviously, a declaration will yield an entity. However, the returned
+    /// iterator will also include declarations declared in nested statements,
+    /// e.g. inside conditional branches.
+    pub fn declarations(&self) -> impl Iterator<Item = &Arc<Entity>> {
+        use transiter::AutoTransIter;
+
+        self.trans_iter().filter_map(|s| if let Self::Declaration(e) = s {
+            Some(e)
+        } else {
+            None
+        })
+    }
+
+    /// Retrieve all instantiations appearing in this statement
+    ///
+    /// This function retrieves all module instantiations (declarations) in a
+    /// given statement. This includes instantiations in nested statements,
+    /// e.g. inside conditional branches.
+    pub fn instantiations(&self) -> impl Iterator<Item = &module::Instance> {
+        self.declarations().filter_map(|e| if let Entity::Instance(i) = e.as_ref() {
+            Some(i)
+        } else {
+            None
+        })
+    }
+}
+
+impl<'a> transiter::AutoTransIter<&'a Statement> for &'a Statement {
+    type RecIter = Vec<Self>;
+
+    fn recurse(item: &Self) -> Self::RecIter {
+        if let Statement::Conditional{when, r#else, ..} = item {
+            when.iter().chain(r#else.iter()).collect()
+        } else {
+            Default::default()
+        }
+    }
+}
+
 impl DisplayIndented for Statement {
     fn fmt<W: fmt::Write>(&self, indent: &mut Indentation, f: &mut W) -> fmt::Result {
         use crate::display::CommaSeparated;
