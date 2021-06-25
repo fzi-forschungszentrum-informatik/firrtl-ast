@@ -50,6 +50,19 @@ impl Statement {
             None
         })
     }
+
+    /// Retrieve all instantiations appearing in this statement
+    ///
+    /// This function retrieves all module instantiations (declarations) in a
+    /// given statement. This includes instantiations in nested statements,
+    /// e.g. inside conditional branches.
+    pub fn instantiations(&self) -> impl Iterator<Item = &module::Instance> {
+        self.declarations().filter_map(|e| if let Entity::Instance(i) = e.as_ref() {
+            Some(i)
+        } else {
+            None
+        })
+    }
 }
 
 impl<'a> transiter::AutoTransIter<&'a Statement> for &'a Statement {
