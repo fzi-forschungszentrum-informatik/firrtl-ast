@@ -27,8 +27,12 @@ pub struct Module {
 
 impl Module {
     /// Create a new module
-    pub fn new(name: Arc<str>, ports: impl IntoIterator<Item = Arc<Port>>) -> Self {
-        Self {name, ports: ports.into_iter().collect(), stmts: Some(Default::default())}
+    pub fn new(name: Arc<str>, ports: impl IntoIterator<Item = Arc<Port>>, kind: Kind) -> Self {
+        let stmts = match kind {
+            Kind::Regular   => Some(Default::default()),
+            Kind::External  => None,
+        };
+        Self {name, ports: ports.into_iter().collect(), stmts}
     }
 
     /// Retrieve the module's name
@@ -88,26 +92,23 @@ impl Arbitrary for Module {
     fn arbitrary(g: &mut Gen) -> Self {
         use crate::tests::Identifier;
 
-        let name = Identifier::arbitrary(g).into();
-
         // We don't just call `arbitrary()` on a `Vec` because we really have to
         // keep the number of ports low. Otherwise, tests will take forever.
         let len = usize::arbitrary(g) % 16;
-        let ports = (0..len)
-            .map(|_| Arbitrary::arbitrary(&mut Gen::new(g.size() / len)));
-        Module::new(name, ports)
+        let mut sub = Gen::new(g.size() / std::cmp::max(len, 1));
+        let ports = (0..len).map(|_| Arbitrary::arbitrary(&mut sub));
+        Module::new(Identifier::arbitrary(g).into(), ports, Kind::Regular)
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         let p = self.ports.clone();
+        let k = self.kind();
         let res = crate::tests::Identifier::from(self.name())
             .shrink()
-            .map(move |n| Self::new(n.into(), p.clone()))
+            .map(move |n| Self::new(n.into(), p.clone(), k))
             .chain({
                 let n = self.name.clone();
-                self.ports
-                    .shrink()
-                    .map(move |p| Self::new(n.clone(), p))
+                self.ports.shrink().map(move |p| Self::new(n.clone(), p, k))
             });
         Box::new(res)
     }

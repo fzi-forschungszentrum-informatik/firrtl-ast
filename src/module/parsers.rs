@@ -21,7 +21,7 @@ pub fn module<'i>(input: &'i str, indentation: &'_ mut Indentation) -> IResult<'
     let mut indentation = indentation.sub();
 
     let mut ports = iterator(input, map(tuple((indentation.parser(), port, le)), |(_, p, ..)| Arc::new(p)));
-    let res = super::Module::new(name, &mut ports);
+    let res = super::Module::new(name, &mut ports, super::Kind::Regular);
     ports.finish().map(|(i, _)| (i, res))
 }
 
