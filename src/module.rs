@@ -13,6 +13,7 @@ use quickcheck::{Arbitrary, Gen};
 
 use crate::expr;
 use crate::indentation::{DisplayIndented, Indentation};
+use crate::stmt::Statement;
 use crate::types::{self, Type};
 
 
@@ -21,12 +22,13 @@ use crate::types::{self, Type};
 pub struct Module {
     name: Arc<str>,
     ports: Vec<Arc<Port>>,
+    stmts: Option<Vec<Statement>>,
 }
 
 impl Module {
     /// Create a new module
     pub fn new(name: Arc<str>, ports: impl IntoIterator<Item = Arc<Port>>) -> Self {
-        Self {name, ports: ports.into_iter().collect()}
+        Self {name, ports: ports.into_iter().collect(), stmts: Some(Default::default())}
     }
 
     /// Retrieve the module's name
@@ -42,6 +44,20 @@ impl Module {
     /// Retrieve a specific port by its name
     pub fn port_by_name(&self, name: &impl AsRef<str>) -> Option<&Arc<Port>> {
         self.ports().find(|p| p.name.as_ref() == name.as_ref())
+    }
+
+    /// Retrieve the module kind
+    pub fn kind(&self) -> Kind {
+        if self.stmts.is_some() {
+            Kind::Regular
+        } else {
+            Kind::External
+        }
+    }
+
+    /// Retrieve the statements in this module
+    pub fn statements(&self) -> &[Statement] {
+        self.stmts.as_ref().map(|v| v.as_ref()).unwrap_or(&[])
     }
 }
 
