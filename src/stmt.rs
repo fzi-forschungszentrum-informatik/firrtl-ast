@@ -357,7 +357,7 @@ impl expr::tests::TypedRef for Arc<Entity> {
                 let m = module::Module::new(
                     Identifier::arbitrary(g).into(),
                     t.fields().unwrap().map(field_to_port),
-                    module::Kind::Regular,
+                    Arbitrary::arbitrary(g),
                 );
                 module::Instance::new(n, Arc::new(m)).into()
             })

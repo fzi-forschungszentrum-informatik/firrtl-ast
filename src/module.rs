@@ -98,7 +98,7 @@ impl Arbitrary for Module {
         let len = usize::arbitrary(g) % 16;
         let mut sub = Gen::new(g.size() / std::cmp::max(len, 1));
         let ports = (0..len).map(|_| Arbitrary::arbitrary(&mut sub));
-        Module::new(Identifier::arbitrary(g).into(), ports, Kind::Regular)
+        Module::new(Identifier::arbitrary(g).into(), ports, Arbitrary::arbitrary(g))
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
