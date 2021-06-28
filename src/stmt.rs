@@ -210,7 +210,7 @@ impl Arbitrary for Statement {
                     .filter(|v| !v.is_empty())
                     .flat_map(move |w| e.shrink().map(move |e| (w.clone(), e)))
                     .map(move |(w, e)| Self::Conditional{cond: cond.clone(), when: w.clone().into(), r#else: e.into()});
-                Box::new(res)
+                Box::new(when.to_vec().into_iter().chain(r#else.to_vec()).chain(res))
             },
             Self::Print{clock, cond, msg}           => {
                 let clock = clock.clone();
