@@ -200,7 +200,7 @@ impl Arbitrary for Statement {
         match self {
             Self::Declaration(entity)               => Box::new(entity.shrink().map(Self::Declaration)),
             Self::Attach(exprs)                     => Box::new(
-                bisect(exprs.clone()).into_iter().map(Self::Attach)
+                bisect(exprs.clone()).into_iter().filter(|v| !v.is_empty()).map(Self::Attach)
             ),
             Self::Conditional{cond, when, r#else}   => {
                 let cond = cond.clone();
