@@ -84,6 +84,41 @@ impl Arbitrary for Module {
 }
 
 
+/// Module kind
+///
+/// The FIRRTL spec defines multiple kinds of modules.
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum Kind {
+    /// A regular module
+    Regular,
+    /// An external module, usually an interface to some IP or external
+    /// VHDL/Verilog.
+    External,
+}
+
+impl Kind {
+    /// Retrieve the keyword associated with the module kind
+    pub fn keyword(&self) -> &'static str {
+        match self {
+            Self::Regular   => "module",
+            Self::External  => "extmodule",
+        }
+    }
+}
+
+impl Default for Kind {
+    fn default() -> Self {
+        Self::Regular
+    }
+}
+
+impl fmt::Display for Kind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self.keyword(), f)
+    }
+}
+
+
 /// An I/O port of a module
 #[derive(Clone, Debug, PartialEq)]
 pub struct Port {
