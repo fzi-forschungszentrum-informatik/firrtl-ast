@@ -59,6 +59,11 @@ impl Module {
     pub fn statements(&self) -> &[Statement] {
         self.stmts.as_ref().map(|v| v.as_ref()).unwrap_or(&[])
     }
+
+    /// Retrieve all modules referenced from this module via instantiations
+    pub fn referenced_modules(&self) -> impl Iterator<Item = &Arc<Self>> {
+        self.statements().iter().flat_map(Statement::instantiations).map(Instance::module)
+    }
 }
 
 impl DisplayIndented for Module {
