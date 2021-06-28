@@ -7,12 +7,17 @@ use nom::combinator::{iterator, map, value};
 use nom::sequence::tuple;
 
 use crate::parsers::{IResult, identifier, kw, le, op, spaced};
+use crate::stmt::parsers::stmts;
 use crate::types::parsers::r#type;
 use crate::indentation::Indentation;
 
 
 /// Parse a Module
-pub fn module<'i>(input: &'i str, indentation: &'_ mut Indentation) -> IResult<'i, super::Module> {
+pub fn module<'i>(
+    module: impl Fn(&str) -> Option<Arc<super::Module>> + Copy,
+    input: &'i str,
+    indentation: &'_ mut Indentation,
+) -> IResult<'i, super::Module> {
     let (input, (name, kind)) = map(
         tuple((indentation.parser(), kind, spaced(identifier), spaced(op(":")), le)),
         |(_, kind, name, ..)| (name.into(), kind)
@@ -21,8 +26,25 @@ pub fn module<'i>(input: &'i str, indentation: &'_ mut Indentation) -> IResult<'
     let mut indentation = indentation.sub();
 
     let mut ports = iterator(input, map(tuple((indentation.parser(), port, le)), |(_, p, ..)| Arc::new(p)));
-    let res = super::Module::new(name, &mut ports, kind);
-    ports.finish().map(|(i, _)| (i, res))
+    let mut res = super::Module::new(name, &mut ports, kind);
+    let (input, _) = ports.finish()?;
+
+    let input = match kind {
+        super::Kind::Regular => {
+            let (input, stmts) = stmts(
+                |n| res.port_by_name(&n).map(|p| Arc::new(p.clone().into())),
+                module,
+                input,
+                &mut indentation,
+            )?;
+
+            res.statements_mut().map(|s| *s = stmts);
+            input
+        },
+        super::Kind::External => input,
+    };
+
+    Ok((input, res))
 }
 
 

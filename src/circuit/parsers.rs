@@ -20,7 +20,7 @@ pub fn circuit(input: &str) -> IResult<super::Circuit> {
     )(input)?;
 
     let mut indent = Indentation::root().sub();
-    let mut modules = iterator(input, map(|i| module(i, &mut indent), Arc::new));
+    let mut modules = iterator(input, map(|i| module(|_| None, i, &mut indent), Arc::new));
     let res = super::ModuleConsumer::new(top_name, &mut modules)
         .into_circuit()
         .ok_or_else(|| nom::Err::Error(Error::from_error_kind(input, EK::MapOpt)))?;

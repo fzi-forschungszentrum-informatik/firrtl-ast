@@ -14,7 +14,11 @@ fn parse_module(mut base: Indentation, original: Module) -> Result<Equivalence<M
     let mut s: String = Default::default();
     original.fmt(&mut base, &mut s).map_err(|e| e.to_string())?;
 
-    let res = all_consuming(|i| parsers::module(i, &mut base))(&s)
+    let modules: Vec<_> = original.referenced_modules().cloned().collect();
+
+    let res = all_consuming(
+        |i| parsers::module(|n| modules.iter().find(|m| m.name() == n).cloned(), i, &mut base)
+    )(&s)
         .finish()
         .map(|(_, parsed)| Equivalence::of(original, parsed))
         .map_err(|e| e.to_string());
