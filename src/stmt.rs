@@ -208,7 +208,7 @@ impl Arbitrary for Statement {
 
                 let res = bisect(when.clone().to_vec())
                     .into_iter()
-                    .filter(|v| v.len() > 0)
+                    .filter(|v| !v.is_empty())
                     .flat_map(move |w| r#else.clone().into_iter().map(move |e| (w.clone(), e)))
                     .map(move |(w, e)| Self::Conditional{cond: cond.clone(), when: w.clone().into(), r#else: e.into()});
                 Box::new(res)
