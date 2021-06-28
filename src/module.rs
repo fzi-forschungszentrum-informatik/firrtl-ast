@@ -26,10 +26,7 @@ pub struct Module {
 impl Module {
     /// Create a new module
     pub fn new(name: Arc<str>, ports: impl IntoIterator<Item = Port>) -> Self {
-        let mut ports: Vec<_> = ports.into_iter().map(Arc::new).collect();
-        ports.sort_unstable_by_key(|p| p.name.clone());
-
-        Self {name, ports}
+        Self {name, ports: ports.into_iter().map(Arc::new).collect()}
     }
 
     /// Retrieve the module's name
@@ -44,7 +41,7 @@ impl Module {
 
     /// Retrieve a specific port by its name
     pub fn port_by_name(&self, name: &impl AsRef<str>) -> Option<&Arc<Port>> {
-        self.ports.binary_search_by_key(&name.as_ref(), |p| p.name.as_ref()).ok().map(|i| &self.ports[i])
+        self.ports().find(|p| p.name.as_ref() == name.as_ref())
     }
 }
 
