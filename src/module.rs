@@ -150,6 +150,17 @@ impl fmt::Display for Kind {
     }
 }
 
+#[cfg(test)]
+impl Arbitrary for Kind {
+    fn arbitrary(g: &mut Gen) -> Self {
+        if g.size() > 0 {
+            g.choose(&[Self::Regular, Self::External]).unwrap().clone()
+        } else {
+            Default::default()
+        }
+    }
+}
+
 
 /// An I/O port of a module
 #[derive(Clone, Debug, PartialEq)]
