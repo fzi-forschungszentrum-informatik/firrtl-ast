@@ -26,6 +26,15 @@ pub fn module<'i>(input: &'i str, indentation: &'_ mut Indentation) -> IResult<'
 }
 
 
+/// Parse a module kind
+pub fn kind<'i>(input: &str) -> IResult<super::Kind> {
+    alt((
+        value(super::Kind::Regular,  kw("module")),
+        value(super::Kind::External, kw("extmodule")),
+    ))(input)
+}
+
+
 /// Parse a module instance
 pub fn instance<'i>(
     module: impl Fn(&str) -> Option<Arc<super::Module>>,
