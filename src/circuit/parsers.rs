@@ -1,12 +1,10 @@
 //! Parsers for Circuits
 
-use std::sync::Arc;
-
 use nom::combinator::{iterator, map};
 use nom::sequence::tuple;
 
 use crate::indentation::Indentation;
-use crate::module::parsers::module;
+use crate::module::parsers::Modules;
 use crate::parsers::{Error, IResult, identifier, kw, le, op, spaced};
 
 
@@ -19,8 +17,9 @@ pub fn circuit(input: &str) -> IResult<super::Circuit> {
         |(_, n, ..)| n
     )(input)?;
 
+    let mut mod_parser = Modules::default();
     let mut indent = Indentation::root().sub();
-    let mut modules = iterator(input, map(|i| module(|_| None, i, &mut indent), Arc::new));
+    let mut modules = iterator(input, |i| mod_parser.parse_module(i, &mut indent));
     let res = super::ModuleConsumer::new(top_name, &mut modules)
         .into_circuit()
         .ok_or_else(|| nom::Err::Error(Error::from_error_kind(input, EK::MapOpt)))?;
