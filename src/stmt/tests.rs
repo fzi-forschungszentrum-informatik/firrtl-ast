@@ -115,7 +115,7 @@ fn parse_fmt_string(original: FormatString) -> Result<TestResult, String> {
 
 
 /// Retrieve all expressions occuring in a statement
-fn stmt_exprs(stmt: &Statement) -> Vec<&Expression<Arc<Entity>>> {
+pub fn stmt_exprs(stmt: &Statement) -> Vec<&Expression<Arc<Entity>>> {
     match stmt {
         Statement::Connection{from, to}             => vec![from, to],
         Statement::PartialConnection{from, to}      => vec![from, to],

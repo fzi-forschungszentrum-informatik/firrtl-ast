@@ -4,7 +4,7 @@ pub(crate) mod display;
 pub(crate) mod parsers;
 
 #[cfg(test)]
-mod tests;
+pub mod tests;
 
 use std::fmt;
 use std::sync::Arc;
