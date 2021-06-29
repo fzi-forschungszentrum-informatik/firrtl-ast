@@ -106,12 +106,32 @@ impl Arbitrary for Module {
         let k = self.kind();
         let res = crate::tests::Identifier::from(self.name())
             .shrink()
-            .map(move |n| Self::new(n.into(), p.clone(), k))
-            .chain({
-                let n = self.name.clone();
-                self.ports.shrink().map(move |p| Self::new(n.clone(), p, k))
-            });
-        Box::new(res)
+            .map(move |n| Self::new(n.into(), p.clone(), k));
+
+        let n = self.name.clone();
+        match self.kind() {
+            Kind::Regular => {
+                // For regular modules, we must maintain that all ports used in
+                // statements are defined for the module. Hence, we shrink the
+                // statement list and derive the ports from that list.
+                let max_stmts = self.statements().len();
+                let res = res.chain(self.statements()
+                    .to_vec()
+                    .shrink()
+                    .map(move |s| tests::module_with_stmts(n.clone(), s, usize::MAX))
+                    .filter(move |m| m.statements().len() < max_stmts));
+                Box::new(res)
+            },
+            Kind::External => {
+                // For external modules, we can just shrink the port list.
+                let res = res.chain(self
+                    .ports
+                    .shrink()
+                    .map(move |p| Self::new(n.clone(), p, Kind::External))
+                );
+                Box::new(res)
+            },
+        }
     }
 }
 
