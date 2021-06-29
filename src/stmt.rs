@@ -200,18 +200,17 @@ impl Arbitrary for Statement {
         match self {
             Self::Declaration(entity)               => Box::new(entity.shrink().map(Self::Declaration)),
             Self::Attach(exprs)                     => Box::new(
-                bisect(exprs.clone()).into_iter().map(Self::Attach)
+                bisect(exprs.clone()).into_iter().filter(|v| !v.is_empty()).map(Self::Attach)
             ),
             Self::Conditional{cond, when, r#else}   => {
                 let cond = cond.clone();
-                let r#else = bisect(r#else.clone().to_vec());
+                let e = r#else.to_vec();
 
-                let res = bisect(when.clone().to_vec())
-                    .into_iter()
-                    .filter(|v| v.len() > 0)
-                    .flat_map(move |w| r#else.clone().into_iter().map(move |e| (w.clone(), e)))
+                let res = when.to_vec().shrink()
+                    .filter(|v| !v.is_empty())
+                    .flat_map(move |w| e.shrink().map(move |e| (w.clone(), e)))
                     .map(move |(w, e)| Self::Conditional{cond: cond.clone(), when: w.clone().into(), r#else: e.into()});
-                Box::new(res)
+                Box::new(when.to_vec().into_iter().chain(r#else.to_vec()).chain(res))
             },
             Self::Print{clock, cond, msg}           => {
                 let clock = clock.clone();
