@@ -12,6 +12,39 @@ use crate::types::parsers::r#type;
 use crate::indentation::Indentation;
 
 
+/// Utility for parsing dependant modules
+#[derive(Default, Debug)]
+pub struct Modules {
+    modules: std::collections::HashMap<Arc<str>, Arc<super::Module>>,
+}
+
+impl Modules {
+    /// Parse one module
+    pub fn parse_module<'i>(
+        &mut self,
+        input: &'i str,
+        indentation: &'_ mut Indentation,
+    ) -> IResult<'i, Arc<super::Module>> {
+        module(|name| self.module(name).cloned(), input, indentation).map(|(i, m)| {
+            let module = Arc::new(m);
+            self.modules.insert(module.name.clone(), module.clone());
+            (i, module)
+        })
+    }
+
+    /// Retrieve a previously parsed module by name
+    pub fn module(&self, name: impl AsRef<str>) -> Option<&Arc<super::Module>> {
+        self.modules.get(name.as_ref())
+    }
+}
+
+impl std::iter::FromIterator<Arc<super::Module>> for Modules {
+    fn from_iter<I: IntoIterator<Item = Arc<super::Module>>>(modules: I) -> Self {
+        Self {modules: modules.into_iter().map(|m| (m.name.clone(), m)).collect()}
+    }
+}
+
+
 /// Parse a Module
 pub fn module<'i>(
     module: impl Fn(&str) -> Option<Arc<super::Module>> + Copy,
