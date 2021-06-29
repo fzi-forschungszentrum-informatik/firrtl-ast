@@ -93,12 +93,20 @@ impl Arbitrary for Module {
     fn arbitrary(g: &mut Gen) -> Self {
         use crate::tests::Identifier;
 
-        // We don't just call `arbitrary()` on a `Vec` because we really have to
-        // keep the number of ports low. Otherwise, tests will take forever.
-        let len = usize::arbitrary(g) % 16;
-        let mut sub = Gen::new(g.size() / std::cmp::max(len, 1));
-        let ports = (0..len).map(|_| Arbitrary::arbitrary(&mut sub));
-        Module::new(Identifier::arbitrary(g).into(), ports, Arbitrary::arbitrary(g))
+        let max_ports = (usize::arbitrary(g) % 16) + 1;
+        let name = Identifier::arbitrary(g).into();
+        match Kind::arbitrary(g) {
+            Kind::Regular => tests::module_with_stmts(
+                name,
+                std::iter::from_fn(|| Some(Arbitrary::arbitrary(g))),
+                max_ports,
+            ),
+            Kind::External => {
+                let mut sub = Gen::new(g.size() / max_ports);
+                let ports = (0..max_ports).map(|_| Arbitrary::arbitrary(&mut sub));
+                Module::new(name, ports, Kind::External)
+            },
+        }
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
