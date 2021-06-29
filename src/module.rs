@@ -25,8 +25,8 @@ pub struct Module {
 
 impl Module {
     /// Create a new module
-    pub fn new(name: Arc<str>, ports: impl IntoIterator<Item = Port>) -> Self {
-        Self {name, ports: ports.into_iter().map(Arc::new).collect()}
+    pub fn new(name: Arc<str>, ports: impl IntoIterator<Item = Arc<Port>>) -> Self {
+        Self {name, ports: ports.into_iter().collect()}
     }
 
     /// Retrieve the module's name
@@ -64,7 +64,7 @@ impl Arbitrary for Module {
         // keep the number of ports low. Otherwise, tests will take forever.
         let len = usize::arbitrary(g) % 16;
         let ports = (0..len)
-            .map(|_| Port::arbitrary(&mut Gen::new(g.size() / len)));
+            .map(|_| Arbitrary::arbitrary(&mut Gen::new(g.size() / len)));
         Module::new(name, ports)
     }
 
@@ -72,12 +72,12 @@ impl Arbitrary for Module {
         let p = self.ports.clone();
         let res = crate::tests::Identifier::from(self.name())
             .shrink()
-            .map(move |n| Self::new(n.into(), p.iter().map(|p| p.as_ref().clone())))
+            .map(move |n| Self::new(n.into(), p.clone()))
             .chain({
                 let n = self.name.clone();
                 self.ports
                     .shrink()
-                    .map(move |p| Self::new(n.clone(), p.into_iter().map(|p| p.as_ref().clone())))
+                    .map(move |p| Self::new(n.clone(), p))
             });
         Box::new(res)
     }

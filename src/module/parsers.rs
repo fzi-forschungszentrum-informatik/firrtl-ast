@@ -1,5 +1,7 @@
 //! Parsers for modules and related items
 
+use std::sync::Arc;
+
 use nom::branch::alt;
 use nom::combinator::{iterator, map, value};
 use nom::sequence::tuple;
@@ -18,7 +20,7 @@ pub fn module<'i>(input: &'i str, indentation: &'_ mut Indentation) -> IResult<'
 
     let mut indentation = indentation.sub();
 
-    let mut ports = iterator(input, map(tuple((indentation.parser(), port, le)), |(_, p, ..)| p));
+    let mut ports = iterator(input, map(tuple((indentation.parser(), port, le)), |(_, p, ..)| Arc::new(p)));
     let res = super::Module::new(name, &mut ports);
     ports.finish().map(|(i, _)| (i, res))
 }
