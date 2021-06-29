@@ -28,7 +28,7 @@ pub fn module<'i>(input: &'i str, indentation: &'_ mut Indentation) -> IResult<'
 
 /// Parse a module instance
 pub fn instance<'i>(
-    module: impl Fn(&str) -> Option<std::sync::Arc<super::Module>>,
+    module: impl Fn(&str) -> Option<Arc<super::Module>>,
     input: &'i str,
 ) -> IResult<'i, super::Instance> {
     nom::combinator::map_opt(
