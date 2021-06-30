@@ -428,7 +428,7 @@ impl Arbitrary for PrintElement {
         use types::GroundType as GT;
 
         let opts: [&dyn Fn(&mut Gen) -> Self; 2] = [
-            &|g| Self::Literal(Arbitrary::arbitrary(g)),
+            &|g| Self::Literal(crate::tests::ASCII::arbitrary(g).to_string()),
             &|g| Self::Value(expr_with_type(GT::arbitrary(g), source_flow(g), g), Arbitrary::arbitrary(g)),
         ];
 
@@ -436,8 +436,12 @@ impl Arbitrary for PrintElement {
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        use crate::tests::ASCII;
+
         match self {
-            Self::Literal(s)    => Box::new(s.shrink().map(Self::Literal)),
+            Self::Literal(s)    => Box::new(
+                ASCII::from(s.clone()).shrink().map(|s| Self::Literal(s.to_string()))
+            ),
             Self::Value(_, _)   => Box::new(std::iter::empty()),
         }
     }
