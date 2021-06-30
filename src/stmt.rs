@@ -326,12 +326,12 @@ impl expr::tests::TypedRef for Arc<Entity> {
 
         use expr::tests::{expr_with_type, source_flow};
 
-        fn field_to_port(field: &types::BundleField) -> module::Port {
+        fn field_to_port(field: &types::BundleField) -> Arc<module::Port> {
             let dir = match field.orientation() {
                 types::Orientation::Normal  => module::Direction::Output,
                 types::Orientation::Flipped => module::Direction::Input,
             };
-            module::Port::new(field.name().clone(), field.r#type().clone(), dir)
+            Arc::new(module::Port::new(field.name().clone(), field.r#type().clone(), dir))
         }
 
         let mut opts: Vec<&dyn Fn(Identifier, types::Type, &mut Gen) -> Entity> = match flow {
