@@ -69,6 +69,10 @@ impl Arbitrary for Circuit {
     fn arbitrary(g: &mut Gen) -> Self {
         Self::new(Arbitrary::arbitrary(g))
     }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        Box::new(self.top.shrink().map(Self::new))
+    }
 }
 
 
