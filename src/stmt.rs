@@ -432,7 +432,11 @@ impl Arbitrary for PrintElement {
             &|g| Self::Value(expr_with_type(GT::arbitrary(g), source_flow(g), g), Arbitrary::arbitrary(g)),
         ];
 
-        g.choose(&opts).unwrap()(g)
+        if g.size() > 0 {
+            g.choose(&opts).unwrap()(g)
+        } else {
+            Self::Literal(" ".to_string())
+        }
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
