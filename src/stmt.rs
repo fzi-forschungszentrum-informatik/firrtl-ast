@@ -176,7 +176,7 @@ impl Arbitrary for Statement {
             &|g| Self::Print {
                 clock: expr_with_type(GT::Clock, source_flow(g), g),
                 cond: expr_with_type(GT::UInt(Some(1)), source_flow(g), g),
-                msg: Arbitrary::arbitrary(g),
+                msg: tests::FormatString::arbitrary(g).into(),
             },
         ];
 
@@ -215,7 +215,10 @@ impl Arbitrary for Statement {
             Self::Print{clock, cond, msg}           => {
                 let clock = clock.clone();
                 let cond = cond.clone();
-                Box::new(msg.shrink().map(move |msg| Self::Print{clock: clock.clone(), cond: cond.clone(), msg}))
+                let res = tests::FormatString::from(msg.clone())
+                    .shrink()
+                    .map(move |msg| Self::Print{clock: clock.clone(), cond: cond.clone(), msg: msg.into()});
+                Box::new(res)
             },
             _ => Box::new(std::iter::empty()),
         }
