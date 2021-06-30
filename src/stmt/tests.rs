@@ -5,9 +5,9 @@ use std::sync::Arc;
 use nom::combinator::all_consuming;
 use nom::Finish;
 
-use quickcheck::{Gen, TestResult, Testable};
+use quickcheck::{Arbitrary, Gen, TestResult, Testable};
 
-use crate::expr::{Expression, Reference};
+use crate::expr::{self, Expression, Reference};
 use crate::indentation::{DisplayIndented, Indentation};
 use crate::tests::Equivalence;
 
@@ -131,5 +131,63 @@ pub fn stmt_list(len: impl Into<usize>, g: &mut Gen) -> Vec<super::Statement> {
     let len = len.into();
     let mut g = Gen::new(g.size() / std::cmp::max(len, 1));
     std::iter::from_fn(|| Some(quickcheck::Arbitrary::arbitrary(&mut g))).take(len).collect()
+}
+
+
+/// Utility for generating format strings
+///
+/// This utility generates format strings, making sure it never has two adjacent
+/// `PrintElement::Literal`s and at least one `PrintElement::Value`.
+#[derive(Clone, Debug)]
+pub struct FormatString {
+    data: Vec<super::PrintElement>
+}
+
+impl From<Vec<super::PrintElement>> for FormatString {
+    fn from(data: Vec<super::PrintElement>) -> Self {
+        Self {data}
+    }
+}
+
+impl From<FormatString> for Vec<super::PrintElement> {
+    fn from(string: FormatString) -> Self {
+        string.data
+    }
+}
+
+impl Arbitrary for FormatString {
+    fn arbitrary(g: &mut Gen) -> Self {
+        use expr::tests::{expr_with_type, source_flow};
+        use crate::types::GroundType as GT;
+
+        use super::PrintElement as PE;
+
+        let mut data = vec![Arbitrary::arbitrary(g)];
+
+        let len = u8::arbitrary(g) as usize;
+        let mut g = Gen::new(g.size() / std::cmp::max(len, 1));
+
+        (0..len).for_each(|_| {
+            data.push(match data.last().unwrap() {
+                PE::Literal(..) => PE::Value(
+                    expr_with_type(GT::arbitrary(&mut g), source_flow(&mut g), &mut g),
+                    Arbitrary::arbitrary(&mut g)
+                ),
+                PE::Value(..)   => Arbitrary::arbitrary(&mut g),
+            })
+        });
+
+        data.into()
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        use super::PrintElement as PE;
+
+        let res = self.data.shrink().filter(|v| v.windows(2).all(|e| match e {
+            [PE::Literal(..), PE::Literal(..)] => false,
+            _ => true,
+        })).map(Into::into);
+        Box::new(res)
+    }
 }
 
