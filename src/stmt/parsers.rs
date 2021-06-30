@@ -6,7 +6,7 @@ use std::sync::Arc;
 use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::character::complete::{anychar, char as chr};
-use nom::combinator::{iterator, map, value};
+use nom::combinator::{iterator, map, value, verify};
 use nom::multi::{many1, separated_list1};
 use nom::sequence::{preceded, tuple};
 
@@ -240,6 +240,7 @@ fn fmt_string_part<'i>(
                 value('\n', tag("\\n")),
                 value('\t', tag("\\t")),
                 preceded(chr('\\'), anychar),
+                verify(anychar, |c| !"%\n\t'\"".contains(*c)),
             ))),
             |v| FmtStrPart::Literal(v.into_iter().collect()),
         )
