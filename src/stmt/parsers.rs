@@ -225,7 +225,7 @@ pub fn entity_decl<'i>(
 
 
 /// Parser for a format string part
-fn fmt_string_part<'i>(
+pub fn fmt_string_part<'i>(
     input: &'i str,
 ) -> IResult<'i, FmtStrPart> {
     use super::Format as F;
@@ -252,7 +252,7 @@ fn fmt_string_part<'i>(
 ///
 /// Instances of this type serves as prototypes for `PrintElement`s.
 #[derive(Clone, Debug)]
-enum FmtStrPart {
+pub enum FmtStrPart {
     Literal(String),
     FormatSpec(super::Format)
 }

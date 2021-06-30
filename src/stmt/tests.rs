@@ -87,6 +87,33 @@ fn parse_entity(mut base: Indentation, original: Entity) -> Result<TestResult, S
 }
 
 
+#[quickcheck]
+fn parse_fmt_string(original: FormatString) -> Result<TestResult, String> {
+    use nom::character::complete::char as chr;
+    use nom::combinator::map;
+    use nom::multi::many1;
+    use nom::sequence::tuple;
+
+    use super::{PrintElement as PE, parsers};
+    use parsers::FmtStrPart as FSP;
+
+    let original: Vec<_> = original.into();
+    let s = super::display::FormatString(original.as_ref()).to_string();
+    let parsed = all_consuming(map(tuple((chr('"'), many1(parsers::fmt_string_part), chr('"'))), |(_, p, ..)| p))(&s)
+        .finish()
+        .map_err(|e| e.to_string())
+        .map(|(_, p)| p)?;
+
+    let identical = original.into_iter().zip(parsed).all(|i| match i {
+        (PE::Literal(o),    FSP::Literal(p))    => o == p,
+        (PE::Value(_, o),   FSP::FormatSpec(p)) => o == p,
+        _ => false,
+    });
+
+    Ok(TestResult::from_bool(identical))
+}
+
+
 /// Retrieve all expressions occuring in a statement
 fn stmt_exprs(stmt: &Statement) -> Vec<&Expression<Arc<Entity>>> {
     match stmt {
