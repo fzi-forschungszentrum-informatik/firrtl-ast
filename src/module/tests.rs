@@ -5,6 +5,8 @@ use std::sync::Arc;
 use nom::Finish;
 use nom::combinator::all_consuming;
 
+use quickcheck::{Gen, TestResult, Testable};
+
 use crate::expr;
 use crate::indentation::{DisplayIndented, Indentation};
 use crate::stmt;
@@ -14,17 +16,26 @@ use super::{Direction, Instance, Module, Port, parsers};
 
 
 #[quickcheck]
-fn parse_module(mut base: Indentation, original: Module) -> Result<Equivalence<Module>, String> {
+fn parse_module(mut base: Indentation, original: Module) -> Result<TestResult, String> {
     let mut s: String = Default::default();
     original.fmt(&mut base, &mut s).map_err(|e| e.to_string())?;
 
-    let modules: Vec<_> = original.referenced_modules().cloned().collect();
+    let mut mods: Vec<_> = original.referenced_modules().cloned().collect();
+    mods.sort_unstable_by_key(|r| r.name().to_string());
+    if mods.windows(2).any(|p| p[0].name() == p[1].name()) {
+        // We depend on module names to be unique.
+        return Ok(TestResult::discard())
+    }
 
     let res = all_consuming(
-        |i| parsers::module(|n| modules.iter().find(|m| m.name() == n).cloned(), i, &mut base)
+        |i| parsers::module(
+            |n| mods.binary_search_by_key(&n, |r| r.name()).ok().map(|i| mods[i].clone()),
+            i,
+            &mut base,
+        )
     )(&s)
         .finish()
-        .map(|(_, parsed)| Equivalence::of(original, parsed))
+        .map(|(_, parsed)| Equivalence::of(original, parsed).result(&mut Gen::new(0)))
         .map_err(|e| e.to_string());
     res
 }
