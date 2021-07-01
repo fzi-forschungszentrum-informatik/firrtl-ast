@@ -110,12 +110,12 @@ impl DisplayIndented for Statement {
             Self::Stop{clock, cond, code}           =>
                 writeln!(f, "{}stop({}, {}, {})", indent.lock(), clock, cond, code),
             Self::Print{clock, cond, msg}           => writeln!(f,
-                "{}printf({}, {}, {}, {})",
+                "{}printf({}, {}, {}{})",
                 indent.lock(),
                 clock,
                 cond,
                 display::FormatString(msg.as_ref()),
-                CommaSeparated::from(msg.iter().filter_map(into_expr)),
+                CommaSeparated::from(msg.iter().filter_map(into_expr)).with_preceding(),
             ),
         }
     }
