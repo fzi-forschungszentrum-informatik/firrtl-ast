@@ -13,15 +13,15 @@ use crate::indentation::Indentation;
 
 /// Parse a Module
 pub fn module<'i>(input: &'i str, indentation: &'_ mut Indentation) -> IResult<'i, super::Module> {
-    let (input, name) = map(
-        tuple((indentation.parser(), kw("module"), spaced(identifier), spaced(op(":")), le)),
-        |(_, _, name, ..)| name.into()
+    let (input, (name, kind)) = map(
+        tuple((indentation.parser(), kind, spaced(identifier), spaced(op(":")), le)),
+        |(_, kind, name, ..)| (name.into(), kind)
     )(input)?;
 
     let mut indentation = indentation.sub();
 
     let mut ports = iterator(input, map(tuple((indentation.parser(), port, le)), |(_, p, ..)| Arc::new(p)));
-    let res = super::Module::new(name, &mut ports, super::Kind::Regular);
+    let res = super::Module::new(name, &mut ports, kind);
     ports.finish().map(|(i, _)| (i, res))
 }
 
