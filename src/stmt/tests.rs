@@ -16,15 +16,21 @@ use super::{Entity, Statement};
 
 #[quickcheck]
 fn parse_stmt(mut base: Indentation, original: Statement) -> Result<TestResult, String> {
-    // We depend on reference and module names to be unique. If they are not,
-    // the set of names will be smaller than the corresponding list.
-    let refs: Vec<_> = stmt_exprs(&original).into_iter().flat_map(Expression::references).cloned().collect();
-    if refs.iter().map(|r| r.name()).collect::<std::collections::HashSet<_>>().len() != refs.len() {
+    let mut refs: Vec<_> = stmt_exprs(&original)
+        .into_iter()
+        .flat_map(Expression::references)
+        .cloned()
+        .collect();
+    refs.sort_unstable_by_key(|r| r.name().to_string());
+    if refs.windows(2).any(|p| p[0].name() == p[1].name()) {
+        // We depend on reference names to be unique.
         return Ok(TestResult::discard())
     }
 
-    let mods: Vec<_> = original.instantiations().map(|i| i.module().clone()).collect();
-    if mods.iter().map(|r| r.name()).collect::<std::collections::HashSet<_>>().len() != refs.len() {
+    let mut mods: Vec<_> = original.instantiations().map(|i| i.module().clone()).collect();
+    mods.sort_unstable_by_key(|r| r.name().to_string());
+    if mods.windows(2).any(|p| p[0].name() == p[1].name()) {
+        // We depend on module names to be unique.
         return Ok(TestResult::discard())
     }
 
@@ -32,8 +38,8 @@ fn parse_stmt(mut base: Indentation, original: Statement) -> Result<TestResult, 
     original.fmt(&mut base, &mut s).map_err(|e| e.to_string())?;
 
     let parser = move |i| super::parsers::stmt(
-        |n| refs.iter().find(|r| r.name() == n).cloned(),
-        |n| mods.iter().find(|m| m.name() == n).cloned(),
+        |n| refs.binary_search_by_key(&n, |r| r.name()).ok().map(|i| refs[i].clone()),
+        |n| mods.binary_search_by_key(&n, |r| r.name()).ok().map(|i| mods[i].clone()),
         i,
         &mut base
     );
