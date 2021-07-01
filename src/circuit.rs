@@ -38,11 +38,29 @@ impl Circuit {
 
 impl fmt::Display for Circuit {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use indentation::DisplayIndented;
+        use std::collections::HashSet;
+        use indentation::{DisplayIndented, Indentation};
+
+        // Format a module and all its dependencies, if it wasn't yet formatted
+        fn fmt_module<'a>(
+            done: &mut HashSet<&'a str>,
+            indent: &mut Indentation,
+            module: &'a Module,
+            f: &mut fmt::Formatter<'_>,
+        ) -> fmt::Result {
+            if done.insert(module.name()) {
+                module.referenced_modules().try_for_each(|m| fmt_module(done, indent, m, f))?;
+                module.fmt(indent, f)
+            } else {
+                Ok(())
+            }
+        }
+
+        let mut done = Default::default();
 
         writeln!(f, "circuit {}:", self.top_module().name())?;
         let mut indent = indentation::Indentation::root().sub();
-        self.top_module().fmt(&mut indent, f)
+        fmt_module(&mut done, &mut indent, self.top_module(), f)
     }
 }
 
@@ -50,6 +68,10 @@ impl fmt::Display for Circuit {
 impl Arbitrary for Circuit {
     fn arbitrary(g: &mut Gen) -> Self {
         Self::new(Arbitrary::arbitrary(g))
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        Box::new(self.top.shrink().map(Self::new))
     }
 }
 

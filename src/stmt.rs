@@ -4,7 +4,7 @@ pub(crate) mod display;
 pub(crate) mod parsers;
 
 #[cfg(test)]
-mod tests;
+pub mod tests;
 
 use std::fmt;
 use std::sync::Arc;
@@ -357,6 +357,7 @@ impl expr::tests::TypedRef for Arc<Entity> {
                 let m = module::Module::new(
                     Identifier::arbitrary(g).into(),
                     t.fields().unwrap().map(field_to_port),
+                    Arbitrary::arbitrary(g),
                 );
                 module::Instance::new(n, Arc::new(m)).into()
             })
