@@ -35,8 +35,13 @@ impl fmt::Display for FormatString<'_> {
         for element in self.0 {
             match element {
                 P::Literal(s)               => s.chars().try_for_each(|c| match c {
-                    '%' => write!(f, "%%"),
-                    c   => fmt::Display::fmt(&c.escape_default(), f),
+                    '%'  => write!(f, "%%"),
+                    '\n' => write!(f, "\\n"),
+                    '\t' => write!(f, "\\t"),
+                    '\\' => write!(f, "\\\\"),
+                    '"'  => write!(f, "\\\""),
+                    '\'' => write!(f, "\\'"),
+                    c    => fmt::Display::fmt(&c, f),
                 }),
                 P::Value(_, F::Binary)      => write!(f, "%b"),
                 P::Value(_, F::Decimal)     => write!(f, "%d"),

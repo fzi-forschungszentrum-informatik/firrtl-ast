@@ -6,7 +6,7 @@ use std::sync::Arc;
 use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::character::complete::{anychar, char as chr};
-use nom::combinator::{iterator, map, value};
+use nom::combinator::{iterator, map, value, verify};
 use nom::multi::{many1, separated_list1};
 use nom::sequence::{preceded, tuple};
 
@@ -225,7 +225,7 @@ pub fn entity_decl<'i>(
 
 
 /// Parser for a format string part
-fn fmt_string_part<'i>(
+pub fn fmt_string_part<'i>(
     input: &'i str,
 ) -> IResult<'i, FmtStrPart> {
     use super::Format as F;
@@ -240,6 +240,7 @@ fn fmt_string_part<'i>(
                 value('\n', tag("\\n")),
                 value('\t', tag("\\t")),
                 preceded(chr('\\'), anychar),
+                verify(anychar, |c| !"%\n\t'\"".contains(*c)),
             ))),
             |v| FmtStrPart::Literal(v.into_iter().collect()),
         )
@@ -251,7 +252,7 @@ fn fmt_string_part<'i>(
 ///
 /// Instances of this type serves as prototypes for `PrintElement`s.
 #[derive(Clone, Debug)]
-enum FmtStrPart {
+pub enum FmtStrPart {
     Literal(String),
     FormatSpec(super::Format)
 }

@@ -100,3 +100,55 @@ impl quickcheck::Arbitrary for Identifier {
     }
 }
 
+
+/// Utility type for generating non-empty ASCII strings
+#[derive(Clone, Debug, PartialEq)]
+pub struct ASCII {
+    data: String
+}
+
+impl ASCII {
+    /// Check whether the given char is valid for an ASCII string
+    pub fn is_valid_char(c: char) -> bool {
+        c.is_ascii() && (!c.is_ascii_control() || c == '\n' || c == '\t')
+    }
+}
+
+impl From<String> for ASCII {
+    fn from(data: String) -> Self {
+        Self {data}
+    }
+}
+
+impl AsRef<str> for ASCII {
+    fn as_ref(&self) -> &str {
+        self.data.as_ref()
+    }
+}
+
+impl fmt::Display for ASCII {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(&self.data, f)
+    }
+}
+
+impl quickcheck::Arbitrary for ASCII {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+        let len = u8::arbitrary(g).saturating_add(1) as usize;
+        std::iter::from_fn(|| Some(char::arbitrary(g)))
+            .filter(|c| Self::is_valid_char(*c))
+            .take(len)
+            .collect::<String>()
+            .into()
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        let res = self
+            .data
+            .shrink()
+            .filter(|s| !s.is_empty() && s.chars().all(Self::is_valid_char))
+            .map(Into::into);
+        Box::new(res)
+    }
+}
+

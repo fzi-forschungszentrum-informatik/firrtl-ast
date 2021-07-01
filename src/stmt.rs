@@ -110,12 +110,12 @@ impl DisplayIndented for Statement {
             Self::Stop{clock, cond, code}           =>
                 writeln!(f, "{}stop({}, {}, {})", indent.lock(), clock, cond, code),
             Self::Print{clock, cond, msg}           => writeln!(f,
-                "{}printf({}, {}, {}, {})",
+                "{}printf({}, {}, {}{})",
                 indent.lock(),
                 clock,
                 cond,
                 display::FormatString(msg.as_ref()),
-                CommaSeparated::from(msg.iter().filter_map(into_expr)),
+                CommaSeparated::from(msg.iter().filter_map(into_expr)).with_preceding(),
             ),
         }
     }
@@ -176,7 +176,7 @@ impl Arbitrary for Statement {
             &|g| Self::Print {
                 clock: expr_with_type(GT::Clock, source_flow(g), g),
                 cond: expr_with_type(GT::UInt(Some(1)), source_flow(g), g),
-                msg: Arbitrary::arbitrary(g),
+                msg: tests::FormatString::arbitrary(g).into(),
             },
         ];
 
@@ -215,7 +215,10 @@ impl Arbitrary for Statement {
             Self::Print{clock, cond, msg}           => {
                 let clock = clock.clone();
                 let cond = cond.clone();
-                Box::new(msg.shrink().map(move |msg| Self::Print{clock: clock.clone(), cond: cond.clone(), msg}))
+                let res = tests::FormatString::from(msg.clone())
+                    .shrink()
+                    .map(move |msg| Self::Print{clock: clock.clone(), cond: cond.clone(), msg: msg.into()});
+                Box::new(res)
             },
             _ => Box::new(std::iter::empty()),
         }
@@ -428,16 +431,24 @@ impl Arbitrary for PrintElement {
         use types::GroundType as GT;
 
         let opts: [&dyn Fn(&mut Gen) -> Self; 2] = [
-            &|g| Self::Literal(Arbitrary::arbitrary(g)),
+            &|g| Self::Literal(crate::tests::ASCII::arbitrary(g).to_string()),
             &|g| Self::Value(expr_with_type(GT::arbitrary(g), source_flow(g), g), Arbitrary::arbitrary(g)),
         ];
 
-        g.choose(&opts).unwrap()(g)
+        if g.size() > 0 {
+            g.choose(&opts).unwrap()(g)
+        } else {
+            Self::Literal(" ".to_string())
+        }
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        use crate::tests::ASCII;
+
         match self {
-            Self::Literal(s)    => Box::new(s.shrink().map(Self::Literal)),
+            Self::Literal(s)    => Box::new(
+                ASCII::from(s.clone()).shrink().map(|s| Self::Literal(s.to_string()))
+            ),
             Self::Value(_, _)   => Box::new(std::iter::empty()),
         }
     }
