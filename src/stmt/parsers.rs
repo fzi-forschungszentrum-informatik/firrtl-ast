@@ -30,16 +30,16 @@ pub fn stmts<'i>(
     use crate::expr::Reference;
 
     let mut res: Vec<super::Statement> = Default::default();
-    let mut entities: Vec<Arc<super::Entity>> = Default::default();
+    let mut entities: std::collections::HashMap<String, Arc<super::Entity>> = Default::default();
 
     while let Ok((i, stmt)) = stmt(
-        |n| entities.iter().find(|e| e.name() == n).cloned().or_else(|| reference(n)),
+        |n| entities.get(n).cloned().or_else(|| reference(n)),
         module,
         input,
         indentation,
     ) {
         if let super::Statement::Declaration(e) = &stmt {
-            entities.push(e.clone());
+            entities.insert(e.name().to_string(), e.clone());
         }
         res.push(stmt);
         input = i;
