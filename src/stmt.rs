@@ -89,6 +89,26 @@ impl DisplayIndented for Statement {
             }
         }
 
+        fn fmt_indendet_cond(
+            cond: &Expression,
+            when: &Arc<[Statement]>,
+            r#else: &Arc<[Statement]>,
+            indent: &mut Indentation,
+            f: &mut impl fmt::Write,
+        ) -> fmt::Result {
+            writeln!(f, "when {}:", cond)?;
+            display::StatementList(when.as_ref()).fmt(&mut indent.sub(), f)?;
+            if let [Statement::Conditional{cond, when, r#else}] = r#else.as_ref() {
+                write!(f, "{}else ", indent.lock())?;
+                fmt_indendet_cond(cond, when, r#else, indent, f)
+            } else if r#else.len() > 0 {
+                writeln!(f, "{}else:", indent.lock())?;
+                display::StatementList(r#else.as_ref()).fmt(&mut indent.sub(), f)
+            } else {
+                Ok(())
+            }
+        }
+
         match self {
             Self::Connection{from, to}              => writeln!(f, "{}{} <= {}", indent.lock(), to, from),
             Self::PartialConnection{from, to}       => writeln!(f, "{}{} <- {}", indent.lock(), to, from),
@@ -98,14 +118,8 @@ impl DisplayIndented for Statement {
             Self::Attach(exprs)                     =>
                 writeln!(f, "{}attach({})", indent.lock(), CommaSeparated::from(exprs)),
             Self::Conditional{cond, when, r#else}   => {
-                let indent = indent.lock();
-                writeln!(f, "{}when {}:", indent, cond)?;
-                display::StatementList(when.as_ref()).fmt(&mut indent.sub(), f)?;
-                if r#else.len() > 0 {
-                    writeln!(f, "{}else:", indent)?;
-                    display::StatementList(r#else.as_ref()).fmt(&mut indent.sub(), f)?;
-                }
-                Ok(())
+                write!(f, "{}", indent.lock())?;
+                fmt_indendet_cond(cond, when, r#else, indent, f)
             },
             Self::Stop{clock, cond, code}           =>
                 writeln!(f, "{}stop({}, {}, {})", indent.lock(), clock, cond, code),
