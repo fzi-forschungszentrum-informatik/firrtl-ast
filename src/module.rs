@@ -93,7 +93,7 @@ impl info::WithInfo for Module {
 
 impl DisplayIndented for Module {
     fn fmt<W: fmt::Write>(&self, indentation: &mut Indentation, f: &mut W) -> fmt::Result {
-        writeln!(f, "{}{} {}:", indentation.lock(), self.kind(), self.name())?;
+        writeln!(f, "{}{} {}:{}", indentation.lock(), self.kind(), self.name(), info::Info::of(self))?;
         let mut indentation = indentation.sub();
         self.ports().try_for_each(|p| DisplayIndented::fmt(p, &mut indentation, f))?;
         self.statements().iter().try_for_each(|s| DisplayIndented::fmt(s, &mut indentation, f))
