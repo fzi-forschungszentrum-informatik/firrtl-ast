@@ -14,6 +14,7 @@ use quickcheck::{Arbitrary, Gen};
 
 use crate::expr;
 use crate::indentation::{DisplayIndented, Indentation};
+use crate::info;
 use crate::memory::Memory;
 use crate::module;
 use crate::register::Register;
@@ -24,6 +25,7 @@ use crate::types;
 #[derive(Clone, Debug, PartialEq)]
 pub struct Statement {
     kind: Kind,
+    info: Option<String>,
 }
 
 impl Statement {
@@ -64,13 +66,23 @@ impl Statement {
 
 impl From<Kind> for Statement {
     fn from(kind: Kind) -> Self {
-        Self {kind}
+        Self {kind, info: Default::default()}
     }
 }
 
 impl AsRef<Kind> for Statement {
     fn as_ref(&self) -> &Kind {
         self.kind()
+    }
+}
+
+impl info::WithInfo for Statement {
+    fn info(&self) -> Option<&str> {
+        self.info.as_ref().map(AsRef::as_ref)
+    }
+
+    fn set_info(&mut self, info: Option<String>) {
+        self.info = info
     }
 }
 
