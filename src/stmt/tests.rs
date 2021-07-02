@@ -11,7 +11,7 @@ use crate::expr::{self, Expression, Reference};
 use crate::indentation::{DisplayIndented, Indentation};
 use crate::tests::Equivalence;
 
-use super::{Entity, Statement};
+use super::{Entity, Kind, Statement};
 
 
 #[quickcheck]
@@ -122,19 +122,19 @@ fn parse_fmt_string(original: FormatString) -> Result<TestResult, String> {
 
 /// Retrieve all expressions occuring in a statement
 pub fn stmt_exprs(stmt: &Statement) -> Vec<&Expression<Arc<Entity>>> {
-    match stmt {
-        Statement::Connection{from, to}             => vec![from, to],
-        Statement::PartialConnection{from, to}      => vec![from, to],
-        Statement::Empty                            => Default::default(),
-        Statement::Declaration(entity)              => entity_exprs(entity.as_ref()),
-        Statement::Invalidate(expr)                 => vec![expr],
-        Statement::Attach(v)                        => v.iter().collect(),
-        Statement::Conditional{cond, when, r#else}  => std::iter::once(cond)
+    match stmt.as_ref() {
+        Kind::Connection{from, to}              => vec![from, to],
+        Kind::PartialConnection{from, to}       => vec![from, to],
+        Kind::Empty                             => Default::default(),
+        Kind::Declaration(entity)               => entity_exprs(entity.as_ref()),
+        Kind::Invalidate(expr)                  => vec![expr],
+        Kind::Attach(v)                         => v.iter().collect(),
+        Kind::Conditional{cond, when, r#else}   => std::iter::once(cond)
             .chain(when.iter().flat_map(stmt_exprs))
             .chain(r#else.iter().flat_map(stmt_exprs))
             .collect(),
-        Statement::Stop{clock, cond, ..}            => vec![clock, cond],
-        Statement::Print{clock, cond, msg}          => std::iter::once(clock)
+        Kind::Stop{clock, cond, ..}             => vec![clock, cond],
+        Kind::Print{clock, cond, msg}           => std::iter::once(clock)
             .chain(std::iter::once(cond))
             .chain(msg.iter().filter_map(|p| if let super::PrintElement::Value(e, _) = p {
                 Some(e)

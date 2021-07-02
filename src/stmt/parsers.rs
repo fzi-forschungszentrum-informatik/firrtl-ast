@@ -38,7 +38,7 @@ pub fn stmts<'i>(
         input,
         indentation,
     ) {
-        if let super::Statement::Declaration(e) = &stmt {
+        if let super::Kind::Declaration(e) = stmt.as_ref() {
             entities.insert(e.name().to_string(), e.clone());
         }
         res.push(stmt);
@@ -56,7 +56,7 @@ pub fn stmt<'i>(
     input: &'i str,
     indentation: &'_ mut Indentation,
 ) -> IResult<'i, super::Statement> {
-    use super::{Statement as S, PrintElement as P};
+    use super::{Kind, PrintElement as P};
 
     let indent = indentation.clone().into_parser();
 
@@ -65,25 +65,25 @@ pub fn stmt<'i>(
     let (input, (indent, stmt)) = alt((
         map(
             tuple((indent.clone(), &expr, spaced(op("<=")), spaced(&expr), le)),
-            |(i, to, _, from, _)| (i, S::Connection{from, to}),
+            |(i, to, _, from, _)| (i, Kind::Connection{from, to}.into()),
         ),
         map(
             tuple((indent.clone(), &expr, spaced(op("<-")), spaced(&expr), le)),
-            |(i, to, _, from, _)| (i, S::PartialConnection{from, to}),
+            |(i, to, _, from, _)| (i, Kind::PartialConnection{from, to}.into()),
         ),
-        map(tuple((indent.clone(), kw("skip"), le)), |(i, ..)| (i, S::Empty)),
+        map(tuple((indent.clone(), kw("skip"), le)), |(i, ..)| (i, Kind::Empty.into())),
         |i| {
             let mut indent = indent.clone().into();
             entity_decl(reference, module, i, &mut indent)
-                .map(|(i, e)| (i, (indent, S::Declaration(Arc::new(e)))))
+                .map(|(i, e)| (i, (indent, Kind::Declaration(Arc::new(e)).into())))
         },
         map(
             tuple((indent.clone(), &expr, spaced(kw("is")), spaced(kw("invalid")), le)),
-            |(i, e, ..)| (i, S::Invalidate(e)),
+            |(i, e, ..)| (i, Kind::Invalidate(e).into()),
         ),
         map(
             tuple((indent.clone(), kw("attach"), lp, separated_list1(comma, spaced(&expr)), rp, le)),
-            |(i, _, _, e, _, _)| (i, S::Attach(e)),
+            |(i, _, _, e, _, _)| (i, Kind::Attach(e).into()),
         ),
         |i| {
             use nom::Parser;
@@ -105,7 +105,7 @@ pub fn stmt<'i>(
                 rp,
                 le,
             )),
-            |(i, _, _, clock, _, cond, _, code, ..)| (i, S::Stop{clock, cond, code}),
+            |(i, _, _, clock, _, cond, _, code, ..)| (i, Kind::Stop{clock, cond, code}.into()),
         ),
         map(
             tuple((
@@ -131,7 +131,7 @@ pub fn stmt<'i>(
                 rp,
                 le,
             )),
-            |(i, _, _, clock, _, cond, _, msg, ..)| (i, S::Print{clock, cond, msg}),
+            |(i, _, _, clock, _, cond, _, msg, ..)| (i, Kind::Print{clock, cond, msg}.into()),
         ),
     ))(input)?;
 
@@ -171,7 +171,7 @@ fn indented_condition<'i>(
 
     Ok((
         input,
-        super::Statement::Conditional{cond, when: when.into(), r#else: r#else.into()}
+        super::Kind::Conditional{cond, when: when.into(), r#else: r#else.into()}.into()
     ))
 }
 

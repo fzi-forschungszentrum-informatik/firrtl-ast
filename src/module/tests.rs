@@ -140,7 +140,7 @@ fn stmt_with_decls(
                         ports.push(p.clone())
                     } else {
                         d.extend(
-                            stmt_with_decls(stmt::Statement::Declaration(r.clone()), entities, ports)?
+                            stmt_with_decls(stmt::Kind::Declaration(r.clone()).into(), entities, ports)?
                         )
                     }
                 }

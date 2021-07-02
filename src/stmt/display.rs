@@ -61,7 +61,7 @@ impl DisplayIndented for StatementList<'_> {
         if self.0.len() > 0 {
             self.0.iter().try_for_each(|s| s.fmt(indent, f))
         } else {
-            super::Statement::Empty.fmt(indent, f)
+            super::Statement::from(super::Kind::Empty).fmt(indent, f)
         }
     }
 }
