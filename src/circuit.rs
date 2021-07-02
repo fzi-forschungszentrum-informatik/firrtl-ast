@@ -70,7 +70,7 @@ impl fmt::Display for Circuit {
 
         let mut done = Default::default();
 
-        writeln!(f, "circuit {}:", self.top_module().name())?;
+        writeln!(f, "circuit {}:{}", self.top_module().name(), info::Info::of(self))?;
         let mut indent = indentation::Indentation::root().sub();
         fmt_module(&mut done, &mut indent, self.top_module(), f)
     }
