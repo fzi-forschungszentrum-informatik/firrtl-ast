@@ -24,6 +24,7 @@ pub struct Module {
     name: Arc<str>,
     ports: Vec<Arc<Port>>,
     stmts: Option<Vec<Statement>>,
+    info: Option<String>,
 }
 
 impl Module {
@@ -33,7 +34,7 @@ impl Module {
             Kind::Regular   => Some(Default::default()),
             Kind::External  => None,
         };
-        Self {name, ports: ports.into_iter().collect(), stmts}
+        Self {name, ports: ports.into_iter().collect(), stmts, info: Default::default()}
     }
 
     /// Retrieve the module's name
@@ -77,6 +78,16 @@ impl Module {
     /// returned.
     pub fn statements_mut(&mut self) -> Option<&mut Vec<Statement>> {
         self.stmts.as_mut()
+    }
+}
+
+impl info::WithInfo for Module {
+    fn info(&self) -> Option<&str> {
+        self.info.as_ref().map(AsRef::as_ref)
+    }
+
+    fn set_info(&mut self, info: Option<String>) {
+        self.info = info
     }
 }
 
