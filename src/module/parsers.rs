@@ -52,15 +52,16 @@ pub fn module<'i>(
     input: &'i str,
     indentation: &'_ mut Indentation,
 ) -> IResult<'i, super::Module> {
-    let (input, (name, kind)) = map(
-        tuple((indentation.parser(), kind, spaced(identifier), spaced(op(":")), le)),
-        |(_, kind, name, ..)| (name.into(), kind)
+    let (input, (name, kind, info)) = map(
+        tuple((indentation.parser(), kind, spaced(identifier), spaced(op(":")), parse_info, le)),
+        |(_, kind, name, _, info, ..)| (name.into(), kind, info)
     )(input)?;
 
     let mut indentation = indentation.sub();
 
     let mut ports = iterator(input, map(tuple((indentation.parser(), port, le)), |(_, p, ..)| Arc::new(p)));
     let mut res = super::Module::new(name, &mut ports, kind);
+    res.set_info(info);
     let (input, _) = ports.finish()?;
 
     let input = match kind {
