@@ -6,9 +6,9 @@ use crate::indentation::{DisplayIndented, Indentation};
 
 
 /// Utility for displaying an entity declaration
-pub struct Entity<'a>(pub &'a super::Entity);
+pub struct EntityDecl<'a>(pub &'a super::Entity);
 
-impl DisplayIndented for Entity<'_> {
+impl DisplayIndented for EntityDecl<'_> {
     fn fmt<W: fmt::Write>(&self, indentation: &mut Indentation, f: &mut W) -> fmt::Result {
         use super::Entity as E;
         match self.0 {

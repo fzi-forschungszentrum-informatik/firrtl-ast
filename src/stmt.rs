@@ -127,7 +127,7 @@ impl DisplayIndented for Statement {
             Kind::Connection{from, to}              => writeln!(f, "{}{} <= {}", indent.lock(), to, from),
             Kind::PartialConnection{from, to}       => writeln!(f, "{}{} <- {}", indent.lock(), to, from),
             Kind::Empty                             => writeln!(f, "{}skip", indent.lock()),
-            Kind::Declaration(entity)               => display::Entity(entity).fmt(indent, f),
+            Kind::Declaration(entity)               => display::EntityDecl(entity).fmt(indent, f),
             Kind::Invalidate(expr)                  => writeln!(f, "{}{} is invalid", indent.lock(), expr),
             Kind::Attach(exprs)                     =>
                 writeln!(f, "{}attach({})", indent.lock(), CommaSeparated::from(exprs)),
