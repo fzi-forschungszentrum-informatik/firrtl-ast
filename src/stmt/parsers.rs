@@ -110,7 +110,7 @@ pub fn stmt<'i>(
                 le,
             )),
             |(i, _, _, clock, _, cond, _, code, _, info, ..)|
-                (i, S::from(Kind::Stop{clock, cond, code}).with_info(info)),
+                (i, S::from(Kind::Stop{name: Default::default(), clock, cond, code}).with_info(info)),
         ),
         map(
             tuple((
@@ -138,7 +138,7 @@ pub fn stmt<'i>(
                 le,
             )),
             |(i, _, _, clock, _, cond, _, msg, _, info, ..)|
-                (i, S::from(Kind::Print{clock, cond, msg}).with_info(info)),
+                (i, S::from(Kind::Print{name: Default::default(), clock, cond, msg}).with_info(info)),
         ),
     ))(input)?;
 

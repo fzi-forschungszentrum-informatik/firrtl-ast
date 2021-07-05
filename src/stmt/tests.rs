@@ -136,7 +136,7 @@ pub fn stmt_exprs(stmt: &Statement) -> Vec<&Expression<Arc<Entity>>> {
             .chain(r#else.iter().flat_map(stmt_exprs))
             .collect(),
         Kind::Stop{clock, cond, ..}             => vec![clock, cond],
-        Kind::Print{clock, cond, msg}           => std::iter::once(clock)
+        Kind::Print{clock, cond, msg, ..}       => std::iter::once(clock)
             .chain(std::iter::once(cond))
             .chain(msg.iter().filter_map(|p| if let super::PrintElement::Value(e, _) = p {
                 Some(e)

@@ -153,9 +153,9 @@ impl DisplayIndented for Statement {
                 write!(f, "{}", indent.lock())?;
                 fmt_indendet_cond(cond, when, r#else, indent, info, f)
             },
-            Kind::Stop{clock, cond, code}           =>
+            Kind::Stop{clock, cond, code, ..}       =>
                 writeln!(f, "{}stop({}, {}, {}){}", indent.lock(), clock, cond, code, info),
-            Kind::Print{clock, cond, msg}           => writeln!(f,
+            Kind::Print{clock, cond, msg, ..}       => writeln!(f,
                 "{}printf({}, {}, {}{}){}",
                 indent.lock(),
                 clock,
@@ -216,11 +216,13 @@ impl Arbitrary for Statement {
                 r#else: tests::stmt_list(u8::arbitrary(g), g).into(),
             },
             &|g| Kind::Stop {
+                name: Default::default(),
                 clock: expr_with_type(GT::Clock, source_flow(g), g),
                 cond: expr_with_type(GT::UInt(Some(1)), source_flow(g), g),
                 code: Arbitrary::arbitrary(g),
             },
             &|g| Kind::Print {
+                name: Default::default(),
                 clock: expr_with_type(GT::Clock, source_flow(g), g),
                 cond: expr_with_type(GT::UInt(Some(1)), source_flow(g), g),
                 msg: tests::FormatString::arbitrary(g).into(),
@@ -265,12 +267,14 @@ impl Arbitrary for Statement {
                     }.into());
                 Box::new(when.to_vec().into_iter().chain(r#else.to_vec()).chain(res))
             },
-            Kind::Print{clock, cond, msg}           => {
+            Kind::Print{name, clock, cond, msg}     => {
+                let name = name.clone();
                 let clock = clock.clone();
                 let cond = cond.clone();
                 let res = tests::FormatString::from(msg.clone())
                     .shrink()
                     .map(move |msg| Kind::Print{
+                        name: name.clone(),
                         clock: clock.clone(),
                         cond: cond.clone(),
                         msg: msg.into(),
@@ -293,8 +297,8 @@ pub enum Kind {
     Invalidate(Expression),
     Attach(Vec<Expression>),
     Conditional{cond: Expression, when: Arc<[Statement]>, r#else: Arc<[Statement]>},
-    Stop{clock: Expression, cond: Expression, code: i64},
-    Print{clock: Expression, cond: Expression, msg: Vec<PrintElement>},
+    Stop{name: Option<Arc<str>>, clock: Expression, cond: Expression, code: i64},
+    Print{name: Option<Arc<str>>, clock: Expression, cond: Expression, msg: Vec<PrintElement>},
 }
 
 
