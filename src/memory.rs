@@ -13,7 +13,6 @@ use std::sync::Arc;
 use quickcheck::{Arbitrary, Gen};
 
 use crate::expr;
-use crate::indentation::{DisplayIndented, Indentation};
 use crate::types;
 
 #[cfg(test)]
@@ -180,21 +179,6 @@ impl types::Typed for Memory {
             .map(|p| Field::new(p.name.clone(), port_type(p.kind)).flipped())
             .collect();
         Ok(bundle)
-    }
-}
-
-impl DisplayIndented for Memory {
-    fn fmt<W: fmt::Write>(&self, indentation: &mut Indentation, f: &mut W) -> fmt::Result {
-        use expr::Reference;
-
-        writeln!(f, "{}mem {}:", indentation.lock(), self.name())?;
-        let mut indentation = indentation.sub();
-        writeln!(f, "{}data-type => {}", indentation.lock(), self.data_type())?;
-        writeln!(f, "{}depth => {}", indentation.lock(), self.depth())?;
-        self.ports().try_for_each(|p| DisplayIndented::fmt(p, &mut indentation, f))?;
-        writeln!(f, "{}read-latency => {}", indentation.lock(), self.read_latency())?;
-        writeln!(f, "{}write-latency => {}", indentation.lock(), self.write_latency())?;
-        writeln!(f, "{}read-under-write => {}", indentation.lock(), self.read_under_write())
     }
 }
 
