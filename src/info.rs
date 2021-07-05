@@ -97,3 +97,17 @@ pub(crate) fn parse(input: &str) -> parsers::IResult<Option<String>> {
     )), |(_, s, _)| s.into_iter().collect()))).parse(input)
 }
 
+
+#[cfg(test)]
+#[quickcheck]
+fn parse_info(original: crate::tests::ASCII) -> Result<crate::tests::Equivalence<Option<String>>, String> {
+    use nom::{Finish, combinator::all_consuming};
+
+    let s = Info(Some(original.as_ref())).to_string();
+    let res = all_consuming(parse)(&s)
+        .finish()
+        .map(|(_, parsed)| crate::tests::Equivalence::of(Some(original.to_string()), parsed))
+        .map_err(|e| e.to_string());
+    res
+}
+
