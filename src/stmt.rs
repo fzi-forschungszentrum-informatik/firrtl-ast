@@ -101,6 +101,7 @@ impl<'a> transiter::AutoTransIter<&'a Statement> for &'a Statement {
 impl DisplayIndented for Statement {
     fn fmt<W: fmt::Write>(&self, indent: &mut Indentation, f: &mut W) -> fmt::Result {
         use crate::display::CommaSeparated;
+        use crate::info::Info;
 
         fn into_expr(elem: &PrintElement) -> Option<&Expression> {
             if let PrintElement::Value(expr, _) = elem {
@@ -115,15 +116,16 @@ impl DisplayIndented for Statement {
             when: &Arc<[Statement]>,
             r#else: &Arc<[Statement]>,
             indent: &mut Indentation,
+            info: Info,
             f: &mut impl fmt::Write,
         ) -> fmt::Result {
-            writeln!(f, "when {}:", cond)?;
+            writeln!(f, "when {}:{}", cond, info)?;
             display::StatementList(when.as_ref()).fmt(&mut indent.sub(), f)?;
 
             if let [stmt] = r#else.as_ref() {
                 if let Kind::Conditional{cond, when, r#else} = stmt.as_ref() {
                     write!(f, "{}else ", indent.lock())?;
-                    return fmt_indendet_cond(cond, when, r#else, indent, f);
+                    return fmt_indendet_cond(cond, when, r#else, indent, Info::of(stmt), f);
                 }
             }
 
@@ -135,27 +137,32 @@ impl DisplayIndented for Statement {
             }
         }
 
+        let info = Info::of(self);
+
         match self.as_ref() {
-            Kind::Connection{from, to}              => writeln!(f, "{}{} <= {}", indent.lock(), to, from),
-            Kind::PartialConnection{from, to}       => writeln!(f, "{}{} <- {}", indent.lock(), to, from),
-            Kind::Empty                             => writeln!(f, "{}skip", indent.lock()),
-            Kind::Declaration(entity)               => display::EntityDecl(entity).fmt(indent, f),
+            Kind::Connection{from, to}              =>
+                writeln!(f, "{}{} <= {}{}", indent.lock(), to, from, info),
+            Kind::PartialConnection{from, to}       =>
+                writeln!(f, "{}{} <- {}{}", indent.lock(), to, from, info),
+            Kind::Empty                             => writeln!(f, "{}skip{}", indent.lock(), info),
+            Kind::Declaration(entity)               => display::EntityDecl(entity, info).fmt(indent, f),
             Kind::Invalidate(expr)                  => writeln!(f, "{}{} is invalid", indent.lock(), expr),
             Kind::Attach(exprs)                     =>
-                writeln!(f, "{}attach({})", indent.lock(), CommaSeparated::from(exprs)),
+                writeln!(f, "{}attach({}){}", indent.lock(), CommaSeparated::from(exprs), info),
             Kind::Conditional{cond, when, r#else}   => {
                 write!(f, "{}", indent.lock())?;
-                fmt_indendet_cond(cond, when, r#else, indent, f)
+                fmt_indendet_cond(cond, when, r#else, indent, info, f)
             },
             Kind::Stop{clock, cond, code}           =>
-                writeln!(f, "{}stop({}, {}, {})", indent.lock(), clock, cond, code),
+                writeln!(f, "{}stop({}, {}, {}){}", indent.lock(), clock, cond, code, info),
             Kind::Print{clock, cond, msg}           => writeln!(f,
-                "{}printf({}, {}, {}{})",
+                "{}printf({}, {}, {}{}){}",
                 indent.lock(),
                 clock,
                 cond,
                 display::FormatString(msg.as_ref()),
                 CommaSeparated::from(msg.iter().filter_map(into_expr)).with_preceding(),
+                info,
             ),
         }
     }

@@ -76,7 +76,9 @@ fn parse_entity(mut base: Indentation, original: Entity) -> Result<TestResult, S
     };
 
     let mut s: String = Default::default();
-    super::display::EntityDecl(&original).fmt(&mut base, &mut s).map_err(|e| e.to_string())?;
+    super::display::EntityDecl(&original, Default::default())
+        .fmt(&mut base, &mut s)
+        .map_err(|e| e.to_string())?;
 
     let parser = move |i| super::parsers::entity_decl(
         |n| refs.iter().find(|r| r.name() == n).cloned(),
