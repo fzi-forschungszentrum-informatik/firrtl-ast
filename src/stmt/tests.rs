@@ -89,7 +89,7 @@ fn parse_entity(mut base: Indentation, original: Entity) -> Result<TestResult, S
 
     let res = all_consuming(parser)(&s)
         .finish()
-        .map(|(_, parsed)| Equivalence::of(original, parsed).result(&mut Gen::new(0)))
+        .map(|(_, parsed)| Equivalence::of((original, None), parsed).result(&mut Gen::new(0)))
         .map_err(|e| e.to_string());
     res
 }
