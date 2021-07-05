@@ -12,12 +12,13 @@ use nom::sequence::{preceded, tuple};
 
 use crate::expr::parsers::expr;
 use crate::indentation::Indentation;
-use crate::module::parsers::instance;
+use crate::info::{WithInfo, parse as info};
+use crate::memory::parsers::memory;
 use crate::module::Module;
+use crate::module::parsers::instance;
 use crate::parsers::{IResult, comma, decimal, identifier, kw, le, lp, op, rp, spaced};
 use crate::register::parsers::register;
 use crate::types::parsers::r#type;
-use crate::memory::parsers::memory;
 
 
 /// Parser for sequences of statements
@@ -38,7 +39,7 @@ pub fn stmts<'i>(
         input,
         indentation,
     ) {
-        if let super::Statement::Declaration(e) = &stmt {
+        if let super::Kind::Declaration(e) = stmt.as_ref() {
             entities.insert(e.name().to_string(), e.clone());
         }
         res.push(stmt);
@@ -56,7 +57,7 @@ pub fn stmt<'i>(
     input: &'i str,
     indentation: &'_ mut Indentation,
 ) -> IResult<'i, super::Statement> {
-    use super::{Statement as S, PrintElement as P};
+    use super::{Kind, PrintElement as P, Statement as S};
 
     let indent = indentation.clone().into_parser();
 
@@ -64,26 +65,28 @@ pub fn stmt<'i>(
 
     let (input, (indent, stmt)) = alt((
         map(
-            tuple((indent.clone(), &expr, spaced(op("<=")), spaced(&expr), le)),
-            |(i, to, _, from, _)| (i, S::Connection{from, to}),
+            tuple((indent.clone(), &expr, spaced(op("<=")), spaced(&expr), info, le)),
+            |(i, to, _, from, info, _)| (i, S::from(Kind::Connection{from, to}).with_info(info)),
         ),
         map(
-            tuple((indent.clone(), &expr, spaced(op("<-")), spaced(&expr), le)),
-            |(i, to, _, from, _)| (i, S::PartialConnection{from, to}),
+            tuple((indent.clone(), &expr, spaced(op("<-")), spaced(&expr), info, le)),
+            |(i, to, _, from, info, _)| (i, S::from(Kind::PartialConnection{from, to}).with_info(info)),
         ),
-        map(tuple((indent.clone(), kw("skip"), le)), |(i, ..)| (i, S::Empty)),
+        map(
+            tuple((indent.clone(), kw("skip"), info, le)),
+            |(i, _, info, ..)| (i, S::from(Kind::Empty).with_info(info))),
         |i| {
             let mut indent = indent.clone().into();
             entity_decl(reference, module, i, &mut indent)
-                .map(|(i, e)| (i, (indent, S::Declaration(Arc::new(e)))))
+                .map(|(i, (e, info))| (i, (indent, S::from(Kind::Declaration(Arc::new(e))).with_info(info))))
         },
         map(
-            tuple((indent.clone(), &expr, spaced(kw("is")), spaced(kw("invalid")), le)),
-            |(i, e, ..)| (i, S::Invalidate(e)),
+            tuple((indent.clone(), &expr, spaced(kw("is")), spaced(kw("invalid")), info, le)),
+            |(i, e, .., info, _)| (i, S::from(Kind::Invalidate(e)).with_info(info)),
         ),
         map(
-            tuple((indent.clone(), kw("attach"), lp, separated_list1(comma, spaced(&expr)), rp, le)),
-            |(i, _, _, e, _, _)| (i, S::Attach(e)),
+            tuple((indent.clone(), kw("attach"), lp, separated_list1(comma, spaced(&expr)), rp, info, le)),
+            |(i, _, _, e, _, info, _)| (i, S::from(Kind::Attach(e)).with_info(info)),
         ),
         |i| {
             use nom::Parser;
@@ -103,9 +106,11 @@ pub fn stmt<'i>(
                 comma,
                 spaced(decimal),
                 rp,
+                info,
                 le,
             )),
-            |(i, _, _, clock, _, cond, _, code, ..)| (i, S::Stop{clock, cond, code}),
+            |(i, _, _, clock, _, cond, _, code, _, info, ..)|
+                (i, S::from(Kind::Stop{clock, cond, code}).with_info(info)),
         ),
         map(
             tuple((
@@ -129,9 +134,11 @@ pub fn stmt<'i>(
                     exprs.finish().map(|(i, _)| (i, ps))
                 }),
                 rp,
+                info,
                 le,
             )),
-            |(i, _, _, clock, _, cond, _, msg, ..)| (i, S::Print{clock, cond, msg}),
+            |(i, _, _, clock, _, cond, _, msg, _, info, ..)|
+                (i, S::from(Kind::Print{clock, cond, msg}).with_info(info)),
         ),
     ))(input)?;
 
@@ -152,9 +159,9 @@ fn indented_condition<'i>(
     input: &'i str,
     indentation: &mut Indentation,
 ) -> IResult<'i, super::Statement> {
-    let (input, cond) = map(
-        tuple((kw("when"), spaced(|i| expr(reference, i)), spaced(op(":")), le)),
-        |(_, e, ..)| e,
+    let (input, (cond, info)) = map(
+        tuple((kw("when"), spaced(|i| expr(reference, i)), spaced(op(":")), info, le)),
+        |(_, e, _, info, ..)| (e, info),
     )(input)?;
 
     let (input, when) = stmts(&reference, module, input, &mut indentation.sub())?;
@@ -169,10 +176,8 @@ fn indented_condition<'i>(
         (input, Default::default())
     };
 
-    Ok((
-        input,
-        super::Statement::Conditional{cond, when: when.into(), r#else: r#else.into()}
-    ))
+    let cond = super::Kind::Conditional{cond, when: when.into(), r#else: r#else.into()};
+    Ok((input, super::Statement::from(cond).with_info(info)))
 }
 
 
@@ -182,20 +187,20 @@ pub fn entity_decl<'i>(
     module: impl Fn(&str) -> Option<std::sync::Arc<Module>> + Copy,
     input: &'i str,
     indentation: &'_ mut Indentation,
-) -> IResult<'i, super::Entity> {
+) -> IResult<'i, (super::Entity, Option<String>)> {
     use nom::Parser;
 
     let indent = indentation.clone().into_parser();
     let ident = |i| spaced(identifier).parse(i);
 
-    let (input, (indent, entity)) = alt((
+    let (input, (indent, entity, info)) = alt((
         map(
-            tuple((indent.clone(), kw("wire"), &ident, spaced(op(":")), spaced(r#type), le)),
-            |(i, _, n, _, r#type, _)| (i, super::Entity::Wire{name: n.into(), r#type})
+            tuple((indent.clone(), kw("wire"), &ident, spaced(op(":")), spaced(r#type), info, le)),
+            |(i, _, n, _, r#type, info, _)| (i, super::Entity::Wire{name: n.into(), r#type}, info)
         ),
         map(
-            tuple((indent.clone(), |i| register(reference, i), le)),
-            |(i, r, _)| (i, r.into())
+            tuple((indent.clone(), |i| register(reference, i), info, le)),
+            |(i, r, info, _)| (i, r.into(), info)
         ),
         map(
             tuple((
@@ -204,23 +209,24 @@ pub fn entity_decl<'i>(
                 &ident,
                 spaced(op("=")),
                 spaced(|i| expr(reference, i)),
+                info,
                 le
             )),
-            |(i, _, n, _, value, _)| (i, super::Entity::Node{name: n.into(), value})
+            |(i, _, n, _, value, info, _)| (i, super::Entity::Node{name: n.into(), value}, info)
         ),
         |i| {
             let mut indent = Into::into(indent.clone());
-            memory(i, &mut indent).map(|(i, m)| (i, (indent, m.into())))
+            memory(i, &mut indent).map(|(i, (m, info))| (i, (indent, m.into(), info)))
         },
         map(
-            tuple((indent.clone(), |i| instance(module, i), le)),
-            |(i, inst, _)| (i, inst.into())
+            tuple((indent.clone(), |i| instance(module, i), info, le)),
+            |(i, inst, info, _)| (i, inst.into(), info)
         ),
     ))(input)?;
 
     *indentation = indent;
 
-    Ok((input, entity))
+    Ok((input, (entity, info)))
 }
 
 

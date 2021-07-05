@@ -6,10 +6,11 @@ use nom::branch::alt;
 use nom::combinator::{iterator, map, value};
 use nom::sequence::tuple;
 
+use crate::indentation::Indentation;
+use crate::info::{WithInfo, parse as parse_info};
 use crate::parsers::{IResult, identifier, kw, le, op, spaced};
 use crate::stmt::parsers::stmts;
 use crate::types::parsers::r#type;
-use crate::indentation::Indentation;
 
 
 /// Utility for parsing dependant modules
@@ -51,15 +52,16 @@ pub fn module<'i>(
     input: &'i str,
     indentation: &'_ mut Indentation,
 ) -> IResult<'i, super::Module> {
-    let (input, (name, kind)) = map(
-        tuple((indentation.parser(), kind, spaced(identifier), spaced(op(":")), le)),
-        |(_, kind, name, ..)| (name.into(), kind)
+    let (input, (name, kind, info)) = map(
+        tuple((indentation.parser(), kind, spaced(identifier), spaced(op(":")), parse_info, le)),
+        |(_, kind, name, _, info, ..)| (name.into(), kind, info)
     )(input)?;
 
     let mut indentation = indentation.sub();
 
     let mut ports = iterator(input, map(tuple((indentation.parser(), port, le)), |(_, p, ..)| Arc::new(p)));
     let mut res = super::Module::new(name, &mut ports, kind);
+    res.set_info(info);
     let (input, _) = ports.finish()?;
 
     let input = match kind {
@@ -105,8 +107,9 @@ pub fn instance<'i>(
 /// Parse the elements of a port
 pub fn port<'i>(input: &str) -> IResult<super::Port> {
     map(
-        tuple((direction, spaced(identifier), spaced(op(":")), spaced(r#type))),
-        |(direction, name, _, r#type)| super::Port::new(name.to_string(), r#type, direction)
+        tuple((direction, spaced(identifier), spaced(op(":")), spaced(r#type), parse_info)),
+        |(direction, name, _, r#type, info)| super::Port::new(name.to_string(), r#type, direction)
+            .with_info(info)
     )(input)
 }
 

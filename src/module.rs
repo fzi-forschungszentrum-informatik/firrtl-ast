@@ -13,6 +13,7 @@ use quickcheck::{Arbitrary, Gen};
 
 use crate::expr;
 use crate::indentation::{DisplayIndented, Indentation};
+use crate::info;
 use crate::stmt::Statement;
 use crate::types::{self, Type};
 
@@ -23,6 +24,7 @@ pub struct Module {
     name: Arc<str>,
     ports: Vec<Arc<Port>>,
     stmts: Option<Vec<Statement>>,
+    info: Option<String>,
 }
 
 impl Module {
@@ -32,7 +34,7 @@ impl Module {
             Kind::Regular   => Some(Default::default()),
             Kind::External  => None,
         };
-        Self {name, ports: ports.into_iter().collect(), stmts}
+        Self {name, ports: ports.into_iter().collect(), stmts, info: Default::default()}
     }
 
     /// Retrieve the module's name
@@ -79,9 +81,19 @@ impl Module {
     }
 }
 
+impl info::WithInfo for Module {
+    fn info(&self) -> Option<&str> {
+        self.info.as_ref().map(AsRef::as_ref)
+    }
+
+    fn set_info(&mut self, info: Option<String>) {
+        self.info = info
+    }
+}
+
 impl DisplayIndented for Module {
     fn fmt<W: fmt::Write>(&self, indentation: &mut Indentation, f: &mut W) -> fmt::Result {
-        writeln!(f, "{}{} {}:", indentation.lock(), self.kind(), self.name())?;
+        writeln!(f, "{}{} {}:{}", indentation.lock(), self.kind(), self.name(), info::Info::of(self))?;
         let mut indentation = indentation.sub();
         self.ports().try_for_each(|p| DisplayIndented::fmt(p, &mut indentation, f))?;
         self.statements().iter().try_for_each(|s| DisplayIndented::fmt(s, &mut indentation, f))
@@ -196,12 +208,13 @@ pub struct Port {
     name: Arc<str>,
     r#type: Type,
     direction: Direction,
+    info: Option<String>,
 }
 
 impl Port {
     /// Create a new port
     pub fn new(name: impl Into<Arc<str>>, r#type: Type, direction: Direction) -> Self {
-        Self {name: name.into(), r#type, direction}
+        Self {name: name.into(), r#type, direction, info: Default::default()}
     }
 
     /// Retrieve the I/O port's name
@@ -248,9 +261,19 @@ impl types::Typed for Port {
     }
 }
 
+impl info::WithInfo for Port {
+    fn info(&self) -> Option<&str> {
+        self.info.as_ref().map(AsRef::as_ref)
+    }
+
+    fn set_info(&mut self, info: Option<String>) {
+        self.info = info
+    }
+}
+
 impl fmt::Display for Port {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} {}: {}", self.direction(), self.name(), self.r#type())
+        write!(f, "{} {}: {}{}", self.direction(), self.name(), self.r#type(), info::Info::of(self))
     }
 }
 

@@ -14,6 +14,7 @@ use quickcheck::{Arbitrary, Gen};
 
 use crate::expr;
 use crate::indentation::{DisplayIndented, Indentation};
+use crate::info;
 use crate::memory::Memory;
 use crate::module;
 use crate::register::Register;
@@ -22,16 +23,9 @@ use crate::types;
 
 /// FIRRTL statement
 #[derive(Clone, Debug, PartialEq)]
-pub enum Statement {
-    Connection{from: Expression, to: Expression},
-    PartialConnection{from: Expression, to: Expression},
-    Empty,
-    Declaration(Arc<Entity>),
-    Invalidate(Expression),
-    Attach(Vec<Expression>),
-    Conditional{cond: Expression, when: Arc<[Self]>, r#else: Arc<[Self]>},
-    Stop{clock: Expression, cond: Expression, code: i64},
-    Print{clock: Expression, cond: Expression, msg: Vec<PrintElement>},
+pub struct Statement {
+    kind: Kind,
+    info: Option<String>,
 }
 
 impl Statement {
@@ -44,7 +38,7 @@ impl Statement {
     pub fn declarations(&self) -> impl Iterator<Item = &Arc<Entity>> {
         use transiter::AutoTransIter;
 
-        self.trans_iter().filter_map(|s| if let Self::Declaration(e) = s {
+        self.trans_iter().filter_map(|s| if let Kind::Declaration(e) = s.as_ref() {
             Some(e)
         } else {
             None
@@ -63,13 +57,40 @@ impl Statement {
             None
         })
     }
+
+    /// Retrieve the statement kind
+    pub fn kind(&self) -> &Kind {
+        &self.kind
+    }
+}
+
+impl From<Kind> for Statement {
+    fn from(kind: Kind) -> Self {
+        Self {kind, info: Default::default()}
+    }
+}
+
+impl AsRef<Kind> for Statement {
+    fn as_ref(&self) -> &Kind {
+        self.kind()
+    }
+}
+
+impl info::WithInfo for Statement {
+    fn info(&self) -> Option<&str> {
+        self.info.as_ref().map(AsRef::as_ref)
+    }
+
+    fn set_info(&mut self, info: Option<String>) {
+        self.info = info
+    }
 }
 
 impl<'a> transiter::AutoTransIter<&'a Statement> for &'a Statement {
     type RecIter = Vec<Self>;
 
     fn recurse(item: &Self) -> Self::RecIter {
-        if let Statement::Conditional{when, r#else, ..} = item {
+        if let Kind::Conditional{when, r#else, ..} = item.kind() {
             when.iter().chain(r#else.iter()).collect()
         } else {
             Default::default()
@@ -80,6 +101,7 @@ impl<'a> transiter::AutoTransIter<&'a Statement> for &'a Statement {
 impl DisplayIndented for Statement {
     fn fmt<W: fmt::Write>(&self, indent: &mut Indentation, f: &mut W) -> fmt::Result {
         use crate::display::CommaSeparated;
+        use crate::info::Info;
 
         fn into_expr(elem: &PrintElement) -> Option<&Expression> {
             if let PrintElement::Value(expr, _) = elem {
@@ -94,14 +116,20 @@ impl DisplayIndented for Statement {
             when: &Arc<[Statement]>,
             r#else: &Arc<[Statement]>,
             indent: &mut Indentation,
+            info: Info,
             f: &mut impl fmt::Write,
         ) -> fmt::Result {
-            writeln!(f, "when {}:", cond)?;
+            writeln!(f, "when {}:{}", cond, info)?;
             display::StatementList(when.as_ref()).fmt(&mut indent.sub(), f)?;
-            if let [Statement::Conditional{cond, when, r#else}] = r#else.as_ref() {
-                write!(f, "{}else ", indent.lock())?;
-                fmt_indendet_cond(cond, when, r#else, indent, f)
-            } else if r#else.len() > 0 {
+
+            if let [stmt] = r#else.as_ref() {
+                if let Kind::Conditional{cond, when, r#else} = stmt.as_ref() {
+                    write!(f, "{}else ", indent.lock())?;
+                    return fmt_indendet_cond(cond, when, r#else, indent, Info::of(stmt), f);
+                }
+            }
+
+            if r#else.len() > 0 {
                 writeln!(f, "{}else:", indent.lock())?;
                 display::StatementList(r#else.as_ref()).fmt(&mut indent.sub(), f)
             } else {
@@ -109,27 +137,32 @@ impl DisplayIndented for Statement {
             }
         }
 
-        match self {
-            Self::Connection{from, to}              => writeln!(f, "{}{} <= {}", indent.lock(), to, from),
-            Self::PartialConnection{from, to}       => writeln!(f, "{}{} <- {}", indent.lock(), to, from),
-            Self::Empty                             => writeln!(f, "{}skip", indent.lock()),
-            Self::Declaration(entity)               => display::Entity(entity).fmt(indent, f),
-            Self::Invalidate(expr)                  => writeln!(f, "{}{} is invalid", indent.lock(), expr),
-            Self::Attach(exprs)                     =>
-                writeln!(f, "{}attach({})", indent.lock(), CommaSeparated::from(exprs)),
-            Self::Conditional{cond, when, r#else}   => {
+        let info = Info::of(self);
+
+        match self.as_ref() {
+            Kind::Connection{from, to}              =>
+                writeln!(f, "{}{} <= {}{}", indent.lock(), to, from, info),
+            Kind::PartialConnection{from, to}       =>
+                writeln!(f, "{}{} <- {}{}", indent.lock(), to, from, info),
+            Kind::Empty                             => writeln!(f, "{}skip{}", indent.lock(), info),
+            Kind::Declaration(entity)               => display::EntityDecl(entity, info).fmt(indent, f),
+            Kind::Invalidate(expr)                  => writeln!(f, "{}{} is invalid", indent.lock(), expr),
+            Kind::Attach(exprs)                     =>
+                writeln!(f, "{}attach({}){}", indent.lock(), CommaSeparated::from(exprs), info),
+            Kind::Conditional{cond, when, r#else}   => {
                 write!(f, "{}", indent.lock())?;
-                fmt_indendet_cond(cond, when, r#else, indent, f)
+                fmt_indendet_cond(cond, when, r#else, indent, info, f)
             },
-            Self::Stop{clock, cond, code}           =>
-                writeln!(f, "{}stop({}, {}, {})", indent.lock(), clock, cond, code),
-            Self::Print{clock, cond, msg}           => writeln!(f,
-                "{}printf({}, {}, {}{})",
+            Kind::Stop{clock, cond, code}           =>
+                writeln!(f, "{}stop({}, {}, {}){}", indent.lock(), clock, cond, code, info),
+            Kind::Print{clock, cond, msg}           => writeln!(f,
+                "{}printf({}, {}, {}{}){}",
                 indent.lock(),
                 clock,
                 cond,
                 display::FormatString(msg.as_ref()),
                 CommaSeparated::from(msg.iter().filter_map(into_expr)).with_preceding(),
+                info,
             ),
         }
     }
@@ -144,50 +177,50 @@ impl Arbitrary for Statement {
         use types::GroundType as GT;
 
         if g.size() == 0 {
-            return Self::Empty
+            return Kind::Empty.into()
         }
 
-        let opts: [&dyn Fn(&mut Gen) -> Self; 9] = [
+        let opts: [&dyn Fn(&mut Gen) -> Kind; 9] = [
             &|g| {
                 let t = types::Type::arbitrary(g);
-                Self::Connection{
+                Kind::Connection{
                     from: expr_with_type(t.clone(), source_flow(g), g),
                     to: expr_with_type(t.clone(), sink_flow(g), g),
                 }
             },
             &|g| {
                 let t = types::Type::arbitrary(g);
-                Self::PartialConnection{
+                Kind::PartialConnection{
                     from: expr_with_type(t.clone(), source_flow(g), g),
                     to: expr_with_type(t.clone(), sink_flow(g), g),
                 }
             },
-            &|_| Self::Empty,
+            &|_| Kind::Empty,
             &|g| {
                 let e = fn_iter(|| Some(Arbitrary::arbitrary(g)))
                     .find(Entity::is_declarable)
                     .unwrap();
-                    Self::Declaration(Arc::new(e))
+                    Kind::Declaration(Arc::new(e))
             },
-            &|g| Self::Invalidate(expr_with_type(types::Type::arbitrary(g), expr::Flow::Source, g)),
+            &|g| Kind::Invalidate(expr_with_type(types::Type::arbitrary(g), expr::Flow::Source, g)),
             &|g| {
                 let t = GT::Analog(Arbitrary::arbitrary(g));
                 let n = u8::arbitrary(g).saturating_add(1);
-                Self::Attach(fn_iter(|| Some(expr_with_type(t.clone(), Arbitrary::arbitrary(g), g)))
+                Kind::Attach(fn_iter(|| Some(expr_with_type(t.clone(), Arbitrary::arbitrary(g), g)))
                     .take(n as usize)
                     .collect())
             },
-            &|g| Self::Conditional {
+            &|g| Kind::Conditional {
                 cond: expr_with_type(GT::UInt(Some(1)), source_flow(g), g),
                 when: tests::stmt_list(u8::arbitrary(g).saturating_add(1), g).into(),
                 r#else: tests::stmt_list(u8::arbitrary(g), g).into(),
             },
-            &|g| Self::Stop {
+            &|g| Kind::Stop {
                 clock: expr_with_type(GT::Clock, source_flow(g), g),
                 cond: expr_with_type(GT::UInt(Some(1)), source_flow(g), g),
                 code: Arbitrary::arbitrary(g),
             },
-            &|g| Self::Print {
+            &|g| Kind::Print {
                 clock: expr_with_type(GT::Clock, source_flow(g), g),
                 cond: expr_with_type(GT::UInt(Some(1)), source_flow(g), g),
                 msg: tests::FormatString::arbitrary(g).into(),
@@ -198,7 +231,7 @@ impl Arbitrary for Statement {
         // statements at a reasonable size. At the same time, we don't
         // necessarily want to take care of all our various generators to cope
         // with a size of `0`. Hence, we need to make sure the size is non-zero.
-        g.choose(&opts).unwrap()(&mut Gen::new(std::cmp::max(g.size() / 5, 1)))
+        g.choose(&opts).unwrap()(&mut Gen::new(std::cmp::max(g.size() / 5, 1))).into()
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
@@ -211,32 +244,57 @@ impl Arbitrary for Statement {
             }
         }
 
-        match self {
-            Self::Declaration(entity)               => Box::new(entity.shrink().map(Self::Declaration)),
-            Self::Attach(exprs)                     => Box::new(
-                bisect(exprs.clone()).into_iter().filter(|v| !v.is_empty()).map(Self::Attach)
+        match self.as_ref() {
+            Kind::Declaration(entity)               => Box::new(
+                entity.shrink().map(Kind::Declaration).map(Into::into)
             ),
-            Self::Conditional{cond, when, r#else}   => {
+            Kind::Attach(exprs)                     => Box::new(
+                bisect(exprs.clone()).into_iter().filter(|v| !v.is_empty()).map(Kind::Attach).map(Into::into)
+            ),
+            Kind::Conditional{cond, when, r#else}   => {
                 let cond = cond.clone();
                 let e = r#else.to_vec();
 
                 let res = when.to_vec().shrink()
                     .filter(|v| !v.is_empty())
                     .flat_map(move |w| e.shrink().map(move |e| (w.clone(), e)))
-                    .map(move |(w, e)| Self::Conditional{cond: cond.clone(), when: w.clone().into(), r#else: e.into()});
+                    .map(move |(w, e)| Kind::Conditional{
+                        cond: cond.clone(),
+                        when: w.clone().into(),
+                        r#else: e.into(),
+                    }.into());
                 Box::new(when.to_vec().into_iter().chain(r#else.to_vec()).chain(res))
             },
-            Self::Print{clock, cond, msg}           => {
+            Kind::Print{clock, cond, msg}           => {
                 let clock = clock.clone();
                 let cond = cond.clone();
                 let res = tests::FormatString::from(msg.clone())
                     .shrink()
-                    .map(move |msg| Self::Print{clock: clock.clone(), cond: cond.clone(), msg: msg.into()});
+                    .map(move |msg| Kind::Print{
+                        clock: clock.clone(),
+                        cond: cond.clone(),
+                        msg: msg.into(),
+                    }.into());
                 Box::new(res)
             },
             _ => Box::new(std::iter::empty()),
         }
     }
+}
+
+
+/// Statement kind
+#[derive(Clone, Debug, PartialEq)]
+pub enum Kind {
+    Connection{from: Expression, to: Expression},
+    PartialConnection{from: Expression, to: Expression},
+    Empty,
+    Declaration(Arc<Entity>),
+    Invalidate(Expression),
+    Attach(Vec<Expression>),
+    Conditional{cond: Expression, when: Arc<[Statement]>, r#else: Arc<[Statement]>},
+    Stop{clock: Expression, cond: Expression, code: i64},
+    Print{clock: Expression, cond: Expression, msg: Vec<PrintElement>},
 }
 
 

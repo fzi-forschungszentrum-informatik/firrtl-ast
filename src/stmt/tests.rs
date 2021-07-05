@@ -11,7 +11,7 @@ use crate::expr::{self, Expression, Reference};
 use crate::indentation::{DisplayIndented, Indentation};
 use crate::tests::Equivalence;
 
-use super::{Entity, Statement};
+use super::{Entity, Kind, Statement};
 
 
 #[quickcheck]
@@ -76,7 +76,9 @@ fn parse_entity(mut base: Indentation, original: Entity) -> Result<TestResult, S
     };
 
     let mut s: String = Default::default();
-    super::display::Entity(&original).fmt(&mut base, &mut s).map_err(|e| e.to_string())?;
+    super::display::EntityDecl(&original, Default::default())
+        .fmt(&mut base, &mut s)
+        .map_err(|e| e.to_string())?;
 
     let parser = move |i| super::parsers::entity_decl(
         |n| refs.iter().find(|r| r.name() == n).cloned(),
@@ -87,7 +89,7 @@ fn parse_entity(mut base: Indentation, original: Entity) -> Result<TestResult, S
 
     let res = all_consuming(parser)(&s)
         .finish()
-        .map(|(_, parsed)| Equivalence::of(original, parsed).result(&mut Gen::new(0)))
+        .map(|(_, parsed)| Equivalence::of((original, None), parsed).result(&mut Gen::new(0)))
         .map_err(|e| e.to_string());
     res
 }
@@ -122,19 +124,19 @@ fn parse_fmt_string(original: FormatString) -> Result<TestResult, String> {
 
 /// Retrieve all expressions occuring in a statement
 pub fn stmt_exprs(stmt: &Statement) -> Vec<&Expression<Arc<Entity>>> {
-    match stmt {
-        Statement::Connection{from, to}             => vec![from, to],
-        Statement::PartialConnection{from, to}      => vec![from, to],
-        Statement::Empty                            => Default::default(),
-        Statement::Declaration(entity)              => entity_exprs(entity.as_ref()),
-        Statement::Invalidate(expr)                 => vec![expr],
-        Statement::Attach(v)                        => v.iter().collect(),
-        Statement::Conditional{cond, when, r#else}  => std::iter::once(cond)
+    match stmt.as_ref() {
+        Kind::Connection{from, to}              => vec![from, to],
+        Kind::PartialConnection{from, to}       => vec![from, to],
+        Kind::Empty                             => Default::default(),
+        Kind::Declaration(entity)               => entity_exprs(entity.as_ref()),
+        Kind::Invalidate(expr)                  => vec![expr],
+        Kind::Attach(v)                         => v.iter().collect(),
+        Kind::Conditional{cond, when, r#else}   => std::iter::once(cond)
             .chain(when.iter().flat_map(stmt_exprs))
             .chain(r#else.iter().flat_map(stmt_exprs))
             .collect(),
-        Statement::Stop{clock, cond, ..}            => vec![clock, cond],
-        Statement::Print{clock, cond, msg}          => std::iter::once(clock)
+        Kind::Stop{clock, cond, ..}             => vec![clock, cond],
+        Kind::Print{clock, cond, msg}           => std::iter::once(clock)
             .chain(std::iter::once(cond))
             .chain(msg.iter().filter_map(|p| if let super::PrintElement::Value(e, _) = p {
                 Some(e)

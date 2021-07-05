@@ -3,21 +3,27 @@
 use std::fmt;
 
 use crate::indentation::{DisplayIndented, Indentation};
+use crate::info::Info;
 
 
 /// Utility for displaying an entity declaration
-pub struct Entity<'a>(pub &'a super::Entity);
+pub(crate) struct EntityDecl<'a>(pub &'a super::Entity, pub Info<'a>);
 
-impl DisplayIndented for Entity<'_> {
+impl DisplayIndented for EntityDecl<'_> {
     fn fmt<W: fmt::Write>(&self, indentation: &mut Indentation, f: &mut W) -> fmt::Result {
+        use crate::memory::display::MemoryDecl;
+
         use super::Entity as E;
+
         match self.0 {
             E::Port(_)              => Err(Default::default()),
-            E::Wire{name, r#type}   => writeln!(f, "{}wire {}: {}", indentation.lock(), name, r#type),
-            E::Register(reg)        => DisplayIndented::fmt(reg, indentation, f),
-            E::Node{name, value}    => writeln!(f, "{}node {} = {}", indentation.lock(), name, value),
-            E::Memory(mem)          => DisplayIndented::fmt(mem, indentation, f),
-            E::Instance(inst)       => DisplayIndented::fmt(inst, indentation, f),
+            E::Wire{name, r#type}   =>
+                writeln!(f, "{}wire {}: {}{}", indentation.lock(), name, r#type, self.1),
+            E::Register(reg)        => writeln!(f, "{}{}{}", indentation.lock(), reg, self.1),
+            E::Node{name, value}    =>
+                writeln!(f, "{}node {} = {}{}", indentation.lock(), name, value, self.1),
+            E::Memory(mem)          => MemoryDecl(mem, self.1.clone()).fmt(indentation, f),
+            E::Instance(inst)       => writeln!(f, "{}{}{}", indentation.lock(), inst, self.1),
         }
     }
 }
@@ -61,7 +67,7 @@ impl DisplayIndented for StatementList<'_> {
         if self.0.len() > 0 {
             self.0.iter().try_for_each(|s| s.fmt(indent, f))
         } else {
-            super::Statement::Empty.fmt(indent, f)
+            super::Statement::from(super::Kind::Empty).fmt(indent, f)
         }
     }
 }

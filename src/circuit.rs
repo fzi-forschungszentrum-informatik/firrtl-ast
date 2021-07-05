@@ -12,6 +12,7 @@ use std::sync::Arc;
 use quickcheck::{Arbitrary, Gen};
 
 use crate::indentation;
+use crate::info;
 use crate::module::Module;
 
 
@@ -21,18 +22,29 @@ use crate::module::Module;
 /// number of modules, one of which is defined as the "top" module.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Circuit {
-    top: Arc<Module>
+    top: Arc<Module>,
+    info: Option<String>,
 }
 
 impl Circuit {
     /// Create a new circuit
     pub fn new(top_module: Arc<Module>) -> Self {
-        Self {top: top_module}
+        Self {top: top_module, info: Default::default()}
     }
 
     /// Get the top level module
     pub fn top_module(&self) -> &Arc<Module> {
         &self.top
+    }
+}
+
+impl info::WithInfo for Circuit {
+    fn info(&self) -> Option<&str> {
+        self.info.as_ref().map(AsRef::as_ref)
+    }
+
+    fn set_info(&mut self, info: Option<String>) {
+        self.info = info
     }
 }
 
@@ -58,7 +70,7 @@ impl fmt::Display for Circuit {
 
         let mut done = Default::default();
 
-        writeln!(f, "circuit {}:", self.top_module().name())?;
+        writeln!(f, "circuit {}:{}", self.top_module().name(), info::Info::of(self))?;
         let mut indent = indentation::Indentation::root().sub();
         fmt_module(&mut done, &mut indent, self.top_module(), f)
     }
