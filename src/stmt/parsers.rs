@@ -106,11 +106,12 @@ pub fn stmt<'i>(
                 comma,
                 spaced(decimal),
                 rp,
+                optional_name,
                 info,
                 le,
             )),
-            |(i, _, _, clock, _, cond, _, code, _, info, ..)|
-                (i, S::from(Kind::Stop{name: Default::default(), clock, cond, code}).with_info(info)),
+            |(i, _, _, clock, _, cond, _, code, _, name, info, ..)|
+                (i, S::from(Kind::Stop{name, clock, cond, code}).with_info(info)),
         ),
         map(
             tuple((
@@ -134,11 +135,12 @@ pub fn stmt<'i>(
                     exprs.finish().map(|(i, _)| (i, ps))
                 }),
                 rp,
+                optional_name,
                 info,
                 le,
             )),
-            |(i, _, _, clock, _, cond, _, msg, _, info, ..)|
-                (i, S::from(Kind::Print{name: Default::default(), clock, cond, msg}).with_info(info)),
+            |(i, _, _, clock, _, cond, _, msg, _, name, info, ..)|
+                (i, S::from(Kind::Print{name, clock, cond, msg}).with_info(info)),
         ),
     ))(input)?;
 
