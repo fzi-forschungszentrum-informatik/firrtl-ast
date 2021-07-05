@@ -10,13 +10,16 @@ use super::{Memory, display::MemoryDecl, parsers};
 
 
 #[quickcheck]
-fn parse_memory(mut base: Indentation, original: Memory) -> Result<Equivalence<Memory>, String> {
+fn parse_memory(
+    mut base: Indentation,
+    original: Memory
+) -> Result<Equivalence<(Memory, Option<String>)>, String> {
     let mut s: String = Default::default();
     MemoryDecl(&original, Default::default()).fmt(&mut base, &mut s).map_err(|e| e.to_string())?;
 
     let res = all_consuming(|i| parsers::memory(i, &mut base))(&s)
         .finish()
-        .map(|(_, parsed)| Equivalence::of(original, parsed))
+        .map(|(_, parsed)| Equivalence::of((original, None), parsed))
         .map_err(|e| e.to_string());
     res
 }

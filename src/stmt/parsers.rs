@@ -210,7 +210,7 @@ pub fn entity_decl<'i>(
         ),
         |i| {
             let mut indent = Into::into(indent.clone());
-            memory(i, &mut indent).map(|(i, m)| (i, (indent, m.into())))
+            memory(i, &mut indent).map(|(i, (m, _))| (i, (indent, m.into())))
         },
         map(
             tuple((indent.clone(), |i| instance(module, i), le)),

@@ -8,15 +8,19 @@ use crate::indentation::Indentation;
 use crate::parsers::{self, IResult, decimal, identifier, kw, le, op, spaced};
 use crate::types::Type;
 use crate::types::parsers::r#type;
+use crate::info::parse as info;
 
 
 /// Parse a Memory
-pub fn memory<'i>(input: &'i str, indentation: &'_ mut Indentation) -> IResult<'i, super::Memory> {
+pub fn memory<'i>(
+    input: &'i str,
+    indentation: &'_ mut Indentation
+) -> IResult<'i, (super::Memory, Option<String>)> {
     use nom::error::{ErrorKind as EK, ParseError};
 
-    let (input, name) = map(
-        tuple((indentation.parser(), kw("mem"), spaced(identifier), spaced(op(":")), le)),
-        |(_, _, name, ..)| name
+    let (input, (name, info)) = map(
+        tuple((indentation.parser(), kw("mem"), spaced(identifier), spaced(op(":")), info, le)),
+        |(_, _, name, _, info, ..)| (name, info)
     )(input)?;
 
     let mut indentation = indentation.sub();
@@ -51,7 +55,7 @@ pub fn memory<'i>(input: &'i str, indentation: &'_ mut Indentation) -> IResult<'
         res = res.with_write_latency(v);
     }
 
-    entries.finish().map(|(i, _)| (i, res))
+    entries.finish().map(|(i, _)| (i, (res, info)))
 }
 
 
