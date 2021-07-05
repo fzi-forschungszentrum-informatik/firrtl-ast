@@ -13,6 +13,7 @@ use quickcheck::{Arbitrary, Gen};
 
 use crate::expr;
 use crate::indentation::{DisplayIndented, Indentation};
+use crate::info;
 use crate::stmt::Statement;
 use crate::types::{self, Type};
 
@@ -196,12 +197,13 @@ pub struct Port {
     name: Arc<str>,
     r#type: Type,
     direction: Direction,
+    info: Option<String>,
 }
 
 impl Port {
     /// Create a new port
     pub fn new(name: impl Into<Arc<str>>, r#type: Type, direction: Direction) -> Self {
-        Self {name: name.into(), r#type, direction}
+        Self {name: name.into(), r#type, direction, info: Default::default()}
     }
 
     /// Retrieve the I/O port's name
@@ -245,6 +247,16 @@ impl types::Typed for Port {
 
     fn r#type(&self) -> Result<Self::Type, Self::Err> {
         Ok(self.r#type().clone())
+    }
+}
+
+impl info::WithInfo for Port {
+    fn info(&self) -> Option<&str> {
+        self.info.as_ref().map(AsRef::as_ref)
+    }
+
+    fn set_info(&mut self, info: Option<String>) {
+        self.info = info
     }
 }
 
