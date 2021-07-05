@@ -6,10 +6,11 @@ use nom::branch::alt;
 use nom::combinator::{iterator, map, value};
 use nom::sequence::tuple;
 
+use crate::indentation::Indentation;
+use crate::info::{WithInfo, parse as parse_info};
 use crate::parsers::{IResult, identifier, kw, le, op, spaced};
 use crate::stmt::parsers::stmts;
 use crate::types::parsers::r#type;
-use crate::indentation::Indentation;
 
 
 /// Utility for parsing dependant modules
@@ -105,8 +106,9 @@ pub fn instance<'i>(
 /// Parse the elements of a port
 pub fn port<'i>(input: &str) -> IResult<super::Port> {
     map(
-        tuple((direction, spaced(identifier), spaced(op(":")), spaced(r#type))),
-        |(direction, name, _, r#type)| super::Port::new(name.to_string(), r#type, direction)
+        tuple((direction, spaced(identifier), spaced(op(":")), spaced(r#type), parse_info)),
+        |(direction, name, _, r#type, info)| super::Port::new(name.to_string(), r#type, direction)
+            .with_info(info)
     )(input)
 }
 
