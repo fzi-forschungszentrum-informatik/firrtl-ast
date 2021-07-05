@@ -112,6 +112,6 @@ pub fn spaced<'i, O>(
 
 /// Check whether the character is allowed in identifiers
 fn is_identifier_char(c: char) -> bool {
-    c.is_alphanumeric() || c == '_'
+    c.is_alphanumeric() || c == '_' || c == '$'
 }
 

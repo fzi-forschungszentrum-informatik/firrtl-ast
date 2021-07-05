@@ -86,12 +86,13 @@ impl quickcheck::Arbitrary for Identifier {
 
         let mut i: u128 = quickcheck::Arbitrary::arbitrary(g);
         while i > 0 {
-            const N: u128 = 2*36 + 10 + 1;
+            const N: u128 = 2*36 + 10 + 2;
             data.push(match (i % N) as u8 {
                 i if i < 10 => (0x30 + i) as char,
                 i if i < 36 => (0x41 - 10 + i) as char,
                 i if i < 62 => (0x61 - 36 + i) as char,
-                _ => '_',
+                62 => '_',
+                _ => '$',
             });
             i = i / N;
         }
