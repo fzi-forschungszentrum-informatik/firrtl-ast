@@ -262,7 +262,7 @@ impl info::WithInfo for Port {
 
 impl fmt::Display for Port {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} {}: {}", self.direction(), self.name(), self.r#type())
+        write!(f, "{} {}: {}{}", self.direction(), self.name(), self.r#type(), info::Info::of(self))
     }
 }
 
