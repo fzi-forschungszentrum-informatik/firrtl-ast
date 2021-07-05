@@ -102,6 +102,7 @@ impl DisplayIndented for Statement {
     fn fmt<W: fmt::Write>(&self, indent: &mut Indentation, f: &mut W) -> fmt::Result {
         use crate::display::CommaSeparated;
         use crate::info::Info;
+        use display::OptionalName;
 
         fn into_expr(elem: &PrintElement) -> Option<&Expression> {
             if let PrintElement::Value(expr, _) = elem {
@@ -153,15 +154,23 @@ impl DisplayIndented for Statement {
                 write!(f, "{}", indent.lock())?;
                 fmt_indendet_cond(cond, when, r#else, indent, info, f)
             },
-            Kind::Stop{clock, cond, code, ..}       =>
-                writeln!(f, "{}stop({}, {}, {}){}", indent.lock(), clock, cond, code, info),
-            Kind::Print{clock, cond, msg, ..}       => writeln!(f,
-                "{}printf({}, {}, {}{}){}",
+            Kind::Stop{name, clock, cond, code}     => writeln!(f,
+                "{}stop({}, {}, {}){}{}",
+                indent.lock(),
+                clock,
+                cond,
+                code,
+                OptionalName::from(name.as_ref().map(AsRef::as_ref)),
+                info,
+            ),
+            Kind::Print{name, clock, cond, msg}     => writeln!(f,
+                "{}printf({}, {}, {}{}){}{}",
                 indent.lock(),
                 clock,
                 cond,
                 display::FormatString(msg.as_ref()),
                 CommaSeparated::from(msg.iter().filter_map(into_expr)).with_preceding(),
+                OptionalName::from(name.as_ref().map(AsRef::as_ref)),
                 info,
             ),
         }
