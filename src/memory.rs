@@ -1,5 +1,6 @@
 //! Memory component
 
+pub(crate) mod display;
 pub(crate) mod parsers;
 
 #[cfg(test)]
