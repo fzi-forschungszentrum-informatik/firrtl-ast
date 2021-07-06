@@ -28,7 +28,7 @@ impl Modules {
     ) -> IResult<'i, Arc<super::Module>> {
         module(|name| self.module(name).cloned(), input, indentation).map(|(i, m)| {
             let module = Arc::new(m);
-            self.modules.insert(module.name.clone(), module.clone());
+            self.add_module(module.clone());
             (i, module)
         })
     }
@@ -36,6 +36,13 @@ impl Modules {
     /// Retrieve a previously parsed module by name
     pub fn module(&self, name: impl AsRef<str>) -> Option<&Arc<super::Module>> {
         self.modules.get(name.as_ref())
+    }
+
+    /// Add a module to the list of known modules
+    ///
+    /// Parsed modules will be able to instantiate the added `Module`.
+    pub fn add_module(&mut self, module: Arc<super::Module>) {
+        self.modules.insert(module.name.clone(), module.clone());
     }
 }
 
