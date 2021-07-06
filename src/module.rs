@@ -17,6 +17,8 @@ use crate::info;
 use crate::stmt::Statement;
 use crate::types::{self, Type};
 
+pub use parsers::Modules;
+
 
 /// A hardware block
 #[derive(Clone, Debug, PartialEq)]
