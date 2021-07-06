@@ -8,6 +8,7 @@ mod indentation;
 mod parsers;
 
 pub mod circuit;
+pub mod error;
 pub mod expr;
 pub mod info;
 pub mod memory;
@@ -25,7 +26,6 @@ mod tests;
 extern crate quickcheck_macros;
 
 pub use circuit::Circuit;
-pub use circuit::parsers::circuit as parse;
 pub use expr::Expression;
 pub use memory::Memory;
 pub use module::Module;

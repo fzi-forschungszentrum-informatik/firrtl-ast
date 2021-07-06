@@ -1,17 +1,15 @@
 //! Tests related to circuits
 
-use nom::Finish;
-use nom::combinator::all_consuming;
-
 use quickcheck::{Gen, TestResult, Testable};
 
+use crate::error::ParseError;
 use crate::tests::Equivalence;
 
 use super::{Circuit, parsers};
 
 
 #[quickcheck]
-fn parse_circuit(original: Circuit) -> Result<TestResult, String> {
+fn parse_circuit(original: Circuit) -> Result<TestResult, ParseError> {
     use transiter::IntoTransIter;
 
     // Module names must be unique within a circuit. If they are not, the set of
@@ -28,9 +26,6 @@ fn parse_circuit(original: Circuit) -> Result<TestResult, String> {
     }
 
     let s = original.to_string();
-    let res = all_consuming(parsers::circuit)(&s)
-        .finish()
-        .map(|(_, parsed)| Equivalence::of(original, parsed).result(&mut Gen::new(0)))
-        .map_err(|e| e.to_string());
-    res
+    parsers::circuit(&s)
+        .map(|parsed| Equivalence::of(original, parsed).result(&mut Gen::new(0)))
 }
