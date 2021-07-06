@@ -15,6 +15,8 @@ use crate::indentation;
 use crate::info::{self, WithInfo};
 use crate::module::Module;
 
+pub use parsers::circuit as parse;
+
 
 /// FIRRTL circuit
 ///

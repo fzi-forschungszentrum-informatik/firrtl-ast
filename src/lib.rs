@@ -25,7 +25,6 @@ mod tests;
 extern crate quickcheck_macros;
 
 pub use circuit::Circuit;
-pub use circuit::parsers::circuit as parse;
 pub use expr::Expression;
 pub use memory::Memory;
 pub use module::Module;
