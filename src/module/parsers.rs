@@ -39,12 +39,6 @@ impl Modules {
     }
 }
 
-impl std::iter::FromIterator<Arc<super::Module>> for Modules {
-    fn from_iter<I: IntoIterator<Item = Arc<super::Module>>>(modules: I) -> Self {
-        Self {modules: modules.into_iter().map(|m| (m.name.clone(), m)).collect()}
-    }
-}
-
 
 /// Parse a Module
 pub fn module<'i>(
