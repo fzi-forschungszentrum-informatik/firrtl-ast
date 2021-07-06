@@ -246,6 +246,8 @@ impl Arbitrary for Statement {
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        use crate::tests::Identifier;
+
         fn bisect<T: Clone>(mut v: Vec<T>) -> Vec<Vec<T>> {
             if v.len() > 1 {
                 let right = v.split_off(v.len() / 2);
@@ -276,17 +278,44 @@ impl Arbitrary for Statement {
                     }.into());
                 Box::new(when.to_vec().into_iter().chain(r#else.to_vec()).chain(res))
             },
-            Kind::Print{name, clock, cond, msg}     => {
-                let name = name.clone();
+            Kind::Stop{name, clock, cond, code}     => {
                 let clock = clock.clone();
                 let cond = cond.clone();
-                let res = tests::FormatString::from(msg.clone())
+                let code = *code;
+
+                let res = name
+                    .as_ref()
+                    .map(|n| Identifier::from(n.as_ref()))
                     .shrink()
-                    .map(move |msg| Kind::Print{
-                        name: name.clone(),
+                    .map(move |name| Kind::Stop{
+                        name: name.map(Into::into),
                         clock: clock.clone(),
                         cond: cond.clone(),
-                        msg: msg.into(),
+                        code,
+                    }.into());
+                Box::new(res)
+            }
+            Kind::Print{name, clock, cond, msg}     => {
+                let clock = clock.clone();
+                let cond = cond.clone();
+
+                let res = name
+                    .as_ref()
+                    .map(|n| Identifier::from(n.as_ref()))
+                    .shrink()
+                    .map({
+                        let msg = msg.clone();
+                        move |name| (name.map(Into::into), msg.clone())
+                    })
+                    .chain(tests::FormatString::from(msg.clone()).shrink().map({
+                        let name = name.clone();
+                        move |msg| (name.clone(), msg.into())
+                    }))
+                    .map(move |(name, msg)| Kind::Print{
+                        name: name,
+                        clock: clock.clone(),
+                        cond: cond.clone(),
+                        msg: msg,
                     }.into());
                 Box::new(res)
             },
