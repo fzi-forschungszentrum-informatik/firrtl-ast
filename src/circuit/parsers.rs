@@ -1,10 +1,9 @@
 //! Parsers for Circuits
 
-use nom::combinator::{iterator, map};
+use nom::combinator::map;
 use nom::sequence::tuple;
 
 use crate::error::{ParseError, convert_error};
-use crate::indentation::Indentation;
 use crate::info::parse as parse_info;
 use crate::module::parsers::Modules;
 use crate::parsers::{IResult, identifier, kw, le, op, spaced};
@@ -14,15 +13,8 @@ use crate::parsers::{IResult, identifier, kw, le, op, spaced};
 pub fn circuit(input: &str) -> Result<super::Circuit, ParseError> {
     let (input, (top_name, info)) = head(input).map_err(|e| convert_error(input, e))?;
 
-    let mut mod_parser = Modules::default();
-    let mut indent = Indentation::root().sub();
-    let mut modules = iterator(input, |i| mod_parser.parse_module(i, &mut indent));
-    let res = super::ModuleConsumer::<_, ParseError>::new(top_name, info, (&mut modules).map(Ok))
-        .into_circuit();
-    modules
-        .finish()
-        .map_err(|e| convert_error(input, e))
-        .and(res)
+    super::ModuleConsumer::new(top_name, info, Modules::new(input))
+        .into_circuit()
 }
 
 

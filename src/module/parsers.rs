@@ -6,6 +6,7 @@ use nom::branch::alt;
 use nom::combinator::{iterator, map, value};
 use nom::sequence::tuple;
 
+use crate::error::{ParseError, convert_error};
 use crate::indentation::Indentation;
 use crate::info::{WithInfo, parse as parse_info};
 use crate::parsers::{IResult, identifier, kw, le, op, spaced};
@@ -13,24 +14,25 @@ use crate::stmt::parsers::stmts;
 use crate::types::parsers::r#type;
 
 
-/// Utility for parsing dependant modules
-#[derive(Default, Debug)]
-pub struct Modules {
+/// Module iterator
+///
+/// This `Iterator` will yield `Module`s parsed from a given input in the order
+/// they are defined in. Once a module was successfully parsed, it is availible
+/// for instantiation in subsequent modules.
+#[derive(Debug)]
+pub struct Modules<'i> {
     modules: std::collections::HashMap<Arc<str>, Arc<super::Module>>,
+    input: &'i str,
+    indentation: Indentation,
 }
 
-impl Modules {
-    /// Parse one module
-    pub fn parse_module<'i>(
-        &mut self,
-        input: &'i str,
-        indentation: &'_ mut Indentation,
-    ) -> IResult<'i, Arc<super::Module>> {
-        module(|name| self.module(name).cloned(), input, indentation).map(|(i, m)| {
-            let module = Arc::new(m);
-            self.add_module(module.clone());
-            (i, module)
-        })
+impl<'i> Modules<'i> {
+    /// Create a new module iterator for a given input
+    ///
+    /// The iterator will yield all modules from the given input in the order
+    /// they are defined in.
+    pub fn new(input: &'i str) -> Self {
+        Self {modules: Default::default(), input, indentation: Indentation::root().sub()}
     }
 
     /// Retrieve a previously parsed module by name
@@ -43,6 +45,31 @@ impl Modules {
     /// Parsed modules will be able to instantiate the added `Module`.
     pub fn add_module(&mut self, module: Arc<super::Module>) {
         self.modules.insert(module.name.clone(), module.clone());
+    }
+}
+
+impl Iterator for Modules<'_> {
+    type Item = Result<Arc<super::Module>, ParseError>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if !self.input.is_empty() {
+            let modules = &self.modules;
+
+            let res = module(|name| modules.get(name).cloned(), self.input, &mut self.indentation)
+                .map(|(i, m)| {
+                    let module = Arc::new(m);
+                    self.add_module(module.clone());
+                    self.input = i;
+                    module
+                })
+                .map_err(|e| {
+                    self.input = Default::default();
+                    convert_error(self.input, e)
+                });
+            Some(res)
+        } else {
+            None
+        }
     }
 }
 
