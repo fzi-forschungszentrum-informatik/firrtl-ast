@@ -9,7 +9,7 @@ use quickcheck::{Arbitrary, Gen, TestResult, Testable};
 
 use crate::expr::{self, Expression, Reference};
 use crate::indentation::{DisplayIndented, Indentation};
-use crate::tests::Equivalence;
+use crate::tests::{Equivalence, Identifier};
 
 use super::{Entity, Kind, Statement};
 
@@ -119,6 +119,17 @@ fn parse_fmt_string(original: FormatString) -> Result<TestResult, String> {
     });
 
     Ok(TestResult::from_bool(identical))
+}
+
+
+#[quickcheck]
+fn parse_optional_name(original: Option<Identifier>) -> Result<Equivalence<Option<Arc<str>>>, String> {
+    let s = super::display::OptionalName(original.as_ref().map(AsRef::as_ref)).to_string();
+    let res = all_consuming(super::parsers::optional_name)(&s)
+        .finish()
+        .map(|(_, parsed)| Equivalence::of(original.map(Into::into), parsed))
+        .map_err(|e| e.to_string());
+    res
 }
 
 
