@@ -11,10 +11,19 @@ use crate::parsers::{IResult, identifier, kw, le, op, spaced};
 
 /// Parse a Circuit
 pub fn circuit(input: &str) -> Result<super::Circuit, ParseError> {
+    consumer(input)?.into_circuit()
+}
+
+
+/// Create a ModuleConsumer for the given input
+///
+/// The input is expected to contain a full circuit definition. The function
+/// will return a `ModuleConsumer` which will construct a `Circuit` from that
+/// input.
+pub fn consumer(input: &str) -> Result<super::ModuleConsumer<Modules, ParseError>, ParseError> {
     let (input, (top_name, info)) = head(input).map_err(|e| convert_error(input, e))?;
 
-    super::ModuleConsumer::new(top_name, info, Modules::new(input))
-        .into_circuit()
+    Ok(super::ModuleConsumer::new(top_name, info, Modules::new(input)))
 }
 
 
