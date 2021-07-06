@@ -12,7 +12,7 @@ use std::sync::Arc;
 use quickcheck::{Arbitrary, Gen};
 
 use crate::indentation;
-use crate::info;
+use crate::info::{self, WithInfo};
 use crate::module::Module;
 
 
@@ -38,7 +38,7 @@ impl Circuit {
     }
 }
 
-impl info::WithInfo for Circuit {
+impl WithInfo for Circuit {
     fn info(&self) -> Option<&str> {
         self.info.as_ref().map(AsRef::as_ref)
     }
@@ -96,13 +96,19 @@ impl Arbitrary for Circuit {
 #[derive(Clone, Debug)]
 pub struct ModuleConsumer<I: Iterator<Item = Arc<Module>>> {
     top_module: TopState,
+    info: Option<String>,
     modules: I,
 }
 
 impl<I: Iterator<Item = Arc<Module>>> ModuleConsumer<I> {
     /// Create a new adapter for the given target top module name
-    pub fn new(top_name: impl Into<String>, modules: I) -> Self {
-        Self {top_module: TopState::Name(top_name.into()), modules}
+    ///
+    /// The adapter will allow constructing a `Circuit` with a top-module with
+    /// the given `top_name`, provided that `modules` will yield such a module.
+    /// The constructed `Circuit` with the given `info`. Note that `None` is a
+    /// valid choice, e.g. if the `info` is to be set later.
+    pub fn new(top_name: impl Into<String>, info: impl Into<Option<String>>, modules: I) -> Self {
+        Self {top_module: TopState::Name(top_name.into()), info: info.into(), modules}
     }
 
     /// Retrieve the circuit
@@ -111,7 +117,7 @@ impl<I: Iterator<Item = Arc<Module>>> ModuleConsumer<I> {
     /// otherwise `None` will be returned.
     pub fn circuit(&self) -> Option<Circuit> {
         if let TopState::Module(m) = &self.top_module {
-            Some(Circuit::new(m.clone()))
+            Some(Circuit::new(m.clone()).with_info(self.info.clone()))
         } else {
             None
         }
@@ -119,10 +125,11 @@ impl<I: Iterator<Item = Arc<Module>>> ModuleConsumer<I> {
 
     /// Try to create the requested circuit, consuming the iterator
     pub fn into_circuit(mut self) -> Option<Circuit> {
+        let info = self.info;
         match self.top_module {
             TopState::Name(n)   => self.modules.find(|m| m.name() == n),
             TopState::Module(m) => Some(m),
-        }.map(Circuit::new)
+        }.map(|m| Circuit::new(m).with_info(info))
     }
 }
 

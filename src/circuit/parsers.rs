@@ -4,7 +4,7 @@ use nom::combinator::{iterator, map};
 use nom::sequence::tuple;
 
 use crate::indentation::Indentation;
-use crate::info::{WithInfo, parse as parse_info};
+use crate::info::parse as parse_info;
 use crate::module::parsers::Modules;
 use crate::parsers::{Error, IResult, identifier, kw, le, op, spaced};
 
@@ -21,9 +21,8 @@ pub fn circuit(input: &str) -> IResult<super::Circuit> {
     let mut mod_parser = Modules::default();
     let mut indent = Indentation::root().sub();
     let mut modules = iterator(input, |i| mod_parser.parse_module(i, &mut indent));
-    let mut res = super::ModuleConsumer::new(top_name, &mut modules)
+    let res = super::ModuleConsumer::new(top_name, info, &mut modules)
         .into_circuit()
         .ok_or_else(|| nom::Err::Error(Error::from_error_kind(input, EK::MapOpt)))?;
-    res.set_info(info);
     modules.finish().map(|(i, _)| (i, res))
 }
