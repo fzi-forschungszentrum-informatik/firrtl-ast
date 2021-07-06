@@ -3,25 +3,25 @@
 use nom::combinator::{iterator, map};
 use nom::sequence::tuple;
 
+use crate::error::{ParseError, convert_error};
 use crate::indentation::Indentation;
 use crate::info::parse as parse_info;
 use crate::module::parsers::Modules;
-use crate::parsers::{Error, IResult, identifier, kw, le, op, spaced};
+use crate::parsers::{IResult, identifier, kw, le, op, spaced};
 
 
 /// Parse a Circuit
-pub fn circuit(input: &str) -> IResult<super::Circuit> {
-    use nom::error::{ErrorKind as EK, ParseError};
-
-    let (input, (top_name, info)) = head(input)?;
+pub fn circuit(input: &str) -> Result<super::Circuit, ParseError> {
+    let (input, (top_name, info)) = head(input).map_err(|e| convert_error(input, e))?;
 
     let mut mod_parser = Modules::default();
     let mut indent = Indentation::root().sub();
     let mut modules = iterator(input, |i| mod_parser.parse_module(i, &mut indent));
-    let res = super::ModuleConsumer::new(top_name, info, &mut modules)
-        .into_circuit()
-        .ok_or_else(|| nom::Err::Error(Error::from_error_kind(input, EK::MapOpt)))?;
-    modules.finish().map(|(i, _)| (i, res))
+    let res = super::ModuleConsumer::new(top_name, info, &mut modules).into_circuit();
+    modules
+        .finish()
+        .map_err(|e| convert_error(input, e))
+        .and_then(|_| res.ok_or_else(|| "Top module not found".to_owned().into()))
 }
 
 
