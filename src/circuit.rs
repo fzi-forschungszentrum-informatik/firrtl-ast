@@ -11,6 +11,7 @@ use std::sync::Arc;
 #[cfg(test)]
 use quickcheck::{Arbitrary, Gen};
 
+use crate::error::ParseError;
 use crate::indentation;
 use crate::info::{self, WithInfo};
 use crate::module::Module;
@@ -37,6 +38,20 @@ impl Circuit {
     /// Get the top level module
     pub fn top_module(&self) -> &Arc<Module> {
         &self.top
+    }
+
+    /// Parse a circuit from an object implementing Read
+    ///
+    /// This function parses a circuit from the given `Read`, e.g. a `File`.
+    ///
+    /// # Note
+    ///
+    /// This function reads the entire source into a separate buffer in memory.
+    /// Consider using `parse` if the source is in memory already.
+    pub fn from_read(mut read: impl std::io::Read) -> Result<Self, ParseError> {
+        let mut buf = Default::default();
+        read.read_to_string(&mut buf)?;
+        parse(buf.as_ref())
     }
 }
 
