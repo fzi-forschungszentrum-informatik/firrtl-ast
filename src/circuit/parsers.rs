@@ -17,11 +17,12 @@ pub fn circuit(input: &str) -> Result<super::Circuit, ParseError> {
     let mut mod_parser = Modules::default();
     let mut indent = Indentation::root().sub();
     let mut modules = iterator(input, |i| mod_parser.parse_module(i, &mut indent));
-    let res = super::ModuleConsumer::new(top_name, info, &mut modules).into_circuit();
+    let res = super::ModuleConsumer::<_, ParseError>::new(top_name, info, (&mut modules).map(Ok))
+        .into_circuit();
     modules
         .finish()
         .map_err(|e| convert_error(input, e))
-        .and_then(|_| res.ok_or_else(|| "Top module not found".to_owned().into()))
+        .and(res)
 }
 
 
