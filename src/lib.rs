@@ -8,6 +8,7 @@ mod indentation;
 mod parsers;
 
 pub mod circuit;
+pub mod error;
 pub mod expr;
 pub mod info;
 pub mod memory;
