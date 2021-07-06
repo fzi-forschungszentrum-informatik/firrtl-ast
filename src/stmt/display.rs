@@ -59,6 +59,22 @@ impl fmt::Display for FormatString<'_> {
 }
 
 
+/// Utility for formatting an optional name for a "special" statement
+pub struct OptionalName<'a>(pub Option<&'a str>);
+
+impl<'a> From<Option<&'a str>> for OptionalName<'a> {
+    fn from(name: Option<&'a str>) -> Self {
+        Self(name)
+    }
+}
+
+impl fmt::Display for OptionalName<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.as_ref().map(|n| write!(f, " : {}", n)).transpose().map(|_| ())
+    }
+}
+
+
 /// Utility for displaying a list of statements
 pub struct StatementList<'a>(pub &'a [super::Statement]);
 

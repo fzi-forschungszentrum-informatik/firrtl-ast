@@ -102,6 +102,7 @@ impl DisplayIndented for Statement {
     fn fmt<W: fmt::Write>(&self, indent: &mut Indentation, f: &mut W) -> fmt::Result {
         use crate::display::CommaSeparated;
         use crate::info::Info;
+        use display::OptionalName;
 
         fn into_expr(elem: &PrintElement) -> Option<&Expression> {
             if let PrintElement::Value(expr, _) = elem {
@@ -153,15 +154,23 @@ impl DisplayIndented for Statement {
                 write!(f, "{}", indent.lock())?;
                 fmt_indendet_cond(cond, when, r#else, indent, info, f)
             },
-            Kind::Stop{clock, cond, code}           =>
-                writeln!(f, "{}stop({}, {}, {}){}", indent.lock(), clock, cond, code, info),
-            Kind::Print{clock, cond, msg}           => writeln!(f,
-                "{}printf({}, {}, {}{}){}",
+            Kind::Stop{name, clock, cond, code}     => writeln!(f,
+                "{}stop({}, {}, {}){}{}",
+                indent.lock(),
+                clock,
+                cond,
+                code,
+                OptionalName::from(name.as_ref().map(AsRef::as_ref)),
+                info,
+            ),
+            Kind::Print{name, clock, cond, msg}     => writeln!(f,
+                "{}printf({}, {}, {}{}){}{}",
                 indent.lock(),
                 clock,
                 cond,
                 display::FormatString(msg.as_ref()),
                 CommaSeparated::from(msg.iter().filter_map(into_expr)).with_preceding(),
+                OptionalName::from(name.as_ref().map(AsRef::as_ref)),
                 info,
             ),
         }
@@ -173,6 +182,7 @@ impl Arbitrary for Statement {
     fn arbitrary(g: &mut Gen) -> Self {
         use std::iter::from_fn as fn_iter;
 
+        use crate::tests::Identifier;
         use expr::tests::{expr_with_type, sink_flow, source_flow};
         use types::GroundType as GT;
 
@@ -216,11 +226,13 @@ impl Arbitrary for Statement {
                 r#else: tests::stmt_list(u8::arbitrary(g), g).into(),
             },
             &|g| Kind::Stop {
+                name: Option::<Identifier>::arbitrary(g).map(Into::into),
                 clock: expr_with_type(GT::Clock, source_flow(g), g),
                 cond: expr_with_type(GT::UInt(Some(1)), source_flow(g), g),
                 code: Arbitrary::arbitrary(g),
             },
             &|g| Kind::Print {
+                name: Option::<Identifier>::arbitrary(g).map(Into::into),
                 clock: expr_with_type(GT::Clock, source_flow(g), g),
                 cond: expr_with_type(GT::UInt(Some(1)), source_flow(g), g),
                 msg: tests::FormatString::arbitrary(g).into(),
@@ -235,6 +247,8 @@ impl Arbitrary for Statement {
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        use crate::tests::Identifier;
+
         fn bisect<T: Clone>(mut v: Vec<T>) -> Vec<Vec<T>> {
             if v.len() > 1 {
                 let right = v.split_off(v.len() / 2);
@@ -265,15 +279,44 @@ impl Arbitrary for Statement {
                     }.into());
                 Box::new(when.to_vec().into_iter().chain(r#else.to_vec()).chain(res))
             },
-            Kind::Print{clock, cond, msg}           => {
+            Kind::Stop{name, clock, cond, code}     => {
                 let clock = clock.clone();
                 let cond = cond.clone();
-                let res = tests::FormatString::from(msg.clone())
+                let code = *code;
+
+                let res = name
+                    .as_ref()
+                    .map(|n| Identifier::from(n.as_ref()))
                     .shrink()
-                    .map(move |msg| Kind::Print{
+                    .map(move |name| Kind::Stop{
+                        name: name.map(Into::into),
                         clock: clock.clone(),
                         cond: cond.clone(),
-                        msg: msg.into(),
+                        code,
+                    }.into());
+                Box::new(res)
+            }
+            Kind::Print{name, clock, cond, msg}     => {
+                let clock = clock.clone();
+                let cond = cond.clone();
+
+                let res = name
+                    .as_ref()
+                    .map(|n| Identifier::from(n.as_ref()))
+                    .shrink()
+                    .map({
+                        let msg = msg.clone();
+                        move |name| (name.map(Into::into), msg.clone())
+                    })
+                    .chain(tests::FormatString::from(msg.clone()).shrink().map({
+                        let name = name.clone();
+                        move |msg| (name.clone(), msg.into())
+                    }))
+                    .map(move |(name, msg)| Kind::Print{
+                        name: name,
+                        clock: clock.clone(),
+                        cond: cond.clone(),
+                        msg: msg,
                     }.into());
                 Box::new(res)
             },
@@ -293,8 +336,8 @@ pub enum Kind {
     Invalidate(Expression),
     Attach(Vec<Expression>),
     Conditional{cond: Expression, when: Arc<[Statement]>, r#else: Arc<[Statement]>},
-    Stop{clock: Expression, cond: Expression, code: i64},
-    Print{clock: Expression, cond: Expression, msg: Vec<PrintElement>},
+    Stop{name: Option<Arc<str>>, clock: Expression, cond: Expression, code: i64},
+    Print{name: Option<Arc<str>>, clock: Expression, cond: Expression, msg: Vec<PrintElement>},
 }
 
 

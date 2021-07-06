@@ -9,7 +9,7 @@ use quickcheck::{Arbitrary, Gen, TestResult, Testable};
 
 use crate::expr::{self, Expression, Reference};
 use crate::indentation::{DisplayIndented, Indentation};
-use crate::tests::Equivalence;
+use crate::tests::{Equivalence, Identifier};
 
 use super::{Entity, Kind, Statement};
 
@@ -122,6 +122,17 @@ fn parse_fmt_string(original: FormatString) -> Result<TestResult, String> {
 }
 
 
+#[quickcheck]
+fn parse_optional_name(original: Option<Identifier>) -> Result<Equivalence<Option<Arc<str>>>, String> {
+    let s = super::display::OptionalName(original.as_ref().map(AsRef::as_ref)).to_string();
+    let res = all_consuming(super::parsers::optional_name)(&s)
+        .finish()
+        .map(|(_, parsed)| Equivalence::of(original.map(Into::into), parsed))
+        .map_err(|e| e.to_string());
+    res
+}
+
+
 /// Retrieve all expressions occuring in a statement
 pub fn stmt_exprs(stmt: &Statement) -> Vec<&Expression<Arc<Entity>>> {
     match stmt.as_ref() {
@@ -136,7 +147,7 @@ pub fn stmt_exprs(stmt: &Statement) -> Vec<&Expression<Arc<Entity>>> {
             .chain(r#else.iter().flat_map(stmt_exprs))
             .collect(),
         Kind::Stop{clock, cond, ..}             => vec![clock, cond],
-        Kind::Print{clock, cond, msg}           => std::iter::once(clock)
+        Kind::Print{clock, cond, msg, ..}       => std::iter::once(clock)
             .chain(std::iter::once(cond))
             .chain(msg.iter().filter_map(|p| if let super::PrintElement::Value(e, _) = p {
                 Some(e)

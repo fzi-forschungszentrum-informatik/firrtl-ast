@@ -6,7 +6,7 @@ use std::sync::Arc;
 use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::character::complete::{anychar, char as chr};
-use nom::combinator::{iterator, map, value, verify};
+use nom::combinator::{iterator, map, opt, value, verify};
 use nom::multi::{many1, separated_list1};
 use nom::sequence::{preceded, tuple};
 
@@ -106,11 +106,12 @@ pub fn stmt<'i>(
                 comma,
                 spaced(decimal),
                 rp,
+                optional_name,
                 info,
                 le,
             )),
-            |(i, _, _, clock, _, cond, _, code, _, info, ..)|
-                (i, S::from(Kind::Stop{clock, cond, code}).with_info(info)),
+            |(i, _, _, clock, _, cond, _, code, _, name, info, ..)|
+                (i, S::from(Kind::Stop{name, clock, cond, code}).with_info(info)),
         ),
         map(
             tuple((
@@ -134,11 +135,12 @@ pub fn stmt<'i>(
                     exprs.finish().map(|(i, _)| (i, ps))
                 }),
                 rp,
+                optional_name,
                 info,
                 le,
             )),
-            |(i, _, _, clock, _, cond, _, msg, _, info, ..)|
-                (i, S::from(Kind::Print{clock, cond, msg}).with_info(info)),
+            |(i, _, _, clock, _, cond, _, msg, _, name, info, ..)|
+                (i, S::from(Kind::Print{name, clock, cond, msg}).with_info(info)),
         ),
     ))(input)?;
 
@@ -261,5 +263,13 @@ pub fn fmt_string_part<'i>(
 pub enum FmtStrPart {
     Literal(String),
     FormatSpec(super::Format)
+}
+
+
+/// Parse optional name
+pub fn optional_name<'i>(
+    input: &'i str,
+) -> IResult<'i, Option<Arc<str>>> {
+    opt(map(tuple((spaced(op(":")), spaced(identifier))), |(_, n)| n.into()))(input)
 }
 
