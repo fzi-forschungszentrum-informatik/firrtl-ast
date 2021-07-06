@@ -4,6 +4,8 @@ use std::error::Error as Error;
 use std::fmt;
 use std::io;
 
+use crate::parsers;
+
 
 /// Parsing error type
 #[derive(Debug)]
@@ -45,6 +47,17 @@ impl fmt::Display for ParseError {
             Self::IO(_)         => fmt::Display::fmt("IO error", f),
             Self::Other(err)    => fmt::Display::fmt(err, f),
         }
+    }
+}
+
+
+/// Convert a `nom::Err` into a `ParseError`
+pub(crate) fn convert_error(input: &str, err: nom::Err<parsers::Error>) -> ParseError {
+    use nom::error::convert_error;
+
+    match err {
+        nom::Err::Incomplete(_) => io::ErrorKind::UnexpectedEof.into(),
+        nom::Err::Error(e) | nom::Err::Failure(e) => convert_error(input, e).into(),
     }
 }
 
