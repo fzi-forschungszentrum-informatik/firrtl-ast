@@ -182,6 +182,7 @@ impl Arbitrary for Statement {
     fn arbitrary(g: &mut Gen) -> Self {
         use std::iter::from_fn as fn_iter;
 
+        use crate::tests::Identifier;
         use expr::tests::{expr_with_type, sink_flow, source_flow};
         use types::GroundType as GT;
 
@@ -225,13 +226,13 @@ impl Arbitrary for Statement {
                 r#else: tests::stmt_list(u8::arbitrary(g), g).into(),
             },
             &|g| Kind::Stop {
-                name: Default::default(),
+                name: Option::<Identifier>::arbitrary(g).map(Into::into),
                 clock: expr_with_type(GT::Clock, source_flow(g), g),
                 cond: expr_with_type(GT::UInt(Some(1)), source_flow(g), g),
                 code: Arbitrary::arbitrary(g),
             },
             &|g| Kind::Print {
-                name: Default::default(),
+                name: Option::<Identifier>::arbitrary(g).map(Into::into),
                 clock: expr_with_type(GT::Clock, source_flow(g), g),
                 cond: expr_with_type(GT::UInt(Some(1)), source_flow(g), g),
                 msg: tests::FormatString::arbitrary(g).into(),
