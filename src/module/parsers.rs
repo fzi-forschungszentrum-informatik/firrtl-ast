@@ -22,7 +22,8 @@ use crate::types::parsers::r#type;
 #[derive(Debug)]
 pub struct Modules<'i> {
     modules: std::collections::HashMap<Arc<str>, Arc<super::Module>>,
-    input: &'i str,
+    origin: &'i str,
+    current: &'i str,
     indentation: Indentation,
 }
 
@@ -31,8 +32,22 @@ impl<'i> Modules<'i> {
     ///
     /// The iterator will yield all modules from the given input in the order
     /// they are defined in.
+    ///
+    /// # Note
+    ///
+    /// The line numbers reported in case of an error will be relative to the
+    /// supplied `input`. Consider using `new_with_origin` instead.
     pub fn new(input: &'i str) -> Self {
-        Self {modules: Default::default(), input, indentation: Indentation::root().sub()}
+        Self::new_with_origin(input, input)
+    }
+
+    /// Create a new module iterator for a given input
+    ///
+    /// The iterator will yield all modules from the given input in the order
+    /// they are defined in. The `original` parameter will be used for computing
+    /// offsets during for error reporting.
+    pub fn new_with_origin(input: &'i str, origin: &'i str) -> Self {
+        Self {modules: Default::default(), origin, current: input, indentation: Indentation::root().sub()}
     }
 
     /// Retrieve a previously parsed module by name
@@ -52,19 +67,19 @@ impl Iterator for Modules<'_> {
     type Item = Result<Arc<super::Module>, ParseError>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if !self.input.is_empty() {
+        if !self.current.is_empty() {
             let modules = &self.modules;
 
-            let res = module(|name| modules.get(name).cloned(), self.input, &mut self.indentation)
+            let res = module(|name| modules.get(name).cloned(), self.current, &mut self.indentation)
                 .map(|(i, m)| {
                     let module = Arc::new(m);
                     self.add_module(module.clone());
-                    self.input = i;
+                    self.current = i;
                     module
                 })
                 .map_err(|e| {
-                    self.input = Default::default();
-                    convert_error(self.input, e)
+                    self.current = self.current.split_at(self.current.len()).1;
+                    convert_error(self.origin, e)
                 });
             Some(res)
         } else {
