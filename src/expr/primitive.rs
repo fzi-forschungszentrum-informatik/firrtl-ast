@@ -67,7 +67,7 @@ pub enum Operation<R: Reference> {
     /// Concatenation
     Cat(Arc<Expression<R>>, Arc<Expression<R>>),
     /// Bit extraction
-    Bits(Arc<Expression<R>>, Option<NonZeroU16>, Option<NonZeroU16>),
+    Bits(Arc<Expression<R>>, Option<u16>, Option<u16>),
     /// Increase precision (of "fixed")
     IncPrecision(Arc<Expression<R>>, NonZeroU16),
     /// Decrease precision (of "fixed")
@@ -229,9 +229,8 @@ impl<R> types::Typed for Operation<R>
                 GT::UInt(max_width(ground(lhs)?.width(), ground(rhs)?.width())
             )),
             Self::Bits(sub, low, high)      => ground(sub).map(|t| GT::UInt(high
-                .map(NonZeroU16::get)
                 .or(t.width())
-                .and_then(|w| w.checked_sub(low.map(NonZeroU16::get).unwrap_or(1)))
+                .and_then(|w| w.checked_sub(low.unwrap_or(1)))
                 .map(|w| w + 1)
             )),
             Self::IncPrecision(sub, bits)   => fixed(sub).map(|(w, p)| GT::Fixed(
