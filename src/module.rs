@@ -202,11 +202,42 @@ impl Default for Kind {
 #[cfg(test)]
 impl Arbitrary for Kind {
     fn arbitrary(g: &mut Gen) -> Self {
-        if g.size() > 0 {
-            let opts: [fn() -> Self; 2] = [Self::empty_regular, Self::empty_external];
-            g.choose(&opts).unwrap()()
-        } else {
-            Default::default()
+        use std::iter::from_fn as fn_iter;
+
+        use crate::stmt::tests::stmts_with_decls;
+
+        if g.size() <= 0 {
+            return Default::default();
+        }
+
+        let opts: [&dyn Fn(&mut Gen) -> Self; 2] = [
+            &|g| {
+                let n = u8::arbitrary(g) as usize;
+                let mut g = Gen::new(g.size() / std::cmp::max(n, 1));
+                let stmts = stmts_with_decls(fn_iter(|| Some(Arbitrary::arbitrary(&mut g))).take(n))
+                    .collect();
+                Self::Regular{stmts}
+            },
+            &|_| Self::empty_external(),
+        ];
+        g.choose(&opts).unwrap()(g)
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        use crate::stmt::tests::stmts_with_decls;
+
+        match self {
+            Self::Regular{stmts} => {
+                let max_stmts = stmts.len();
+                let res = stmts
+                    .to_vec()
+                    .shrink()
+                    .map(|v| stmts_with_decls(v).collect::<Vec<_>>())
+                    .filter(move |v| v.len() < max_stmts)
+                    .map(|stmts| Self::Regular{stmts});
+                Box::new(res)
+            },
+            Kind::External => Box::new(std::iter::empty()),
         }
     }
 }
