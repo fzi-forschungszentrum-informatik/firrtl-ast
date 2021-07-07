@@ -1,5 +1,6 @@
 //! Parsers for expressions
 
+use std::num::ParseIntError;
 use std::sync::Arc;
 
 use nom::branch::alt;
@@ -140,5 +141,45 @@ pub fn primitive_op<'i, R: super::Reference + Clone>(
     };
 
     value(op, rp)(input)
+}
+
+
+/// Parse FIRRTL's weird stringified number literal format
+///
+/// This parser yields the value and radix.
+fn num_lit<T: FromStrRadix + std::str::FromStr>(input: &str) -> IResult<T> {
+    use nom::character::complete::{alphanumeric1, char as chr};
+    use nom::combinator::{map_res, recognize, opt};
+
+    alt((
+        decimal,
+        map_res(
+            tuple((
+                chr('"'),
+                alt((value(2, chr('b')), value(8, chr('o')), value(16, chr('h')))),
+                recognize(preceded(opt(alt((chr('+'), chr('-')))), alphanumeric1)),
+                chr('"'),
+            )),
+            |(_, radix, value, _)| FromStrRadix::from_str_radix(value, radix)
+        )
+    ))(input)
+}
+
+
+/// Helper trait for generalizing from_str_radix
+trait FromStrRadix: Sized {
+    fn from_str_radix(value: &str, radix: u32) -> Result<Self, ParseIntError>;
+}
+
+impl FromStrRadix for u128 {
+    fn from_str_radix(value: &str, radix: u32) -> Result<Self, ParseIntError> {
+        u128::from_str_radix(value, radix)
+    }
+}
+
+impl FromStrRadix for i128 {
+    fn from_str_radix(value: &str, radix: u32) -> Result<Self, ParseIntError> {
+        i128::from_str_radix(value, radix)
+    }
 }
 
