@@ -185,11 +185,21 @@ impl Kind {
             Self::External  => "extmodule",
         }
     }
+
+    /// Create a new, empty module kind for regular modules
+    pub fn empty_regular() -> Self {
+        Self::Regular{stmts: Default::default()}
+    }
+
+    /// Create a new, empty module kind for external modules
+    pub fn empty_external() -> Self {
+        Self::External
+    }
 }
 
 impl Default for Kind {
     fn default() -> Self {
-        Self::Regular
+        Self::empty_regular()
     }
 }
 
@@ -197,7 +207,8 @@ impl Default for Kind {
 impl Arbitrary for Kind {
     fn arbitrary(g: &mut Gen) -> Self {
         if g.size() > 0 {
-            g.choose(&[Self::Regular, Self::External]).unwrap().clone()
+            let opts: [fn() -> Self; 2] = [Self::empty_regular, Self::empty_external];
+            g.choose(&opts).unwrap()()
         } else {
             Default::default()
         }

@@ -129,8 +129,8 @@ pub fn module<'i>(
 /// Parse a module kind
 pub fn kind<'i>(input: &str) -> IResult<super::Kind> {
     alt((
-        value(super::Kind::Regular,  kw("module")),
-        value(super::Kind::External, kw("extmodule")),
+        map(kw("module"), |_| super::Kind::empty_regular()),
+        map(kw("extmodule"), |_| super::Kind::empty_external()),
     ))(input)
 }
 
