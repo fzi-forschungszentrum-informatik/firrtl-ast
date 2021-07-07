@@ -16,7 +16,7 @@ use crate::indentation;
 use crate::info::{self, WithInfo};
 use crate::module::Module;
 
-pub use parsers::circuit as parse;
+pub use parsers::{circuit as parse, consumer};
 
 
 /// FIRRTL circuit
@@ -111,13 +111,16 @@ impl Arbitrary for Circuit {
 /// over the modules yielded by the inner iterator transparently, seeking out
 /// the top module for a target circuit by name.
 #[derive(Clone, Debug)]
-pub struct ModuleConsumer<I: Iterator<Item = Arc<Module>>> {
+pub struct ModuleConsumer<I: Iterator<Item = Result<Arc<Module>, E>>, E> {
     top_module: TopState,
     info: Option<String>,
     modules: I,
 }
 
-impl<I: Iterator<Item = Arc<Module>>> ModuleConsumer<I> {
+impl<I, E> ModuleConsumer<I, E>
+where I: Iterator<Item = Result<Arc<Module>, E>>,
+      E: Into<ParseError>,
+{
     /// Create a new adapter for the given target top module name
     ///
     /// The adapter will allow constructing a `Circuit` with a top-module with
@@ -141,21 +144,25 @@ impl<I: Iterator<Item = Arc<Module>>> ModuleConsumer<I> {
     }
 
     /// Try to create the requested circuit, consuming the iterator
-    pub fn into_circuit(mut self) -> Option<Circuit> {
+    pub fn into_circuit(mut self) -> Result<Circuit, ParseError> {
         let info = self.info;
         match self.top_module {
-            TopState::Name(n)   => self.modules.find(|m| m.name() == n),
-            TopState::Module(m) => Some(m),
+            TopState::Name(n)   => self
+                .modules
+                .find(|m| m.as_ref().ok().map(|m| m.name() == n).unwrap_or(true))
+                .map(|r| r.map_err(Into::into))
+                .unwrap_or_else(|| Err("top module not found".to_owned().into())),
+            TopState::Module(m) => Ok(m),
         }.map(|m| Circuit::new(m).with_info(info))
     }
 }
 
-impl<I: Iterator<Item = Arc<Module>>> Iterator for ModuleConsumer<I> {
+impl<I: Iterator<Item = Result<Arc<Module>, E>>, E> Iterator for ModuleConsumer<I, E> {
     type Item = I::Item;
 
     fn next(&mut self) -> Option<Self::Item> {
         let res = self.modules.next();
-        if let (Some(m), TopState::Name(n)) = (res.as_ref(), &self.top_module) {
+        if let (Some(Ok(m)), TopState::Name(n)) = (res.as_ref(), &self.top_module) {
             if n == m.name() {
                 self.top_module = TopState::Module(m.clone())
             }
