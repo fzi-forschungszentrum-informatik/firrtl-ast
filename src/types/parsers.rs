@@ -6,7 +6,7 @@ use nom::branch::alt;
 use nom::bytes::complete::take_while;
 use nom::combinator::{map, opt, value};
 use nom::error::context;
-use nom::multi::{fold_many0, separated_list1};
+use nom::multi::{fold_many0, separated_list0};
 use nom::sequence::{preceded, tuple};
 
 use crate::parsers::{IResult, decimal, is_identifier_char, kw, op, spaced};
@@ -50,7 +50,7 @@ pub fn r#type(input: &str) -> IResult<super::Type> {
 
     let (input, res) = alt((
         map(
-            tuple((op("{"), separated_list1(spaced(op(",")), spaced(field)), spaced(op("}")))),
+            tuple((op("{"), separated_list0(spaced(op(",")), spaced(field)), spaced(op("}")))),
             |(_, v, _)| T::Bundle(v.into())
         ),
         map(ground_type, T::GroundType),

@@ -182,7 +182,7 @@ impl Arbitrary for Type {
                 Arbitrary::arbitrary(&mut Gen::new(g.size().saturating_sub(1))),
                 Arbitrary::arbitrary(g)
             ),
-            &|g| bundle_fields(u8::arbitrary(g).saturating_add(1) as usize, g).into(),
+            &|g| bundle_fields(u8::arbitrary(g) as usize, g).into(),
         ];
         if g.size() > 0 {
             g.choose(&opts).unwrap()(g)
@@ -204,7 +204,6 @@ impl Arbitrary for Type {
                 let res = v
                     .to_vec()
                     .shrink()
-                    .filter(move |v| !v.is_empty())
                     .map(Into::into)
                     .map(Self::Bundle)
                     .chain(v.to_vec().into_iter().map(|f| f.r#type().clone()));
