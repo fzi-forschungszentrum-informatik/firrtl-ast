@@ -112,8 +112,6 @@ pub fn module_with_stmts(
         ports.len() <= max_ports
     }).collect();
 
-    let mut module = Module::new(name, ports.into_iter().map(|(_, v)| v), super::Kind::Regular);
-    module.statements_mut().map(|s| *s = stmts);
-    module
+    Module::new(name, ports.into_iter().map(|(_, v)| v), super::Kind::Regular{stmts})
 }
 

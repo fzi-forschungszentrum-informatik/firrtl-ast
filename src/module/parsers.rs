@@ -108,7 +108,7 @@ pub fn module<'i>(
     let (input, _) = ports.finish()?;
 
     let input = match kind {
-        super::Kind::Regular => {
+        super::Kind::Regular{..} => {
             let (input, stmts) = stmts(
                 |n| res.port_by_name(&n).map(|p| Arc::new(p.clone().into())),
                 module,

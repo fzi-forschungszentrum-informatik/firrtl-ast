@@ -33,8 +33,8 @@ impl Module {
     /// Create a new module
     pub fn new(name: Arc<str>, ports: impl IntoIterator<Item = Arc<Port>>, kind: Kind) -> Self {
         let stmts = match kind {
-            Kind::Regular   => Some(Default::default()),
-            Kind::External  => None,
+            Kind::Regular{stmts}    => Some(stmts),
+            Kind::External          => None,
         };
         Self {name, ports: ports.into_iter().collect(), stmts, info: Default::default()}
     }
@@ -56,8 +56,8 @@ impl Module {
 
     /// Retrieve the module kind
     pub fn kind(&self) -> Kind {
-        if self.stmts.is_some() {
-            Kind::Regular
+        if let Some(stmts) = self.stmts.clone() {
+            Kind::Regular{stmts}
         } else {
             Kind::External
         }
@@ -117,7 +117,7 @@ impl Arbitrary for Module {
         let max_ports = (usize::arbitrary(g) % 16) + 1;
         let name = Identifier::arbitrary(g).into();
         match Kind::arbitrary(g) {
-            Kind::Regular => tests::module_with_stmts(
+            Kind::Regular{..} => tests::module_with_stmts(
                 name,
                 std::iter::from_fn(|| Some(Arbitrary::arbitrary(g))),
                 max_ports,
@@ -139,7 +139,7 @@ impl Arbitrary for Module {
 
         let n = self.name.clone();
         match self.kind() {
-            Kind::Regular => {
+            Kind::Regular{..} => {
                 // For regular modules, we must maintain that all ports used in
                 // statements are defined for the module. Hence, we shrink the
                 // statement list and derive the ports from that list.
@@ -171,7 +171,7 @@ impl Arbitrary for Module {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Kind {
     /// A regular module
-    Regular,
+    Regular{stmts: Vec<Statement>},
     /// An external module, usually an interface to some IP or external
     /// VHDL/Verilog.
     External,
@@ -181,8 +181,8 @@ impl Kind {
     /// Retrieve the keyword associated with the module kind
     pub fn keyword(&self) -> &'static str {
         match self {
-            Self::Regular   => "module",
-            Self::External  => "extmodule",
+            Self::Regular{..}   => "module",
+            Self::External      => "extmodule",
         }
     }
 
