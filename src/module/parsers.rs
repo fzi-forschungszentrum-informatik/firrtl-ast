@@ -103,7 +103,7 @@ pub fn module<'i>(
     let mut indentation = indentation.sub();
 
     let mut ports = iterator(input, map(tuple((indentation.parser(), port, le)), |(_, p, ..)| Arc::new(p)));
-    let mut res = super::Module::new(name, &mut ports, kind);
+    let mut res = super::Module::new(name, &mut ports, kind.clone());
     res.set_info(info);
     let (input, _) = ports.finish()?;
 

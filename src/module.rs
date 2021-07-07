@@ -135,7 +135,7 @@ impl Arbitrary for Module {
         let k = self.kind();
         let res = crate::tests::Identifier::from(self.name())
             .shrink()
-            .map(move |n| Self::new(n.into(), p.clone(), k));
+            .map(move |n| Self::new(n.into(), p.clone(), k.clone()));
 
         let n = self.name.clone();
         match self.kind() {
@@ -168,7 +168,7 @@ impl Arbitrary for Module {
 /// Module kind
 ///
 /// The FIRRTL spec defines multiple kinds of modules.
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Kind {
     /// A regular module
     Regular,
