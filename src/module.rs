@@ -25,18 +25,14 @@ pub use parsers::Modules;
 pub struct Module {
     name: Arc<str>,
     ports: Vec<Arc<Port>>,
-    stmts: Option<Vec<Statement>>,
+    kind: Kind,
     info: Option<String>,
 }
 
 impl Module {
     /// Create a new module
     pub fn new(name: Arc<str>, ports: impl IntoIterator<Item = Arc<Port>>, kind: Kind) -> Self {
-        let stmts = match kind {
-            Kind::Regular{stmts}    => Some(stmts),
-            Kind::External          => None,
-        };
-        Self {name, ports: ports.into_iter().collect(), stmts, info: Default::default()}
+        Self {name, ports: ports.into_iter().collect(), kind, info: Default::default()}
     }
 
     /// Retrieve the module's name
@@ -56,16 +52,12 @@ impl Module {
 
     /// Retrieve the module kind
     pub fn kind(&self) -> Kind {
-        if let Some(stmts) = self.stmts.clone() {
-            Kind::Regular{stmts}
-        } else {
-            Kind::External
-        }
+        self.kind.clone()
     }
 
     /// Retrieve the statements in this module
     pub fn statements(&self) -> &[Statement] {
-        self.stmts.as_ref().map(|v| v.as_ref()).unwrap_or(&[])
+        self.kind.statements()
     }
 
     /// Retrieve all modules referenced from this module via instantiations
