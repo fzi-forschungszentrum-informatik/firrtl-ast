@@ -78,7 +78,7 @@ pub fn primitive_op<'i, R: super::Reference + Clone>(
 ) -> IResult<'i, super::primitive::Operation<R>> {
     use nom::error::ParseError;
 
-    use types::GroundType as GT;
+    use types::{GroundType as GT, ResetKind as RK};
 
     use super::primitive::Operation as PO;
 
@@ -86,55 +86,65 @@ pub fn primitive_op<'i, R: super::Reference + Clone>(
 
     let (input, op) = terminated(identifier, lp)(input)?;
     let (input, op) = match op {
-        "add"       => map(tuple((&sub, comma, &sub)), |(l, _, r)| PO::Add(l, r))(input)?,
-        "sub"       => map(tuple((&sub, comma, &sub)), |(l, _, r)| PO::Sub(l, r))(input)?,
-        "mul"       => map(tuple((&sub, comma, &sub)), |(l, _, r)| PO::Mul(l, r))(input)?,
-        "div"       => map(tuple((&sub, comma, &sub)), |(l, _, r)| PO::Div(l, r))(input)?,
-        "rem"       => map(tuple((&sub, comma, &sub)), |(l, _, r)| PO::Rem(l, r))(input)?,
-        "lt"        => map(tuple((&sub, comma, &sub)), |(l, _, r)| PO::Lt(l, r))(input)?,
-        "leq"       => map(tuple((&sub, comma, &sub)), |(l, _, r)| PO::LEq(l, r))(input)?,
-        "gt"        => map(tuple((&sub, comma, &sub)), |(l, _, r)| PO::Gt(l, r))(input)?,
-        "geq"       => map(tuple((&sub, comma, &sub)), |(l, _, r)| PO::GEq(l, r))(input)?,
-        "eq"        => map(tuple((&sub, comma, &sub)), |(l, _, r)| PO::Eq(l, r))(input)?,
-        "neq"       => map(tuple((&sub, comma, &sub)), |(l, _, r)| PO::NEq(l, r))(input)?,
-        "pad"       => map(tuple((&sub, comma, spaced(decimal))), |(e, _, b)| PO::Pad(e, b))(input)?,
-        "asUInt"    => map(&sub, |e| PO::Cast(e, GT::UInt(None)))(input)?,
-        "asSInt"    => map(&sub, |e| PO::Cast(e, GT::SInt(None)))(input)?,
-        "asFixed"   => map(
+        "add"           => map(tuple((&sub, comma, &sub)), |(l, _, r)| PO::Add(l, r))(input)?,
+        "sub"           => map(tuple((&sub, comma, &sub)), |(l, _, r)| PO::Sub(l, r))(input)?,
+        "mul"           => map(tuple((&sub, comma, &sub)), |(l, _, r)| PO::Mul(l, r))(input)?,
+        "div"           => map(tuple((&sub, comma, &sub)), |(l, _, r)| PO::Div(l, r))(input)?,
+        "rem"           => map(tuple((&sub, comma, &sub)), |(l, _, r)| PO::Rem(l, r))(input)?,
+        "lt"            => map(tuple((&sub, comma, &sub)), |(l, _, r)| PO::Lt(l, r))(input)?,
+        "leq"           => map(tuple((&sub, comma, &sub)), |(l, _, r)| PO::LEq(l, r))(input)?,
+        "gt"            => map(tuple((&sub, comma, &sub)), |(l, _, r)| PO::Gt(l, r))(input)?,
+        "geq"           => map(tuple((&sub, comma, &sub)), |(l, _, r)| PO::GEq(l, r))(input)?,
+        "eq"            => map(tuple((&sub, comma, &sub)), |(l, _, r)| PO::Eq(l, r))(input)?,
+        "neq"           => map(tuple((&sub, comma, &sub)), |(l, _, r)| PO::NEq(l, r))(input)?,
+        "pad"           => map(tuple((&sub, comma, spaced(decimal))), |(e, _, b)| PO::Pad(e, b))(input)?,
+        "asUInt"        => map(&sub, |e| PO::Cast(e, GT::UInt(None)))(input)?,
+        "asSInt"        => map(&sub, |e| PO::Cast(e, GT::SInt(None)))(input)?,
+        "asFixed"       => map(
             tuple((&sub, comma, spaced(decimal))),
             |(e, _, p)| PO::Cast(e, GT::Fixed(None, Some(p)))
         )(input)?,
-        "asClock"   => map(&sub, |e| PO::Cast(e, GT::Clock))(input)?,
-        "shl"       => map(tuple((&sub, comma, spaced(decimal))), |(e, _, b)| PO::Shl(e, b))(input)?,
-        "shr"       => map(tuple((&sub, comma, spaced(decimal))), |(e, _, b)| PO::Shr(e, b))(input)?,
-        "dshl"      => map(tuple((&sub, comma, &sub)), |(e, _, b)| PO::DShl(e, b))(input)?,
-        "dshr"      => map(tuple((&sub, comma, &sub)), |(e, _, b)| PO::DShr(e, b))(input)?,
-        "cvt"       => map(&sub, PO::Cvt)(input)?,
-        "neg"       => map(&sub, PO::Neg)(input)?,
-        "not"       => map(&sub, PO::Not)(input)?,
-        "and"       => map(tuple((&sub, comma, &sub)), |(l, _, r)| PO::And(l, r))(input)?,
-        "or"        => map(tuple((&sub, comma, &sub)), |(l, _, r)| PO::Or(l, r))(input)?,
-        "xor"       => map(tuple((&sub, comma, &sub)), |(l, _, r)| PO::Xor(l, r))(input)?,
-        "andr"      => map(&sub, PO::AndReduce)(input)?,
-        "orr"       => map(&sub, PO::OrReduce)(input)?,
-        "xorr"      => map(&sub, PO::XorReduce)(input)?,
-        "cat"       => map(tuple((&sub, comma, &sub)), |(l, _, r)| PO::Cat(l, r))(input)?,
-        "bits"      => map(
+        "asClock"       => map(&sub, |e| PO::Cast(e, GT::Clock))(input)?,
+        "asAsyncReset"  => map(&sub, |e| PO::Cast(e, GT::Reset(RK::Async)))(input)?,
+        "shl"           => map(tuple((&sub, comma, spaced(decimal))), |(e, _, b)| PO::Shl(e, b))(input)?,
+        "shr"           => map(tuple((&sub, comma, spaced(decimal))), |(e, _, b)| PO::Shr(e, b))(input)?,
+        "dshl"          => map(tuple((&sub, comma, &sub)), |(e, _, b)| PO::DShl(e, b))(input)?,
+        "dshr"          => map(tuple((&sub, comma, &sub)), |(e, _, b)| PO::DShr(e, b))(input)?,
+        "cvt"           => map(&sub, PO::Cvt)(input)?,
+        "neg"           => map(&sub, PO::Neg)(input)?,
+        "not"           => map(&sub, PO::Not)(input)?,
+        "and"           => map(tuple((&sub, comma, &sub)), |(l, _, r)| PO::And(l, r))(input)?,
+        "or"            => map(tuple((&sub, comma, &sub)), |(l, _, r)| PO::Or(l, r))(input)?,
+        "xor"           => map(tuple((&sub, comma, &sub)), |(l, _, r)| PO::Xor(l, r))(input)?,
+        "andr"          => map(&sub, PO::AndReduce)(input)?,
+        "orr"           => map(&sub, PO::OrReduce)(input)?,
+        "xorr"          => map(&sub, PO::XorReduce)(input)?,
+        "cat"           => map(tuple((&sub, comma, &sub)), |(l, _, r)| PO::Cat(l, r))(input)?,
+        "bits"          => map(
             tuple((&sub, comma, spaced(decimal), comma, spaced(decimal))),
             |(e, _, l, _, h)| PO::Bits(e, Some(l), Some(h))
         )(input)?,
-        "head"      => map(
+        "head"          => map(
             tuple((&sub, comma, spaced(decimal))),
             |(e, _, h)| PO::Bits(e, None, Some(h))
         )(input)?,
-        "tail"      => map(
+        "tail"          => map(
             tuple((&sub, comma, spaced(decimal))),
             |(e, _, l)| PO::Bits(e, Some(l), None)
         )(input)?,
-        "incp"      => map(tuple((&sub, comma, spaced(decimal))), |(e, _, b)| PO::IncPrecision(e, b))(input)?,
-        "decp"      => map(tuple((&sub, comma, spaced(decimal))), |(e, _, b)| PO::DecPrecision(e, b))(input)?,
-        "setp"      => map(tuple((&sub, comma, spaced(decimal))), |(e, _, b)| PO::SetPrecision(e, b))(input)?,
-        _           => return Err(
+        "incp"          => map(
+            tuple((&sub, comma, spaced(decimal))),
+            |(e, _, b)| PO::IncPrecision(e, b)
+        )(input)?,
+        "decp"          => map(
+            tuple((&sub, comma, spaced(decimal))),
+            |(e, _, b)| PO::DecPrecision(e, b)
+        )(input)?,
+        "setp"          => map(
+            tuple((&sub, comma, spaced(decimal))),
+            |(e, _, b)| PO::SetPrecision(e, b)
+        )(input)?,
+        _               => return Err(
             nom::Err::Error(crate::parsers::Error::from_error_kind(input, nom::error::ErrorKind::Tag))
         ),
     };
