@@ -72,15 +72,6 @@ impl Module {
     pub fn referenced_modules(&self) -> impl Iterator<Item = &Arc<Self>> {
         self.statements().iter().flat_map(Statement::instantiations).map(Instance::module)
     }
-
-    /// Retrieve a mutable reference of this module's statement list
-    ///
-    /// For regulsr modules, this function will return a reference to the
-    /// module's internal statement list. For external modules, `None` will be
-    /// returned.
-    pub fn statements_mut(&mut self) -> Option<&mut Vec<Statement>> {
-        self.stmts.as_mut()
-    }
 }
 
 impl info::WithInfo for Module {
