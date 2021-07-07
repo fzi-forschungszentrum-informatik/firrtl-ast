@@ -14,7 +14,7 @@ mod tests;
 
 
 pub use combinator::Combinator;
-pub use ground::{GroundType, MaxWidth, combine_fixed_max};
+pub use ground::{GroundType, MaxWidth, ResetKind, combine_fixed_max};
 pub use orientation::Orientation;
 pub use oriented::OrientedType;
 pub use r#type::{BundleField, Type};

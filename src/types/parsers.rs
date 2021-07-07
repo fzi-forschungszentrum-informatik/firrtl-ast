@@ -12,7 +12,7 @@ use crate::parsers::{IResult, decimal, identifier, kw, op, spaced};
 
 /// Parse a ground type
 pub fn ground_type(input: &str) -> IResult<super::GroundType> {
-    use super::GroundType as G;
+    use super::{GroundType as G, ResetKind as K};
 
     let point_offset = |i| opt(spaced(map(tuple((op("<<"), decimal, op(">>"))), |(_, w, _)| w)))(i);
 
@@ -21,6 +21,8 @@ pub fn ground_type(input: &str) -> IResult<super::GroundType> {
         map(preceded(kw("SInt"), bitwidth), G::SInt),
         map(tuple((kw("Fixed"), bitwidth, point_offset)), |(_, w, o)| G::Fixed(w, o)),
         value(G::Clock, kw("Clock")),
+        value(G::Reset(K::Regular), kw("Reset")),
+        value(G::Reset(K::Async), kw("AsyncReset")),
         map(preceded(kw("Analog"), bitwidth), G::Analog),
     ))(input)
 }

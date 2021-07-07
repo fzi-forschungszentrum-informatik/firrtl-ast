@@ -254,7 +254,7 @@ impl<R> types::Typed for Operation<R>
 
 impl<R: Reference> fmt::Display for Operation<R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use types::GroundType as GT;
+        use types::{GroundType as GT, ResetKind as RK};
 
         match self {
             Self::Add(lhs, rhs)                     => write!(f, "add({}, {})", lhs, rhs),
@@ -273,6 +273,7 @@ impl<R: Reference> fmt::Display for Operation<R> {
             Self::Cast(sub, GT::SInt(..))           => write!(f, "asSInt({})", sub),
             Self::Cast(sub, GT::Fixed(.., Some(p))) => write!(f, "asFixed({}, {})", sub, p),
             Self::Cast(sub, GT::Clock)              => write!(f, "asClock({})", sub),
+            Self::Cast(sub, GT::Reset(RK::Async))   => write!(f, "asAsyncReset({})", sub),
             Self::Cast(..)                          => Err(Default::default()),
             Self::Shl(sub, bits)                    => write!(f, "shl({}, {})", sub, bits),
             Self::Shr(sub, bits)                    => write!(f, "shr({}, {})", sub, bits),
