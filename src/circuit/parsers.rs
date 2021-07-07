@@ -21,11 +21,11 @@ pub fn circuit(input: &str) -> Result<super::Circuit, ParseError> {
 /// will return a `ModuleConsumer` which will construct a `Circuit` from that
 /// input.
 pub fn consumer(input: &str) -> Result<super::ModuleConsumer<Modules, ParseError>, ParseError> {
-    let (input, (top_name, info)) = map(
+    let (mod_input, (top_name, info)) = map(
         tuple((kw("circuit"), spaced(identifier), spaced(op(":")), parse_info, le)),
         |(_, n, _, i, ..)| (n, i)
     )(input).map_err(|e| convert_error(input, e))?;
 
-    Ok(super::ModuleConsumer::new(top_name, info, Modules::new(input)))
+    Ok(super::ModuleConsumer::new(top_name, info, Modules::new_with_origin(mod_input, input)))
 }
 
