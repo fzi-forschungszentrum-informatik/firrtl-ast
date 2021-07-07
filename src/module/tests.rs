@@ -96,18 +96,31 @@ pub fn module_with_stmts(
     stmts: impl IntoIterator<Item = stmt::Statement>,
     max_ports: usize,
 ) -> Module {
-    use stmt::tests::stmt_with_decls;
+    use stmt::tests::{stmt_exprs, stmt_with_decls};
+
+    use crate::expr::Expression;
 
     let mut entities: std::collections::HashMap<String, Arc<stmt::Entity>> = Default::default();
-    let mut ports: Vec<_> = Default::default();
+    let mut ports: std::collections::HashMap<String, Arc<Port>> = Default::default();
 
-    let stmts = stmts.into_iter().map(|s| if ports.len() > max_ports {
-        None
-    } else {
-        stmt_with_decls(s, &mut entities, &mut ports)
-    }).take_while(Option::is_some).flat_map(|s| s.unwrap_or_default()).collect();
+    let stmts = stmts
+        .into_iter()
+        .map(|s| stmt_with_decls(s, &mut entities))
+        .take_while(Option::is_some)
+        .flat_map(|v| v.unwrap_or_default())
+        .take_while(|s| {
+            ports.extend(
+                stmt_exprs(s)
+                    .into_iter()
+                    .flat_map(Expression::references)
+                    .filter_map(|e| if let stmt::Entity::Port(p) = e.as_ref() { Some(p) } else { None })
+                    .map(|p| (p.name().into(), p.clone()))
+            );
+            ports.len() <= max_ports
+        })
+        .collect();
 
-    let mut module = Module::new(name, ports, super::Kind::Regular);
+    let mut module = Module::new(name, ports.into_iter().map(|(_, v)| v), super::Kind::Regular);
     module.statements_mut().map(|s| *s = stmts);
     module
 }

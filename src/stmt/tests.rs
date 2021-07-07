@@ -140,7 +140,6 @@ fn parse_optional_name(original: Option<Identifier>) -> Result<Equivalence<Optio
 pub fn stmt_with_decls(
     statement: Statement,
     entities: &mut std::collections::HashMap<String, Arc<Entity>>,
-    ports: &mut Vec<Arc<crate::module::Port>>,
 ) -> Option<Vec<Statement>> {
     use std::collections::hash_map::Entry;
 
@@ -154,12 +153,8 @@ pub fn stmt_with_decls(
                 Entry::Occupied(e) => if e.get() != r { return None }
                 Entry::Vacant(e) => {
                     e.insert(r.clone());
-                    if let Entity::Port(p) = r.as_ref() {
-                        ports.push(p.clone())
-                    } else {
-                        d.extend(
-                            stmt_with_decls(Kind::Declaration(r.clone()).into(), entities, ports)?
-                        )
+                    if r.is_declarable() {
+                        d.extend(stmt_with_decls(Kind::Declaration(r.clone()).into(), entities)?)
                     }
                 }
             };
