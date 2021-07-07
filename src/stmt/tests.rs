@@ -133,6 +133,46 @@ fn parse_optional_name(original: Option<Identifier>) -> Result<Equivalence<Optio
 }
 
 
+/// Generate a valid sequence of statements ending with a given statement
+///
+/// This function prepends the given statement with all declarations necessary
+/// for it to be valid. If this is not possible, the function returns `None`.
+pub fn stmt_with_decls(
+    statement: Statement,
+    entities: &mut std::collections::HashMap<String, Arc<Entity>>,
+    ports: &mut Vec<Arc<crate::module::Port>>,
+) -> Option<Vec<Statement>> {
+    use std::collections::hash_map::Entry;
+
+    entities.extend(statement.declarations().map(|d| (d.name().into(), d.clone())));
+
+    let new_decls = stmt_exprs(&statement)
+        .into_iter()
+        .flat_map(Expression::references)
+        .try_fold(Vec::default(), |mut d, r| {
+            match entities.entry(r.name().into()) {
+                Entry::Occupied(e) => if e.get() != r { return None }
+                Entry::Vacant(e) => {
+                    e.insert(r.clone());
+                    if let Entity::Port(p) = r.as_ref() {
+                        ports.push(p.clone())
+                    } else {
+                        d.extend(
+                            stmt_with_decls(Kind::Declaration(r.clone()).into(), entities, ports)?
+                        )
+                    }
+                }
+            };
+            Some(d)
+        });
+
+    new_decls.map(|mut v| {
+        v.push(statement);
+        v
+    })
+}
+
+
 /// Retrieve all expressions occuring in a statement
 pub fn stmt_exprs(stmt: &Statement) -> Vec<&Expression<Arc<Entity>>> {
     match stmt.as_ref() {

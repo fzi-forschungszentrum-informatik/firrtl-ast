@@ -7,7 +7,6 @@ use nom::combinator::all_consuming;
 
 use quickcheck::{Gen, TestResult, Testable};
 
-use crate::expr;
 use crate::indentation::{DisplayIndented, Indentation};
 use crate::stmt;
 use crate::tests::Equivalence;
@@ -97,6 +96,8 @@ pub fn module_with_stmts(
     stmts: impl IntoIterator<Item = stmt::Statement>,
     max_ports: usize,
 ) -> Module {
+    use stmt::tests::stmt_with_decls;
+
     let mut entities: std::collections::HashMap<String, Arc<stmt::Entity>> = Default::default();
     let mut ports: Vec<_> = Default::default();
 
@@ -109,48 +110,5 @@ pub fn module_with_stmts(
     let mut module = Module::new(name, ports, super::Kind::Regular);
     module.statements_mut().map(|s| *s = stmts);
     module
-}
-
-
-/// Generate a valid sequence of statements ending with a given statement
-///
-/// This function prepends the given statement with all declarations necessary
-/// for it to be valid. If this is not possible, the function returns `None`.
-fn stmt_with_decls(
-    statement: stmt::Statement,
-    entities: &mut std::collections::HashMap<String, Arc<stmt::Entity>>,
-    ports: &mut Vec<Arc<Port>>,
-) -> Option<Vec<stmt::Statement>> {
-    use std::collections::hash_map::Entry;
-
-    use expr::Reference;
-    use stmt::tests::stmt_exprs;
-
-    entities.extend(statement.declarations().map(|d| (d.name().into(), d.clone())));
-
-    let new_decls = stmt_exprs(&statement)
-        .into_iter()
-        .flat_map(expr::Expression::references)
-        .try_fold(Vec::default(), |mut d, r| {
-            match entities.entry(r.name().into()) {
-                Entry::Occupied(e) => if e.get() != r { return None }
-                Entry::Vacant(e) => {
-                    e.insert(r.clone());
-                    if let stmt::Entity::Port(p) = r.as_ref() {
-                        ports.push(p.clone())
-                    } else {
-                        d.extend(
-                            stmt_with_decls(stmt::Kind::Declaration(r.clone()).into(), entities, ports)?
-                        )
-                    }
-                }
-            };
-            Some(d)
-        });
-
-    new_decls.map(|mut v| {
-        v.push(statement);
-        v
-    })
 }
 
