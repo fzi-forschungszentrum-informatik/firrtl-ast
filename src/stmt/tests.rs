@@ -133,6 +133,25 @@ fn parse_optional_name(original: Option<Identifier>) -> Result<Equivalence<Optio
 }
 
 
+/// Generate a valid sequence of statements from a given input
+///
+/// This function takes the given statements and inserts additional
+/// ones, making sure all referenced declarable `Entities` are both
+/// declared before they are used and have unique names.
+///
+/// The iteration will stop if extension fails for an item, i.e. the output will
+/// potentially only contain a subset of the input.
+pub fn stmts_with_decls(statements: impl IntoIterator<Item = Statement>) -> impl Iterator<Item = Statement> {
+    let mut entities = Default::default();
+
+    statements
+        .into_iter()
+        .map(move |s| stmt_with_decls(s, &mut entities))
+        .take_while(Option::is_some)
+        .flat_map(|v| v.unwrap_or_default())
+}
+
+
 /// Generate a valid sequence of statements ending with a given statement
 ///
 /// This function prepends the given statement with all declarations necessary
