@@ -145,6 +145,11 @@ impl Arbitrary for GroundType {
 }
 
 
+/// Kind of reset signal
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub enum ResetKind {Regular, Async}
+
+
 /// Maximum width Combinator
 ///
 /// Creating an `FnWidth` using `std::cmp::max` will yield a combinator which
