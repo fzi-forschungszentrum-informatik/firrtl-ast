@@ -24,7 +24,7 @@ pub fn expr<'i, R: super::Reference + Clone>(
 
     let (input, res) = alt((
         map(
-            tuple((kw("UInt"), spaced(bitwidth), lp, spaced(decimal), rp)),
+            tuple((kw("UInt"), spaced(bitwidth), lp, spaced(num_lit), rp)),
             |(_, width, _, value, _)| {
                 let width = width
                     .or_else(|| (0..u16::MAX).find(|i| value >> i == 0))
@@ -33,7 +33,7 @@ pub fn expr<'i, R: super::Reference + Clone>(
             }
         ),
         map(
-            tuple((kw("SInt"), spaced(bitwidth), lp, spaced(decimal), rp)),
+            tuple((kw("SInt"), spaced(bitwidth), lp, spaced(num_lit), rp)),
             |(_, width, _, value, _)| {
                 let width = width
                     .or_else(|| (1..u16::MAX).find(|i| value >> (i - 1) == 0 || value >> i == -1))
