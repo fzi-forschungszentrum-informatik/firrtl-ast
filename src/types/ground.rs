@@ -19,6 +19,8 @@ pub enum GroundType {
     Fixed(BitWidth, Option<i16>),
     /// Clock type
     Clock,
+    /// Reset type
+    Reset(ResetKind),
     /// Analog signal with number of wires
     Analog(BitWidth),
 }
@@ -34,6 +36,7 @@ impl GroundType {
             Self::SInt(w)     => *w,
             Self::Fixed(w, _) => *w,
             Self::Clock       => Some(1),
+            Self::Reset(_)    => Some(1),
             Self::Analog(w)   => *w,
         }
     }
@@ -49,6 +52,7 @@ impl GroundType {
             Self::SInt(_)     => Self::SInt(width),
             Self::Fixed(_, p) => Self::Fixed(width, *p),
             Self::Clock       => Self::Clock,
+            Self::Reset(k)    => Self::Reset(*k),
             Self::Analog(_)   => Self::Analog(width),
         }
     }
@@ -102,12 +106,16 @@ impl<C: Combinator<BitWidth>> Combinator<GroundType> for C {
 impl fmt::Display for GroundType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use super::display::{PointOff, Width};
+        use ResetKind as R;
+
         match self {
-            Self::UInt(w)     => write!(f, "UInt{}", Width::from(w)),
-            Self::SInt(w)     => write!(f, "SInt{}", Width::from(w)),
-            Self::Fixed(w, p) => write!(f, "Fixed{}{}", Width::from(w), PointOff::from(p)),
-            Self::Clock       => write!(f, "Clock"),
-            Self::Analog(w)   => write!(f, "Analog{}", Width::from(w)),
+            Self::UInt(w)           => write!(f, "UInt{}", Width::from(w)),
+            Self::SInt(w)           => write!(f, "SInt{}", Width::from(w)),
+            Self::Fixed(w, p)       => write!(f, "Fixed{}{}", Width::from(w), PointOff::from(p)),
+            Self::Clock             => write!(f, "Clock"),
+            Self::Reset(R::Regular) => write!(f, "Reset"),
+            Self::Reset(R::Async)   => write!(f, "AsyncReset"),
+            Self::Analog(w)         => write!(f, "Analog{}", Width::from(w)),
         }
     }
 }
@@ -138,8 +146,8 @@ impl Arbitrary for GroundType {
                     .chain(p.shrink().map(move |p| Self::Fixed(w, p)));
                 Box::new(res)
             },
-            Self::Clock       => Box::new(std::iter::empty()),
             Self::Analog(w)   => Box::new(w.shrink().map(Self::Analog)),
+            _                 => Box::new(std::iter::empty()),
         }
     }
 }
