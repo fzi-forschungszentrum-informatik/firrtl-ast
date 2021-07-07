@@ -95,7 +95,14 @@ impl info::WithInfo for Module {
 
 impl DisplayIndented for Module {
     fn fmt<W: fmt::Write>(&self, indentation: &mut Indentation, f: &mut W) -> fmt::Result {
-        writeln!(f, "{}{} {}:{}", indentation.lock(), self.kind(), self.name(), info::Info::of(self))?;
+        writeln!(
+            f,
+            "{}{} {}:{}",
+            indentation.lock(),
+            self.kind().keyword(),
+            self.name(),
+            info::Info::of(self),
+        )?;
         let mut indentation = indentation.sub();
         self.ports().try_for_each(|p| DisplayIndented::fmt(p, &mut indentation, f))?;
         self.statements().iter().try_for_each(|s| DisplayIndented::fmt(s, &mut indentation, f))
@@ -183,12 +190,6 @@ impl Kind {
 impl Default for Kind {
     fn default() -> Self {
         Self::Regular
-    }
-}
-
-impl fmt::Display for Kind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(self.keyword(), f)
     }
 }
 
