@@ -242,6 +242,11 @@ impl Arbitrary for Kind {
 }
 
 
+/// Representation of a parameter value
+#[derive(Clone, PartialEq, Debug)]
+pub enum ParamValue {Int(i64), Double(f64), String(Arc<str>)}
+
+
 /// An I/O port of a module
 #[derive(Clone, Debug, PartialEq)]
 pub struct Port {
