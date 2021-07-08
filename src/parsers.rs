@@ -36,18 +36,23 @@ pub fn identifier(input: &str) -> IResult<&str> {
 pub fn decimal<O>(input: &str) -> IResult<O>
     where O: std::str::FromStr
 {
-    use nom::combinator::{recognize, success};
-    use nom::branch::alt;
-
-    let sign = alt((value((), tag("+")), value((), tag("-")), success(())));
+    use nom::combinator::{map_res, recognize};
 
     context(
         "expected decimal numeral",
-        nom::combinator::map_res(
+        map_res(
             recognize(tuple((sign, take_while(char::is_numeric)))),
             str::parse
         )
     )(input)
+}
+
+
+/// Parse an optional plus or minus sign
+fn sign(input: &str) -> IResult<()> {
+    use nom::{branch::alt, combinator::success};
+
+    alt((value((), tag("+")), value((), tag("-")), success(())))(input)
 }
 
 
