@@ -195,6 +195,14 @@ impl Kind {
     pub fn empty_external() -> Self {
         Self::External
     }
+
+    /// Retrieve the statements in this module
+    pub fn statements(&self) -> &[Statement] {
+        match self {
+            Self::Regular{stmts}    => stmts.as_ref(),
+            Self::External          => &[],
+        }
+    }
 }
 
 impl Default for Kind {
