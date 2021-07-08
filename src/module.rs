@@ -246,6 +246,27 @@ impl Arbitrary for Kind {
 #[derive(Clone, PartialEq, Debug)]
 pub enum ParamValue {Int(i64), Double(f64), String(Arc<str>)}
 
+impl fmt::Display for ParamValue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Int(v)    => fmt::Display::fmt(v, f),
+            Self::Double(v) => fmt::Display::fmt(v, f),
+            Self::String(v) => {
+                fmt::Display::fmt(&'"', f)?;
+                v.chars().try_for_each(|c| match c {
+                    '\n' => write!(f, "\\\n"),
+                    '\t' => write!(f, "\\\t"),
+                    '"'  => write!(f, "\\\""),
+                    '\'' => write!(f, "\\'"),
+                    '\\' => write!(f, "\\\\"),
+                    c    => fmt::Display::fmt(&c, f),
+                })?;
+                fmt::Display::fmt(&'"', f)
+            },
+        }
+    }
+}
+
 
 /// An I/O port of a module
 #[derive(Clone, Debug, PartialEq)]
