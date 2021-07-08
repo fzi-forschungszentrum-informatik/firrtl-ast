@@ -94,7 +94,17 @@ impl DisplayIndented for Module {
         )?;
         let mut indentation = indentation.sub();
         self.ports().try_for_each(|p| DisplayIndented::fmt(p, &mut indentation, f))?;
-        self.statements().iter().try_for_each(|s| DisplayIndented::fmt(s, &mut indentation, f))
+        match self.kind() {
+            Kind::Regular{stmts} => stmts
+                .iter()
+                .try_for_each(|s| DisplayIndented::fmt(s, &mut indentation, f)),
+            Kind::External{defname, params} => {
+                defname.as_ref().map(|n| writeln!(f, "{}defname = {}", indentation.lock(), n)).transpose()?;
+                params
+                    .iter()
+                    .try_for_each(|(k, v)| writeln!(f, "{}parameter {} = {}", indentation.lock(), k, v))
+            },
+        }
     }
 }
 
