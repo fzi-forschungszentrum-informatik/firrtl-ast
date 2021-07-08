@@ -3,6 +3,7 @@
 use std::sync::Arc;
 
 use nom::branch::alt;
+use nom::character::complete::char as chr;
 use nom::combinator::{map, value};
 use nom::multi::many0;
 use nom::sequence::tuple;
@@ -10,7 +11,7 @@ use nom::sequence::tuple;
 use crate::error::{ParseError, convert_error};
 use crate::indentation::Indentation;
 use crate::info::{WithInfo, parse as parse_info};
-use crate::parsers::{IResult, identifier, kw, le, op, spaced};
+use crate::parsers::{IResult, decimal, float, identifier, kw, le, op, spaced, unquoted_string};
 use crate::stmt::parsers::stmts as parse_stmts;
 use crate::types::parsers::r#type;
 
@@ -134,6 +135,25 @@ pub fn kind<'i>(input: &str) -> IResult<super::Kind> {
     alt((
         map(kw("module"), |_| super::Kind::empty_regular()),
         map(kw("extmodule"), |_| super::Kind::empty_external()),
+    ))(input)
+}
+
+
+/// Parse a parameter value
+pub fn param_value(input: &str) -> IResult<super::ParamValue> {
+    use super::ParamValue as PV;
+
+    alt((
+        map(float, PV::Double),
+        map(decimal, PV::Int),
+        map(
+            tuple((chr('"'), |i| unquoted_string(i, &['\n', '\t', '"']), chr('"'))),
+            |(_, s, _)| PV::String(s.into())
+        ),
+        map(
+            tuple((chr('\''), |i| unquoted_string(i, &['\n', '\t', '\'']), chr('\''))),
+            |(_, s, _)| PV::String(s.into())
+        ),
     ))(input)
 }
 
