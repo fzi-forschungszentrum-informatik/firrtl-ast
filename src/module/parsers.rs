@@ -3,14 +3,15 @@
 use std::sync::Arc;
 
 use nom::branch::alt;
-use nom::combinator::{iterator, map, value};
+use nom::combinator::{map, value};
+use nom::multi::many0;
 use nom::sequence::tuple;
 
 use crate::error::{ParseError, convert_error};
 use crate::indentation::Indentation;
 use crate::info::{WithInfo, parse as parse_info};
 use crate::parsers::{IResult, identifier, kw, le, op, spaced};
-use crate::stmt::parsers::stmts;
+use crate::stmt::parsers::stmts as parse_stmts;
 use crate::types::parsers::r#type;
 
 
@@ -95,42 +96,44 @@ pub fn module<'i>(
     input: &'i str,
     indentation: &'_ mut Indentation,
 ) -> IResult<'i, super::Module> {
-    let (input, (name, kind, info)) = map(
+    let (input, (name, mut kind, info)) = map(
         tuple((indentation.parser(), kind, spaced(identifier), spaced(op(":")), parse_info, le)),
         |(_, kind, name, _, info, ..)| (name.into(), kind, info)
     )(input)?;
 
     let mut indentation = indentation.sub();
 
-    let mut ports = iterator(input, map(tuple((indentation.parser(), port, le)), |(_, p, ..)| Arc::new(p)));
-    let mut res = super::Module::new(name, &mut ports, kind);
-    res.set_info(info);
-    let (input, _) = ports.finish()?;
+    let (input, ports) = many0(
+        map(tuple((indentation.parser(), port, le)), |(_, p, ..)| Arc::new(p))
+    )(input)?;
 
-    let input = match kind {
-        super::Kind::Regular => {
-            let (input, stmts) = stmts(
-                |n| res.port_by_name(&n).map(|p| Arc::new(p.clone().into())),
+    let input = match &mut kind {
+        super::Kind::Regular{stmts} => {
+            let (input, s) = parse_stmts(
+                |n| ports
+                    .iter()
+                    .find(|p| p.name.as_ref() == n)
+                    .map(|p| Arc::new(p.clone().into())),
                 module,
                 input,
                 &mut indentation,
             )?;
 
-            res.statements_mut().map(|s| *s = stmts);
+            *stmts = s;
             input
         },
         super::Kind::External => input,
     };
 
-    Ok((input, res))
+    Ok((input, super::Module::new(name, ports, kind).with_info(info)))
 }
 
 
 /// Parse a module kind
 pub fn kind<'i>(input: &str) -> IResult<super::Kind> {
     alt((
-        value(super::Kind::Regular,  kw("module")),
-        value(super::Kind::External, kw("extmodule")),
+        map(kw("module"), |_| super::Kind::empty_regular()),
+        map(kw("extmodule"), |_| super::Kind::empty_external()),
     ))(input)
 }
 

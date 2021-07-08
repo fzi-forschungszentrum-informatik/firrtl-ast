@@ -25,18 +25,14 @@ pub use parsers::Modules;
 pub struct Module {
     name: Arc<str>,
     ports: Vec<Arc<Port>>,
-    stmts: Option<Vec<Statement>>,
+    kind: Kind,
     info: Option<String>,
 }
 
 impl Module {
     /// Create a new module
     pub fn new(name: Arc<str>, ports: impl IntoIterator<Item = Arc<Port>>, kind: Kind) -> Self {
-        let stmts = match kind {
-            Kind::Regular   => Some(Default::default()),
-            Kind::External  => None,
-        };
-        Self {name, ports: ports.into_iter().collect(), stmts, info: Default::default()}
+        Self {name, ports: ports.into_iter().collect(), kind, info: Default::default()}
     }
 
     /// Retrieve the module's name
@@ -55,31 +51,23 @@ impl Module {
     }
 
     /// Retrieve the module kind
-    pub fn kind(&self) -> Kind {
-        if self.stmts.is_some() {
-            Kind::Regular
-        } else {
-            Kind::External
-        }
+    pub fn kind(&self) -> &Kind {
+        &self.kind
+    }
+
+    /// Retrieve a mutable reference of the module kind
+    pub fn kind_mut(&mut self) -> &mut Kind {
+        &mut self.kind
     }
 
     /// Retrieve the statements in this module
     pub fn statements(&self) -> &[Statement] {
-        self.stmts.as_ref().map(|v| v.as_ref()).unwrap_or(&[])
+        self.kind.statements()
     }
 
     /// Retrieve all modules referenced from this module via instantiations
     pub fn referenced_modules(&self) -> impl Iterator<Item = &Arc<Self>> {
         self.statements().iter().flat_map(Statement::instantiations).map(Instance::module)
-    }
-
-    /// Retrieve a mutable reference of this module's statement list
-    ///
-    /// For regulsr modules, this function will return a reference to the
-    /// module's internal statement list. For external modules, `None` will be
-    /// returned.
-    pub fn statements_mut(&mut self) -> Option<&mut Vec<Statement>> {
-        self.stmts.as_mut()
     }
 }
 
@@ -95,7 +83,14 @@ impl info::WithInfo for Module {
 
 impl DisplayIndented for Module {
     fn fmt<W: fmt::Write>(&self, indentation: &mut Indentation, f: &mut W) -> fmt::Result {
-        writeln!(f, "{}{} {}:{}", indentation.lock(), self.kind(), self.name(), info::Info::of(self))?;
+        writeln!(
+            f,
+            "{}{} {}:{}",
+            indentation.lock(),
+            self.kind().keyword(),
+            self.name(),
+            info::Info::of(self),
+        )?;
         let mut indentation = indentation.sub();
         self.ports().try_for_each(|p| DisplayIndented::fmt(p, &mut indentation, f))?;
         self.statements().iter().try_for_each(|s| DisplayIndented::fmt(s, &mut indentation, f))
@@ -105,54 +100,52 @@ impl DisplayIndented for Module {
 #[cfg(test)]
 impl Arbitrary for Module {
     fn arbitrary(g: &mut Gen) -> Self {
+        use crate::stmt::{self, tests::stmt_exprs};
         use crate::tests::Identifier;
 
-        let max_ports = (usize::arbitrary(g) % 16) + 1;
         let name = Identifier::arbitrary(g).into();
-        match Kind::arbitrary(g) {
-            Kind::Regular => tests::module_with_stmts(
-                name,
-                std::iter::from_fn(|| Some(Arbitrary::arbitrary(g))),
-                max_ports,
-            ),
-            Kind::External => {
-                let mut sub = Gen::new(g.size() / max_ports);
-                let ports = (0..max_ports).map(|_| Arbitrary::arbitrary(&mut sub));
-                Module::new(name, ports, Kind::External)
-            },
-        }
+        let kind: Kind = Arbitrary::arbitrary(g);
+        let ports: Vec<_> = if kind.statements().is_empty() {
+            let n = (usize::arbitrary(g) % 16) + 1;
+            let mut g = Gen::new(g.size() / n);
+            std::iter::from_fn(|| Some(Arbitrary::arbitrary(&mut g))).take(n).collect()
+        } else {
+            let ports: std::collections::HashMap<_, _> = kind
+                .statements()
+                .iter()
+                .flat_map(stmt_exprs)
+                .flat_map(expr::Expression::references)
+                .filter_map(|e| if let stmt::Entity::Port(p) = e.as_ref() { Some(p) } else { None })
+                .map(|p| (p.name(), p.clone()))
+                .collect();
+            ports.into_iter().map(|(_, v)| v).collect()
+        };
+
+        Module::new(name, ports, kind)
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
-        let p = self.ports.clone();
-        let k = self.kind();
         let res = crate::tests::Identifier::from(self.name())
             .shrink()
-            .map(move |n| Self::new(n.into(), p.clone(), k));
+            .map({
+                let p = self.ports.clone();
+                let k = self.kind().clone();
+                move |n| Self::new(n.into(), p.clone(), k.clone())
+            })
+            .chain(self.kind().shrink().map({
+                let n = self.name.clone();
+                let p = self.ports.clone();
+                move |k| Self::new(n.clone(), p.clone(), k)
+            }));
 
-        let n = self.name.clone();
-        match self.kind() {
-            Kind::Regular => {
-                // For regular modules, we must maintain that all ports used in
-                // statements are defined for the module. Hence, we shrink the
-                // statement list and derive the ports from that list.
-                let max_stmts = self.statements().len();
-                let res = res.chain(self.statements()
-                    .to_vec()
-                    .shrink()
-                    .map(move |s| tests::module_with_stmts(n.clone(), s, usize::MAX))
-                    .filter(move |m| m.statements().len() < max_stmts));
-                Box::new(res)
-            },
-            Kind::External => {
-                // For external modules, we can just shrink the port list.
-                let res = res.chain(self
-                    .ports
-                    .shrink()
-                    .map(move |p| Self::new(n.clone(), p, Kind::External))
-                );
-                Box::new(res)
-            },
+        // We can shrink ports only if we don't have to accomoidate for any
+        // statements which could potentially reference them.
+        if self.statements().is_empty() {
+            let n = self.name.clone();
+            let k = self.kind().clone();
+            Box::new(res.chain(self.ports.shrink().map(move |p| Self::new(n.clone(), p, k.clone()))))
+        } else {
+            Box::new(res)
         }
     }
 }
@@ -161,10 +154,10 @@ impl Arbitrary for Module {
 /// Module kind
 ///
 /// The FIRRTL spec defines multiple kinds of modules.
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Kind {
     /// A regular module
-    Regular,
+    Regular{stmts: Vec<Statement>},
     /// An external module, usually an interface to some IP or external
     /// VHDL/Verilog.
     External,
@@ -174,31 +167,75 @@ impl Kind {
     /// Retrieve the keyword associated with the module kind
     pub fn keyword(&self) -> &'static str {
         match self {
-            Self::Regular   => "module",
-            Self::External  => "extmodule",
+            Self::Regular{..}   => "module",
+            Self::External      => "extmodule",
+        }
+    }
+
+    /// Create a new, empty module kind for regular modules
+    pub fn empty_regular() -> Self {
+        Self::Regular{stmts: Default::default()}
+    }
+
+    /// Create a new, empty module kind for external modules
+    pub fn empty_external() -> Self {
+        Self::External
+    }
+
+    /// Retrieve the statements in this module
+    pub fn statements(&self) -> &[Statement] {
+        match self {
+            Self::Regular{stmts}    => stmts.as_ref(),
+            Self::External          => &[],
         }
     }
 }
 
 impl Default for Kind {
     fn default() -> Self {
-        Self::Regular
-    }
-}
-
-impl fmt::Display for Kind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(self.keyword(), f)
+        Self::empty_regular()
     }
 }
 
 #[cfg(test)]
 impl Arbitrary for Kind {
     fn arbitrary(g: &mut Gen) -> Self {
-        if g.size() > 0 {
-            g.choose(&[Self::Regular, Self::External]).unwrap().clone()
-        } else {
-            Default::default()
+        use std::iter::from_fn as fn_iter;
+
+        use crate::stmt::tests::stmts_with_decls;
+
+        if g.size() <= 0 {
+            return Default::default();
+        }
+
+        let opts: [&dyn Fn(&mut Gen) -> Self; 2] = [
+            &|g| {
+                let n = u8::arbitrary(g) as usize;
+                let mut g = Gen::new(g.size() / std::cmp::max(n, 1));
+                let stmts = stmts_with_decls(fn_iter(|| Some(Arbitrary::arbitrary(&mut g))).take(n))
+                    .collect();
+                Self::Regular{stmts}
+            },
+            &|_| Self::empty_external(),
+        ];
+        g.choose(&opts).unwrap()(g)
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        use crate::stmt::tests::stmts_with_decls;
+
+        match self {
+            Self::Regular{stmts} => {
+                let max_stmts = stmts.len();
+                let res = stmts
+                    .to_vec()
+                    .shrink()
+                    .map(|v| stmts_with_decls(v).collect::<Vec<_>>())
+                    .filter(move |v| v.len() < max_stmts)
+                    .map(|stmts| Self::Regular{stmts});
+                Box::new(res)
+            },
+            Kind::External => Box::new(std::iter::empty()),
         }
     }
 }
