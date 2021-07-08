@@ -53,6 +53,56 @@ fn parse_stmt(mut base: Indentation, original: Statement) -> Result<TestResult, 
 
 
 #[quickcheck]
+fn parse_stmts(mut base: Indentation, original: Statement) -> Result<TestResult, String> {
+    let original = if let Some(stmts) = stmt_with_decls(original, &mut Default::default()) {
+        stmts
+    } else {
+        return Ok(TestResult::discard())
+    };
+
+    let mut ports: Vec<_> = original
+        .iter()
+        .flat_map(stmt_exprs)
+        .into_iter()
+        .flat_map(Expression::references)
+        .filter_map(|e| if let Entity::Port(p) = e.as_ref() { Some(p.clone()) } else { None })
+        .collect();
+    ports.sort_unstable_by_key(|r| r.name().to_string());
+    if ports.windows(2).any(|p| p[0].name() == p[1].name()) {
+        // We depend on reference names to be unique.
+        return Ok(TestResult::discard())
+    }
+
+    let mut mods: Vec<_> = original
+        .iter()
+        .flat_map(Statement::instantiations)
+        .map(|i| i.module().clone())
+        .collect();
+    mods.sort_unstable_by_key(|r| r.name().to_string());
+    if mods.windows(2).any(|p| p[0].name() == p[1].name()) {
+        // We depend on module names to be unique.
+        return Ok(TestResult::discard())
+    }
+
+    let mut buf: String = Default::default();
+    original.iter().try_for_each(|s| s.fmt(&mut base, &mut buf)).map_err(|e| e.to_string())?;
+
+    let parser = move |i| super::parsers::stmts(
+        |n| ports.binary_search_by_key(&n, |r| r.name()).ok().map(|i| Arc::new(ports[i].clone().into())),
+        |n| mods.binary_search_by_key(&n, |r| r.name()).ok().map(|i| mods[i].clone()),
+        i,
+        &mut base
+    );
+
+    let res = all_consuming(parser)(&buf)
+        .finish()
+        .map(|(_, parsed)| Equivalence::of(original, parsed).result(&mut Gen::new(0)))
+        .map_err(|e| e.to_string());
+    res
+}
+
+
+#[quickcheck]
 fn parse_entity(mut base: Indentation, original: Entity) -> Result<TestResult, String> {
     if !original.is_declarable() {
         return Ok(TestResult::discard())
@@ -130,6 +180,60 @@ fn parse_optional_name(original: Option<Identifier>) -> Result<Equivalence<Optio
         .map(|(_, parsed)| Equivalence::of(original.map(Into::into), parsed))
         .map_err(|e| e.to_string());
     res
+}
+
+
+/// Generate a valid sequence of statements from a given input
+///
+/// This function takes the given statements and inserts additional
+/// ones, making sure all referenced declarable `Entities` are both
+/// declared before they are used and have unique names.
+///
+/// The iteration will stop if extension fails for an item, i.e. the output will
+/// potentially only contain a subset of the input.
+pub fn stmts_with_decls(statements: impl IntoIterator<Item = Statement>) -> impl Iterator<Item = Statement> {
+    let mut entities = Default::default();
+
+    statements
+        .into_iter()
+        .map(move |s| stmt_with_decls(s, &mut entities))
+        .take_while(Option::is_some)
+        .flat_map(|v| v.unwrap_or_default())
+}
+
+
+/// Generate a valid sequence of statements ending with a given statement
+///
+/// This function prepends the given statement with all declarations necessary
+/// for it to be valid. If this is not possible, the function returns `None`.
+pub fn stmt_with_decls(
+    statement: Statement,
+    entities: &mut std::collections::HashMap<String, Arc<Entity>>,
+) -> Option<Vec<Statement>> {
+    use std::collections::hash_map::Entry;
+
+    entities.extend(statement.declarations().map(|d| (d.name().into(), d.clone())));
+
+    let new_decls = stmt_exprs(&statement)
+        .into_iter()
+        .flat_map(Expression::references)
+        .try_fold(Vec::default(), |mut d, r| {
+            match entities.entry(r.name().into()) {
+                Entry::Occupied(e) => if e.get() != r { return None }
+                Entry::Vacant(e) => {
+                    e.insert(r.clone());
+                    if r.is_declarable() {
+                        d.extend(stmt_with_decls(Kind::Declaration(r.clone()).into(), entities)?)
+                    }
+                }
+            };
+            Some(d)
+        });
+
+    new_decls.map(|mut v| {
+        v.push(statement);
+        v
+    })
 }
 
 
