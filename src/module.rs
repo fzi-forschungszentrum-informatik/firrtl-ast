@@ -214,6 +214,7 @@ impl Arbitrary for Kind {
         use std::iter::from_fn as fn_iter;
 
         use crate::stmt::tests::stmts_with_decls;
+        use crate::tests::Identifier;
 
         if g.size() <= 0 {
             return Default::default();
@@ -227,13 +228,24 @@ impl Arbitrary for Kind {
                     .collect();
                 Self::Regular{stmts}
             },
-            &|_| Self::empty_external(),
+            &|g| {
+                let defname = Option::<Identifier>::arbitrary(g).map(Into::into);
+                let n = u8::arbitrary(g) as usize;
+                let mut g = Gen::new(g.size() / std::cmp::max(n, 1));
+                let params = fn_iter(
+                    || Some((Identifier::arbitrary(&mut g).into(), Arbitrary::arbitrary(&mut g)))
+                ).take(n).collect();
+                Kind::External{defname, params}
+            },
         ];
         g.choose(&opts).unwrap()(g)
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        use std::iter::once;
+
         use crate::stmt::tests::stmts_with_decls;
+        use crate::tests::Identifier;
 
         match self {
             Self::Regular{stmts} => {
@@ -246,7 +258,32 @@ impl Arbitrary for Kind {
                     .map(|stmts| Self::Regular{stmts});
                 Box::new(res)
             },
-            Kind::External{..} => Box::new(std::iter::empty()),
+            Kind::External{defname, params} => {
+                let res = defname
+                    .as_ref()
+                    .map(|n| Identifier::from(n.as_ref()))
+                    .shrink()
+                    .map({
+                        let p = params.clone();
+                        move |n| Kind::External{defname: n.map(Into::into), params: p.clone()}
+                    });
+                if params.len() > 1 {
+                    let n = defname.clone();
+                    let res = res.chain(params
+                        .clone()
+                        .into_iter()
+                        .map(move |p| Kind::External{defname: n.clone(), params: once(p).collect()})
+                    );
+                    Box::new(res)
+                } else if params.len() > 1 {
+                    let res = res.chain(
+                        once(Kind::External{defname: defname.clone(), params: Default::default()})
+                    );
+                    Box::new(res)
+                } else {
+                    Box::new(res)
+                }
+            },
         }
     }
 }
