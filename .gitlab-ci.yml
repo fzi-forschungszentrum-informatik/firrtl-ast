@@ -34,3 +34,13 @@ cargo_test:
     <<: *general_cache
     policy: pull
 
+cargo_examples:
+  stage: test
+  tags:
+    - docker
+  script:
+    - cargo build --examples
+  cache:
+    <<: *general_cache
+    policy: pull
+
