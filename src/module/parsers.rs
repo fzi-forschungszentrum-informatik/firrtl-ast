@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use nom::branch::alt;
 use nom::character::complete::char as chr;
-use nom::combinator::{map, value};
+use nom::combinator::{iterator, map, value};
 use nom::multi::many0;
 use nom::sequence::tuple;
 
@@ -123,7 +123,32 @@ pub fn module<'i>(
             *stmts = s;
             input
         },
-        super::Kind::External{..} => input,
+        super::Kind::External{defname, params} => {
+            let (input, n) = nom::combinator::opt(
+                map(
+                    tuple((indentation.parser(), kw("defname"), spaced(op("=")), spaced(identifier), le)),
+                    |(.., n, _)| n.into()
+                )
+            )(input)?;
+            *defname = n;
+
+            let mut param_iter = iterator(
+                input,
+                map(
+                    tuple((
+                        indentation.parser(),
+                        kw("parameter"),
+                        spaced(identifier),
+                        spaced(op("=")),
+                        spaced(param_value),
+                        le,
+                    )),
+                    |(.., k, _, v, _)| (k.into(), v)
+                ),
+            );
+            params.extend(&mut param_iter);
+            param_iter.finish()?.0
+        },
     };
 
     Ok((input, super::Module::new(name, ports, kind).with_info(info)))
