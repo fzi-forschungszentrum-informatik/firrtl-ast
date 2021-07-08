@@ -5,6 +5,7 @@ pub(crate) mod parsers;
 #[cfg(test)]
 mod tests;
 
+use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
 
@@ -110,7 +111,7 @@ impl Arbitrary for Module {
             let mut g = Gen::new(g.size() / n);
             std::iter::from_fn(|| Some(Arbitrary::arbitrary(&mut g))).take(n).collect()
         } else {
-            let ports: std::collections::HashMap<_, _> = kind
+            let ports: HashMap<_, _> = kind
                 .statements()
                 .iter()
                 .flat_map(stmt_exprs)
