@@ -6,7 +6,7 @@ mod tests;
 
 use nom::Parser;
 use nom::bytes::complete::{tag, take_while};
-use nom::character::complete::{satisfy, space0};
+use nom::character::complete::{char as chr, satisfy, space0};
 use nom::combinator::{not, peek, value};
 use nom::error::context;
 use nom::sequence::{preceded, tuple};
@@ -45,6 +45,26 @@ pub fn decimal<O>(input: &str) -> IResult<O>
             str::parse
         )
     )(input)
+}
+
+
+/// Parse a floating point numeral
+pub fn float<O: std::str::FromStr>(input: &str) -> IResult<O> {
+    use nom::branch::alt;
+    use nom::combinator::{map_res, recognize};
+
+    let format = tuple((
+        sign,
+        take_while(char::is_numeric),
+        chr('.'),
+        take_while(char::is_numeric),
+        alt((
+            peek(not(chr('E'))),
+            value((), tuple((chr('E'), sign, take_while(char::is_numeric))))
+        )),
+    ));
+
+    context("expected floating point numeral", map_res(recognize(format), str::parse))(input)
 }
 
 
