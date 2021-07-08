@@ -161,7 +161,7 @@ pub enum Kind {
     Regular{stmts: Vec<Statement>},
     /// An external module, usually an interface to some IP or external
     /// VHDL/Verilog.
-    External,
+    External{defname: Option<Arc<str>>, params: HashMap<Arc<str>, ParamValue>},
 }
 
 impl Kind {
@@ -169,7 +169,7 @@ impl Kind {
     pub fn keyword(&self) -> &'static str {
         match self {
             Self::Regular{..}   => "module",
-            Self::External      => "extmodule",
+            Self::External{..}  => "extmodule",
         }
     }
 
@@ -180,14 +180,14 @@ impl Kind {
 
     /// Create a new, empty module kind for external modules
     pub fn empty_external() -> Self {
-        Self::External
+        Self::External{defname: Default::default(), params: Default::default()}
     }
 
     /// Retrieve the statements in this module
     pub fn statements(&self) -> &[Statement] {
         match self {
             Self::Regular{stmts}    => stmts.as_ref(),
-            Self::External          => &[],
+            Self::External{..}      => &[],
         }
     }
 }
@@ -236,7 +236,7 @@ impl Arbitrary for Kind {
                     .map(|stmts| Self::Regular{stmts});
                 Box::new(res)
             },
-            Kind::External => Box::new(std::iter::empty()),
+            Kind::External{..} => Box::new(std::iter::empty()),
         }
     }
 }

@@ -122,7 +122,7 @@ pub fn module<'i>(
             *stmts = s;
             input
         },
-        super::Kind::External => input,
+        super::Kind::External{..} => input,
     };
 
     Ok((input, super::Module::new(name, ports, kind).with_info(info)))
