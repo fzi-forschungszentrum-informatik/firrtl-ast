@@ -55,6 +55,11 @@ impl Module {
         &self.kind
     }
 
+    /// Retrieve a mutable reference of the module kind
+    pub fn kind_mut(&mut self) -> &mut Kind {
+        &mut self.kind
+    }
+
     /// Retrieve the statements in this module
     pub fn statements(&self) -> &[Statement] {
         self.kind.statements()
