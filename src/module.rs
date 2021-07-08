@@ -277,6 +277,31 @@ impl fmt::Display for ParamValue {
     }
 }
 
+#[cfg(test)]
+impl Arbitrary for ParamValue {
+    fn arbitrary(g: &mut Gen) -> Self {
+        // We decided against considering Double values in our tests. With parse
+        // tests, trying to get back the same double is a matter of luck,
+        // especially since our formatting will happily format it as an integer
+        // if possible.
+        let opts: [&dyn Fn(&mut Gen) -> Self; 2] = [
+            &|g| Self::Int(Arbitrary::arbitrary(g)),
+            &|g| Self::String(crate::tests::ASCII::arbitrary(g).into()),
+        ];
+        g.choose(&opts).unwrap()(g)
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        use crate::tests::ASCII;
+
+        match self {
+            Self::Int(v)    => Box::new(v.shrink().map(Self::Int)),
+            Self::Double(v) => Box::new(v.shrink().map(Self::Double)),
+            Self::String(v) => Box::new(ASCII::from(v.as_ref()).shrink().map(Into::into).map(Self::String)),
+        }
+    }
+}
+
 
 /// An I/O port of a module
 #[derive(Clone, Debug, PartialEq)]
