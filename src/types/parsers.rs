@@ -3,11 +3,13 @@
 use std::sync::Arc;
 
 use nom::branch::alt;
+use nom::bytes::complete::take_while;
 use nom::combinator::{map, opt, value};
-use nom::sequence::{preceded, tuple};
+use nom::error::context;
 use nom::multi::{fold_many0, separated_list1};
+use nom::sequence::{preceded, tuple};
 
-use crate::parsers::{IResult, decimal, identifier, kw, op, spaced};
+use crate::parsers::{IResult, decimal, is_identifier_char, kw, op, spaced};
 
 
 /// Parse a ground type
@@ -41,7 +43,7 @@ pub fn r#type(input: &str) -> IResult<super::Type> {
     use super::Type as T;
 
     let field = map(
-        tuple((opt(kw("flip")), spaced(identifier), spaced(op(":")), spaced(r#type))),
+        tuple((opt(kw("flip")), spaced(field_name), spaced(op(":")), spaced(r#type))),
         |(o, n, _, t)| super::BundleField::new(n, t)
             .with_orientation(o.map(|_| super::Orientation::Flipped).unwrap_or_default())
     );
@@ -59,5 +61,13 @@ pub fn r#type(input: &str) -> IResult<super::Type> {
         res,
         |t, (_, w, _)| T::Vector(Arc::new(t), w)
     )(input)
+}
+
+
+/// Parser for field names
+///
+/// The rules for field names are somehow more relaxed than for identifiers.
+pub fn field_name(input: &str) -> IResult<&str> {
+    context("expected field name", take_while(is_identifier_char))(input)
 }
 

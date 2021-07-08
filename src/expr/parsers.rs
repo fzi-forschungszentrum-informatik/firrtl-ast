@@ -16,7 +16,7 @@ pub fn expr<'i, R: super::Reference + Clone>(
     reference: impl Fn(&str) -> Option<R> + Copy,
     input: &'i str
 ) -> IResult<'i, super::Expression<R>> {
-    use types::parsers::bitwidth;
+    use types::parsers::{bitwidth, field_name};
 
     use super::Expression as E;
 
@@ -58,7 +58,7 @@ pub fn expr<'i, R: super::Reference + Clone>(
 
     fold_many0(
         spaced(alt((
-            map(preceded(op("."), spaced(identifier)), |i| Subscript::Field(Arc::from(i))),
+            map(preceded(op("."), spaced(field_name)), |i| Subscript::Field(Arc::from(i))),
             map(tuple((op("["), spaced(decimal), spaced(op("]")))), |(_, i, _)| Subscript::Index(i)),
             map(tuple((op("["), sub, spaced(op("]")))), |(_, i, _)| Subscript::Access(i)),
         ))),
