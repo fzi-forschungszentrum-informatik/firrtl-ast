@@ -32,6 +32,31 @@ pub fn identifier(input: &str) -> IResult<&str> {
 }
 
 
+/// Parse an unquoted string
+///
+/// This function parses the inner of a string literal or info attribute. It
+/// parses unescaped characters if they are not in `special` and characters
+/// escaped with a backslash. `\n` and `\t` are special in this regard as these
+/// are parsed as newline and tab characters respectively.
+pub fn unquoted_string<'i>(input: &'i str, special: &[char]) -> IResult<'i, String> {
+    use nom::combinator::{iterator, verify};
+    use nom::branch::alt;
+    use nom::character::complete::anychar;
+
+    let mut chars = iterator(
+        input,
+        alt((
+            value('\n', tag("\\n")),
+            value('\t', tag("\\t")),
+            preceded(chr('\\'), anychar),
+            verify(anychar, |c| *c != '\\' && !special.contains(c)),
+        ))
+    );
+    let res = (&mut chars).collect();
+    chars.finish().map(|(i, _)| (i, res))
+}
+
+
 /// Parse a decimal numeral
 pub fn decimal<O>(input: &str) -> IResult<O>
     where O: std::str::FromStr
