@@ -121,9 +121,27 @@ impl From<String> for ASCII {
     }
 }
 
+impl From<&str> for ASCII {
+    fn from(data: &str) -> Self {
+        Self {data: data.to_string()}
+    }
+}
+
 impl AsRef<str> for ASCII {
     fn as_ref(&self) -> &str {
         self.data.as_ref()
+    }
+}
+
+impl From<ASCII> for std::sync::Arc<str> {
+    fn from(a: ASCII) -> Self {
+        a.data.into()
+    }
+}
+
+impl From<ASCII> for String {
+    fn from(a: ASCII) -> Self {
+        a.data
     }
 }
 
