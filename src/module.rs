@@ -51,8 +51,8 @@ impl Module {
     }
 
     /// Retrieve the module kind
-    pub fn kind(&self) -> Kind {
-        self.kind.clone()
+    pub fn kind(&self) -> &Kind {
+        &self.kind
     }
 
     /// Retrieve the statements in this module
@@ -115,7 +115,7 @@ impl Arbitrary for Module {
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         let p = self.ports.clone();
-        let k = self.kind();
+        let k = self.kind().clone();
         let res = crate::tests::Identifier::from(self.name())
             .shrink()
             .map(move |n| Self::new(n.into(), p.clone(), k.clone()));
