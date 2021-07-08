@@ -53,6 +53,56 @@ fn parse_stmt(mut base: Indentation, original: Statement) -> Result<TestResult, 
 
 
 #[quickcheck]
+fn parse_stmts(mut base: Indentation, original: Statement) -> Result<TestResult, String> {
+    let original = if let Some(stmts) = stmt_with_decls(original, &mut Default::default()) {
+        stmts
+    } else {
+        return Ok(TestResult::discard())
+    };
+
+    let mut ports: Vec<_> = original
+        .iter()
+        .flat_map(stmt_exprs)
+        .into_iter()
+        .flat_map(Expression::references)
+        .filter_map(|e| if let Entity::Port(p) = e.as_ref() { Some(p.clone()) } else { None })
+        .collect();
+    ports.sort_unstable_by_key(|r| r.name().to_string());
+    if ports.windows(2).any(|p| p[0].name() == p[1].name()) {
+        // We depend on reference names to be unique.
+        return Ok(TestResult::discard())
+    }
+
+    let mut mods: Vec<_> = original
+        .iter()
+        .flat_map(Statement::instantiations)
+        .map(|i| i.module().clone())
+        .collect();
+    mods.sort_unstable_by_key(|r| r.name().to_string());
+    if mods.windows(2).any(|p| p[0].name() == p[1].name()) {
+        // We depend on module names to be unique.
+        return Ok(TestResult::discard())
+    }
+
+    let mut buf: String = Default::default();
+    original.iter().try_for_each(|s| s.fmt(&mut base, &mut buf)).map_err(|e| e.to_string())?;
+
+    let parser = move |i| super::parsers::stmts(
+        |n| ports.binary_search_by_key(&n, |r| r.name()).ok().map(|i| Arc::new(ports[i].clone().into())),
+        |n| mods.binary_search_by_key(&n, |r| r.name()).ok().map(|i| mods[i].clone()),
+        i,
+        &mut base
+    );
+
+    let res = all_consuming(parser)(&buf)
+        .finish()
+        .map(|(_, parsed)| Equivalence::of(original, parsed).result(&mut Gen::new(0)))
+        .map_err(|e| e.to_string());
+    res
+}
+
+
+#[quickcheck]
 fn parse_entity(mut base: Indentation, original: Entity) -> Result<TestResult, String> {
     if !original.is_declarable() {
         return Ok(TestResult::discard())
