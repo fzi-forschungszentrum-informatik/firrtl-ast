@@ -6,6 +6,7 @@ pub(crate) mod parsers;
 pub mod common;
 pub mod mem;
 pub mod register;
+pub mod simple;
 
 #[cfg(test)]
 mod tests;
