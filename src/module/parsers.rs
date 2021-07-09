@@ -3,14 +3,15 @@
 use std::sync::Arc;
 
 use nom::branch::alt;
-use nom::combinator::{map, value};
+use nom::character::complete::char as chr;
+use nom::combinator::{iterator, map, value};
 use nom::multi::many0;
 use nom::sequence::tuple;
 
 use crate::error::{ParseError, convert_error};
 use crate::indentation::Indentation;
 use crate::info::{WithInfo, parse as parse_info};
-use crate::parsers::{IResult, identifier, kw, le, op, spaced};
+use crate::parsers::{IResult, decimal, float, identifier, kw, le, op, spaced, unquoted_string};
 use crate::stmt::parsers::stmts as parse_stmts;
 use crate::types::parsers::r#type;
 
@@ -122,7 +123,32 @@ pub fn module<'i>(
             *stmts = s;
             input
         },
-        super::Kind::External => input,
+        super::Kind::External{defname, params} => {
+            let (input, n) = nom::combinator::opt(
+                map(
+                    tuple((indentation.parser(), kw("defname"), spaced(op("=")), spaced(identifier), le)),
+                    |(.., n, _)| n.into()
+                )
+            )(input)?;
+            *defname = n;
+
+            let mut param_iter = iterator(
+                input,
+                map(
+                    tuple((
+                        indentation.parser(),
+                        kw("parameter"),
+                        spaced(identifier),
+                        spaced(op("=")),
+                        spaced(param_value),
+                        le,
+                    )),
+                    |(.., k, _, v, _)| (k.into(), v)
+                ),
+            );
+            params.extend(&mut param_iter);
+            param_iter.finish()?.0
+        },
     };
 
     Ok((input, super::Module::new(name, ports, kind).with_info(info)))
@@ -134,6 +160,25 @@ pub fn kind<'i>(input: &str) -> IResult<super::Kind> {
     alt((
         map(kw("module"), |_| super::Kind::empty_regular()),
         map(kw("extmodule"), |_| super::Kind::empty_external()),
+    ))(input)
+}
+
+
+/// Parse a parameter value
+pub fn param_value(input: &str) -> IResult<super::ParamValue> {
+    use super::ParamValue as PV;
+
+    alt((
+        map(float, PV::Double),
+        map(decimal, PV::Int),
+        map(
+            tuple((chr('"'), |i| unquoted_string(i, &['\n', '\t', '"']), chr('"'))),
+            |(_, s, _)| PV::String(s.into())
+        ),
+        map(
+            tuple((chr('\''), |i| unquoted_string(i, &['\n', '\t', '\'']), chr('\''))),
+            |(_, s, _)| PV::String(s.into())
+        ),
     ))(input)
 }
 

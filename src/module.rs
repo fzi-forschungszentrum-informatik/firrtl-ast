@@ -5,6 +5,7 @@ pub(crate) mod parsers;
 #[cfg(test)]
 mod tests;
 
+use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
 
@@ -93,7 +94,17 @@ impl DisplayIndented for Module {
         )?;
         let mut indentation = indentation.sub();
         self.ports().try_for_each(|p| DisplayIndented::fmt(p, &mut indentation, f))?;
-        self.statements().iter().try_for_each(|s| DisplayIndented::fmt(s, &mut indentation, f))
+        match self.kind() {
+            Kind::Regular{stmts} => stmts
+                .iter()
+                .try_for_each(|s| DisplayIndented::fmt(s, &mut indentation, f)),
+            Kind::External{defname, params} => {
+                defname.as_ref().map(|n| writeln!(f, "{}defname = {}", indentation.lock(), n)).transpose()?;
+                params
+                    .iter()
+                    .try_for_each(|(k, v)| writeln!(f, "{}parameter {} = {}", indentation.lock(), k, v))
+            },
+        }
     }
 }
 
@@ -110,7 +121,7 @@ impl Arbitrary for Module {
             let mut g = Gen::new(g.size() / n);
             std::iter::from_fn(|| Some(Arbitrary::arbitrary(&mut g))).take(n).collect()
         } else {
-            let ports: std::collections::HashMap<_, _> = kind
+            let ports: HashMap<_, _> = kind
                 .statements()
                 .iter()
                 .flat_map(stmt_exprs)
@@ -160,7 +171,7 @@ pub enum Kind {
     Regular{stmts: Vec<Statement>},
     /// An external module, usually an interface to some IP or external
     /// VHDL/Verilog.
-    External,
+    External{defname: Option<Arc<str>>, params: HashMap<Arc<str>, ParamValue>},
 }
 
 impl Kind {
@@ -168,7 +179,7 @@ impl Kind {
     pub fn keyword(&self) -> &'static str {
         match self {
             Self::Regular{..}   => "module",
-            Self::External      => "extmodule",
+            Self::External{..}  => "extmodule",
         }
     }
 
@@ -179,14 +190,14 @@ impl Kind {
 
     /// Create a new, empty module kind for external modules
     pub fn empty_external() -> Self {
-        Self::External
+        Self::External{defname: Default::default(), params: Default::default()}
     }
 
     /// Retrieve the statements in this module
     pub fn statements(&self) -> &[Statement] {
         match self {
             Self::Regular{stmts}    => stmts.as_ref(),
-            Self::External          => &[],
+            Self::External{..}      => &[],
         }
     }
 }
@@ -203,6 +214,7 @@ impl Arbitrary for Kind {
         use std::iter::from_fn as fn_iter;
 
         use crate::stmt::tests::stmts_with_decls;
+        use crate::tests::Identifier;
 
         if g.size() <= 0 {
             return Default::default();
@@ -216,13 +228,24 @@ impl Arbitrary for Kind {
                     .collect();
                 Self::Regular{stmts}
             },
-            &|_| Self::empty_external(),
+            &|g| {
+                let defname = Option::<Identifier>::arbitrary(g).map(Into::into);
+                let n = u8::arbitrary(g) as usize;
+                let mut g = Gen::new(g.size() / std::cmp::max(n, 1));
+                let params = fn_iter(
+                    || Some((Identifier::arbitrary(&mut g).into(), Arbitrary::arbitrary(&mut g)))
+                ).take(n).collect();
+                Kind::External{defname, params}
+            },
         ];
         g.choose(&opts).unwrap()(g)
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        use std::iter::once;
+
         use crate::stmt::tests::stmts_with_decls;
+        use crate::tests::Identifier;
 
         match self {
             Self::Regular{stmts} => {
@@ -235,7 +258,83 @@ impl Arbitrary for Kind {
                     .map(|stmts| Self::Regular{stmts});
                 Box::new(res)
             },
-            Kind::External => Box::new(std::iter::empty()),
+            Kind::External{defname, params} => {
+                let res = defname
+                    .as_ref()
+                    .map(|n| Identifier::from(n.as_ref()))
+                    .shrink()
+                    .map({
+                        let p = params.clone();
+                        move |n| Kind::External{defname: n.map(Into::into), params: p.clone()}
+                    });
+                if params.len() > 1 {
+                    let n = defname.clone();
+                    let res = res.chain(params
+                        .clone()
+                        .into_iter()
+                        .map(move |p| Kind::External{defname: n.clone(), params: once(p).collect()})
+                    );
+                    Box::new(res)
+                } else if params.len() > 1 {
+                    let res = res.chain(
+                        once(Kind::External{defname: defname.clone(), params: Default::default()})
+                    );
+                    Box::new(res)
+                } else {
+                    Box::new(res)
+                }
+            },
+        }
+    }
+}
+
+
+/// Representation of a parameter value
+#[derive(Clone, PartialEq, Debug)]
+pub enum ParamValue {Int(i64), Double(f64), String(Arc<str>)}
+
+impl fmt::Display for ParamValue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Int(v)    => fmt::Display::fmt(v, f),
+            Self::Double(v) => fmt::Display::fmt(v, f),
+            Self::String(v) => {
+                fmt::Display::fmt(&'"', f)?;
+                v.chars().try_for_each(|c| match c {
+                    '\n' => write!(f, "\\\n"),
+                    '\t' => write!(f, "\\\t"),
+                    '"'  => write!(f, "\\\""),
+                    '\'' => write!(f, "\\'"),
+                    '\\' => write!(f, "\\\\"),
+                    c    => fmt::Display::fmt(&c, f),
+                })?;
+                fmt::Display::fmt(&'"', f)
+            },
+        }
+    }
+}
+
+#[cfg(test)]
+impl Arbitrary for ParamValue {
+    fn arbitrary(g: &mut Gen) -> Self {
+        // We decided against considering Double values in our tests. With parse
+        // tests, trying to get back the same double is a matter of luck,
+        // especially since our formatting will happily format it as an integer
+        // if possible.
+        let opts: [&dyn Fn(&mut Gen) -> Self; 2] = [
+            &|g| Self::Int(Arbitrary::arbitrary(g)),
+            &|g| Self::String(crate::tests::ASCII::arbitrary(g).into()),
+        ];
+        g.choose(&opts).unwrap()(g)
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        use crate::tests::ASCII;
+
+        match self {
+            Self::Int(v)    => Box::new(v.shrink().map(Self::Int)),
+            Self::Double(v) => Box::new(v.shrink().map(Self::Double)),
+            Self::String(v) => Box::new(ASCII::from(v.as_ref()).shrink().map(Into::into).map(Self::String)),
         }
     }
 }

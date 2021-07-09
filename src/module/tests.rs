@@ -8,7 +8,7 @@ use quickcheck::{Gen, TestResult, Testable};
 use crate::indentation::{DisplayIndented, Indentation};
 use crate::tests::Equivalence;
 
-use super::{Direction, Instance, Module, Port, parsers};
+use super::{Direction, Instance, Module, ParamValue, Port, parsers};
 
 
 #[quickcheck]
@@ -32,6 +32,18 @@ fn parse_module(mut base: Indentation, original: Module) -> Result<TestResult, S
     )(&s)
         .finish()
         .map(|(_, parsed)| Equivalence::of(original, parsed).result(&mut Gen::new(0)))
+        .map_err(|e| e.to_string());
+    res
+}
+
+
+#[quickcheck]
+fn parse_param_value(original: ParamValue) -> Result<Equivalence<ParamValue>, String> {
+    let s = original.to_string();
+
+    let res = all_consuming(parsers::param_value)(&s)
+        .finish()
+        .map(|(_, parsed)| Equivalence::of(original, parsed))
         .map_err(|e| e.to_string());
     res
 }
