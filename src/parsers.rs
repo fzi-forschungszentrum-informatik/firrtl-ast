@@ -141,10 +141,17 @@ pub fn op<'i>(operator: &'static str) -> impl nom::Parser<&'i str, (), Error<'i>
 
 /// Parse line endings, skipping preceding whitespace
 ///
-/// This parser consumes line endings, optionally preceded by whitespace. If no
-/// line ending is recognized, this parser will yield an error.
+/// This parser consumes line endings, optionally preceded by whitespace and/or
+/// a comment. If no line ending is recognized, this parser will yield an error.
 pub fn le<'i>(input: &'i str) -> IResult<'i, ()> {
-    nom::multi::fold_many1(spaced(nom::character::complete::line_ending), (), |_, _| ())(input)
+    use nom::character::complete::{line_ending, not_line_ending};
+    use nom::combinator::opt;
+
+    nom::multi::fold_many1(
+        spaced(preceded(opt(tuple((chr(';'), not_line_ending))), line_ending)),
+        (),
+        |_, _| ()
+    )(input)
 }
 
 
