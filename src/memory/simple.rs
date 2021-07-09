@@ -60,6 +60,42 @@ impl fmt::Display for Memory {
     }
 }
 
+#[cfg(test)]
+impl Arbitrary for Memory {
+    fn arbitrary(g: &mut Gen) -> Self {
+        use crate::tests::Identifier;
+
+        // The type of a memory must always be a vector type
+        Self::new(
+            Identifier::arbitrary(g),
+            types::Type::Vector(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
+            Arbitrary::arbitrary(g)
+        )
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        use crate::tests::Identifier;
+
+        let k = self.kind();
+        let res = Identifier::from(self.name().as_ref())
+            .shrink()
+            .map({
+                let t = self.data_type.clone();
+                move |n| Self::new(n, t.clone(), k)
+            })
+            .chain(self.data_type.shrink().map({
+                let n = self.name.clone();
+                move |t| Self::new(n.clone(), t, k)
+            }))
+            .chain(k.shrink().map({
+                let n = self.name.clone();
+                let t = self.data_type.clone();
+                move |k| Self::new(n.clone(), t.clone(), k)
+            }));
+        Box::new(res)
+    }
+}
+
 
 /// Kind of simple memory
 #[derive(Copy, Clone, Debug, PartialEq)]
