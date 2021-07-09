@@ -1,6 +1,7 @@
 //! Parsers for Circuits
 
 use nom::combinator::map;
+use nom::multi::fold_many0;
 use nom::sequence::tuple;
 
 use crate::error::{ParseError, convert_error};
@@ -22,8 +23,15 @@ pub fn circuit(input: &str) -> Result<super::Circuit, ParseError> {
 /// input.
 pub fn consumer(input: &str) -> Result<super::ModuleConsumer<Modules, ParseError>, ParseError> {
     let (mod_input, (top_name, info)) = map(
-        tuple((kw("circuit"), spaced(identifier), spaced(op(":")), parse_info, le)),
-        |(_, n, _, i, ..)| (n, i)
+        tuple((
+            fold_many0(le, (), |_, _| ()),
+            kw("circuit"),
+            spaced(identifier),
+            spaced(op(":")),
+            parse_info,
+            le,
+        )),
+        |(_, _, n, _, i, ..)| (n, i)
     )(input).map_err(|e| convert_error(input, e))?;
 
     Ok(super::ModuleConsumer::new(top_name, info, Modules::new_with_origin(mod_input, input)))
