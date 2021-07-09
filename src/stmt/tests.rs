@@ -11,7 +11,7 @@ use crate::expr::{self, Expression, Reference};
 use crate::indentation::{DisplayIndented, Indentation};
 use crate::tests::{Equivalence, Identifier};
 
-use super::{Entity, Kind, Statement, PrintElement};
+use super::{Entity, Kind, Statement, print::PrintElement};
 
 
 #[quickcheck]

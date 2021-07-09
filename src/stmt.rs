@@ -3,6 +3,8 @@
 pub(crate) mod display;
 pub(crate) mod parsers;
 
+pub mod print;
+
 #[cfg(test)]
 pub mod tests;
 
@@ -104,8 +106,8 @@ impl DisplayIndented for Statement {
         use crate::info::Info;
         use display::OptionalName;
 
-        fn into_expr(elem: &PrintElement) -> Option<&Expression> {
-            if let PrintElement::Value(expr, _) = elem {
+        fn into_expr(elem: &print::PrintElement) -> Option<&Expression> {
+            if let print::PrintElement::Value(expr, _) = elem {
                 Some(expr)
             } else {
                 None
@@ -337,7 +339,7 @@ pub enum Kind {
     Attach(Vec<Expression>),
     Conditional{cond: Expression, when: Arc<[Statement]>, r#else: Arc<[Statement]>},
     Stop{name: Option<Arc<str>>, clock: Expression, cond: Expression, code: i64},
-    Print{name: Option<Arc<str>>, clock: Expression, cond: Expression, msg: Vec<PrintElement>},
+    Print{name: Option<Arc<str>>, clock: Expression, cond: Expression, msg: Vec<print::PrintElement>},
 }
 
 
@@ -529,56 +531,6 @@ impl Arbitrary for Entity {
             Self::Memory(mem)           => Box::new(mem.shrink().map(Into::into)),
             Self::Instance(inst)        => Box::new(inst.shrink().map(Into::into)),
         }
-    }
-}
-
-
-/// An element in a print statement
-#[derive(Clone, Debug, PartialEq)]
-pub enum PrintElement {
-    Literal(String),
-    Value(Expression, Format),
-}
-
-#[cfg(test)]
-impl Arbitrary for PrintElement {
-    fn arbitrary(g: &mut Gen) -> Self {
-        use expr::tests::{expr_with_type, source_flow};
-        use types::GroundType as GT;
-
-        let opts: [&dyn Fn(&mut Gen) -> Self; 2] = [
-            &|g| Self::Literal(crate::tests::ASCII::arbitrary(g).to_string()),
-            &|g| Self::Value(expr_with_type(GT::arbitrary(g), source_flow(g), g), Arbitrary::arbitrary(g)),
-        ];
-
-        if g.size() > 0 {
-            g.choose(&opts).unwrap()(g)
-        } else {
-            Self::Literal(" ".to_string())
-        }
-    }
-
-    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
-        use crate::tests::ASCII;
-
-        match self {
-            Self::Literal(s)    => Box::new(
-                ASCII::from(s.clone()).shrink().map(|s| Self::Literal(s.to_string()))
-            ),
-            Self::Value(_, _)   => Box::new(std::iter::empty()),
-        }
-    }
-}
-
-
-/// Foramt specifier for print statements
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub enum Format {Binary, Decimal, Hexadecimal}
-
-#[cfg(test)]
-impl Arbitrary for Format {
-    fn arbitrary(g: &mut Gen) -> Self {
-        g.choose(&[Self::Binary, Self::Decimal, Self::Hexadecimal]).unwrap().clone()
     }
 }
 
