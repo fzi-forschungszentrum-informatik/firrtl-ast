@@ -11,7 +11,7 @@ use crate::types::Type;
 use crate::types::parsers::r#type;
 use crate::info::parse as info;
 
-use super::mem;
+use super::{mem, simple};
 
 
 /// Parse a Memory
@@ -59,6 +59,28 @@ pub fn memory<'i>(
     }
 
     entries.finish().map(|(i, _)| (i, (res, info)))
+}
+
+
+/// Parse a simple memory
+pub fn simple_mem(input: &str) -> IResult<simple::Memory> {
+    use simple::Kind;
+
+    #[derive(Copy, Clone, Debug)]
+    enum K {Cmem, Smem}
+
+    let (input, (k, name, _, r#type)) = tuple((
+        alt((value(K::Cmem, kw("cmem")), value(K::Smem, kw("smem")))),
+        spaced(identifier),
+        spaced(op(":")),
+        spaced(r#type),
+    ))(input)?;
+
+    let (input, kind) = match k {
+        K::Cmem => (input, Kind::Combinatory),
+        K::Smem => map(opt(spaced(ruw)), |ruw| Kind::Sequential(ruw))(input)?,
+    };
+    Ok((input, super::simple::Memory::new(name, r#type, kind)))
 }
 
 
