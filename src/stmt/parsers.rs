@@ -161,7 +161,7 @@ fn indented_condition<'i>(
     input: &'i str,
     indentation: &mut Indentation,
 ) -> IResult<'i, super::Statement> {
-    let (input, (cond, info)) = map(
+    let (input, (cond, when_info)) = map(
         tuple((kw("when"), spaced(|i| expr(reference, i)), spaced(op(":")), info, le)),
         |(_, e, _, info, ..)| (e, info),
     )(input)?;
@@ -169,7 +169,7 @@ fn indented_condition<'i>(
     let (input, when) = stmts(&reference, module, input, &mut indentation.sub())?;
 
     let (input, r#else) = if let Ok((i, _)) = tuple((indentation.clone().parser(), kw("else")))(input) {
-        if let Ok((i, _)) = tuple((spaced(op(":")), le))(i) {
+        if let Ok((i, _)) = tuple((spaced(op(":")), info, le))(i) {
             stmts(reference, module, i, &mut indentation.sub())
         } else {
             map(spaced(|i| indented_condition(reference, module, i, indentation)), |s| vec![s],)(i)
@@ -179,7 +179,7 @@ fn indented_condition<'i>(
     };
 
     let cond = super::Kind::Conditional{cond, when: when.into(), r#else: r#else.into()};
-    Ok((input, super::Statement::from(cond).with_info(info)))
+    Ok((input, super::Statement::from(cond).with_info(when_info)))
 }
 
 
