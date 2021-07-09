@@ -3,6 +3,9 @@
 use std::fmt;
 use std::sync::Arc;
 
+#[cfg(test)]
+use quickcheck::{Arbitrary, Gen};
+
 use crate::expr;
 use crate::types;
 
@@ -73,6 +76,24 @@ impl Kind {
         match self {
             Self::Combinatory   => "cmem",
             Self::Sequential(_) => "smem",
+        }
+    }
+}
+
+#[cfg(test)]
+impl Arbitrary for Kind {
+    fn arbitrary(g: &mut Gen) -> Self {
+        let opts: [&dyn Fn(&mut Gen) -> Self; 2] = [
+            &|_| Self::Combinatory,
+            &|g| Self::Sequential(Arbitrary::arbitrary(g)),
+        ];
+        g.choose(&opts).unwrap()(g)
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        match self {
+            Self::Combinatory   => Box::new(std::iter::empty()),
+            Self::Sequential(b) => Box::new(b.shrink().map(Self::Sequential)),
         }
     }
 }
