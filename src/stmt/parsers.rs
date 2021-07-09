@@ -248,7 +248,7 @@ pub fn fmt_string_part<'i>(
                 value('\n', tag("\\n")),
                 value('\t', tag("\\t")),
                 preceded(chr('\\'), anychar),
-                verify(anychar, |c| !"%\n\t'\"".contains(*c)),
+                verify(anychar, |c| !"%\n\t\"".contains(*c)),
             ))),
             |v| FmtStrPart::Literal(v.into_iter().collect()),
         )
