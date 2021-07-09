@@ -82,19 +82,13 @@ impl fmt::Display for Info<'_> {
 /// regardless of whether an info attribute is encountered or not.
 pub(crate) fn parse(input: &str) -> parsers::IResult<Option<String>> {
     use nom::Parser;
-    use nom::branch::alt;
-    use nom::character::complete::{anychar, char as chr};
-    use nom::combinator::{map, opt, verify};
-    use nom::multi::many1;
-    use nom::sequence::{preceded, tuple};
+    use nom::combinator::{map, opt};
+    use nom::sequence::tuple;
 
-    use parsers::{op, spaced};
+    use parsers::{op, spaced, unquoted_string};
 
-    spaced(opt(map(tuple((
-        op("@["),
-        many1(alt((preceded(chr('\\'), anychar), verify(anychar, |c| !"\n\t]\\".contains(*c))))),
-        op("]"),
-    )), |(_, s, _)| s.into_iter().collect()))).parse(input)
+    spaced(opt(map(tuple((op("@["), |i| unquoted_string(i, &['\n', '\t', ']']), op("]"))), |(_, s, _)| s)))
+        .parse(input)
 }
 
 

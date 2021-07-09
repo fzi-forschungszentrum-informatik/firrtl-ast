@@ -6,7 +6,7 @@ mod tests;
 
 use nom::Parser;
 use nom::bytes::complete::{tag, take_while};
-use nom::character::complete::{satisfy, space0};
+use nom::character::complete::{char as chr, satisfy, space0};
 use nom::combinator::{not, peek, value};
 use nom::error::context;
 use nom::sequence::{preceded, tuple};
@@ -32,22 +32,72 @@ pub fn identifier(input: &str) -> IResult<&str> {
 }
 
 
+/// Parse an unquoted string
+///
+/// This function parses the inner of a string literal or info attribute. It
+/// parses unescaped characters if they are not in `special` and characters
+/// escaped with a backslash. `\n` and `\t` are special in this regard as these
+/// are parsed as newline and tab characters respectively.
+pub fn unquoted_string<'i>(input: &'i str, special: &[char]) -> IResult<'i, String> {
+    use nom::combinator::{iterator, verify};
+    use nom::branch::alt;
+    use nom::character::complete::anychar;
+
+    let mut chars = iterator(
+        input,
+        alt((
+            value('\n', tag("\\n")),
+            value('\t', tag("\\t")),
+            preceded(chr('\\'), anychar),
+            verify(anychar, |c| *c != '\\' && !special.contains(c)),
+        ))
+    );
+    let res = (&mut chars).collect();
+    chars.finish().map(|(i, _)| (i, res))
+}
+
+
 /// Parse a decimal numeral
 pub fn decimal<O>(input: &str) -> IResult<O>
     where O: std::str::FromStr
 {
-    use nom::combinator::{recognize, success};
-    use nom::branch::alt;
-
-    let sign = alt((value((), tag("+")), value((), tag("-")), success(())));
+    use nom::combinator::{map_res, recognize};
 
     context(
         "expected decimal numeral",
-        nom::combinator::map_res(
+        map_res(
             recognize(tuple((sign, take_while(char::is_numeric)))),
             str::parse
         )
     )(input)
+}
+
+
+/// Parse a floating point numeral
+pub fn float<O: std::str::FromStr>(input: &str) -> IResult<O> {
+    use nom::branch::alt;
+    use nom::combinator::{map_res, recognize};
+
+    let format = tuple((
+        sign,
+        take_while(char::is_numeric),
+        chr('.'),
+        take_while(char::is_numeric),
+        alt((
+            peek(not(chr('E'))),
+            value((), tuple((chr('E'), sign, take_while(char::is_numeric))))
+        )),
+    ));
+
+    context("expected floating point numeral", map_res(recognize(format), str::parse))(input)
+}
+
+
+/// Parse an optional plus or minus sign
+fn sign(input: &str) -> IResult<()> {
+    use nom::{branch::alt, combinator::success};
+
+    alt((value((), tag("+")), value((), tag("-")), success(())))(input)
 }
 
 
