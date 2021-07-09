@@ -170,7 +170,7 @@ fn indented_condition<'i>(
 
     let (input, r#else) = if let Ok((i, _)) = tuple((indentation.clone().parser(), kw("else")))(input) {
         if let Ok((i, _)) = tuple((spaced(op(":")), le))(i) {
-            stmts(&reference, module, i, &mut indentation.sub())
+            stmts(reference, module, i, &mut indentation.sub())
         } else {
             map(spaced(|i| indented_condition(reference, module, i, indentation)), |s| vec![s],)(i)
         }?
