@@ -75,15 +75,15 @@ fn entry<'i>(input: &'i str) -> IResult<'i, Entry> {
         map(tuple((kw("depth"), arrow, spaced(decimal))), |(.., v)| Entry::Depth(v)),
         map(
             tuple((kw("reader"), arrow, spaced(identifier))),
-            |(.., n)| Entry::Port(super::Port {name: n.into(), kind: super::PortKind::Read})
+            |(.., n)| Entry::Port(super::Port {name: n.into(), dir: super::PortDir::Read})
         ),
         map(
             tuple((kw("writer"), arrow, spaced(identifier))),
-            |(.., n)| Entry::Port(super::Port {name: n.into(), kind: super::PortKind::Write})
+            |(.., n)| Entry::Port(super::Port {name: n.into(), dir: super::PortDir::Write})
         ),
         map(
             tuple((kw("readwriter"), arrow, spaced(identifier))),
-            |(.., n)| Entry::Port(super::Port {name: n.into(), kind: super::PortKind::ReadWrite})
+            |(.., n)| Entry::Port(super::Port {name: n.into(), dir: super::PortDir::ReadWrite})
         ),
         map(tuple((kw("read-latency"), arrow, spaced(decimal))), |(.., v)| Entry::ReadLatency(v)),
         map(tuple((kw("write-latency"), arrow, spaced(decimal))), |(.., v)| Entry::WriteLatency(v)),

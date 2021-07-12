@@ -154,20 +154,20 @@ impl types::Typed for Memory {
         let mask = mask(&self.data_type());
 
         let port_type = |kind| match kind {
-            PortKind::Read      => vec![
+            PortDir::Read       => vec![
                 Field::new("data", self.data_type().clone()).flipped(),
                 addr_field.clone(),
                 en_field.clone(),
                 clk_field.clone(),
             ],
-            PortKind::Write     => vec![
+            PortDir::Write      => vec![
                 Field::new("data", self.data_type().clone()),
                 Field::new("mask", mask.clone()),
                 addr_field.clone(),
                 en_field.clone(),
                 clk_field.clone(),
             ],
-            PortKind::ReadWrite => vec![
+            PortDir::ReadWrite  => vec![
                 Field::new("wmode", GT::UInt(Some(1))),
                 Field::new("rdata", self.data_type().clone()).flipped(),
                 Field::new("wdata", self.data_type().clone()),
@@ -180,7 +180,7 @@ impl types::Typed for Memory {
 
         let bundle = self
             .ports()
-            .map(|p| Field::new(p.name.clone(), port_type(p.kind)).flipped())
+            .map(|p| Field::new(p.name.clone(), port_type(p.dir)).flipped())
             .collect();
         Ok(bundle)
     }
@@ -270,28 +270,33 @@ type Latency = u16;
 #[derive(Clone, Debug, PartialEq)]
 pub struct Port {
     pub name: Arc<str>,
-    pub kind: PortKind,
+    pub dir: PortDir,
 }
 
 impl fmt::Display for Port {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} => {}", self.kind, self.name)
+        let kind = match self.dir {
+            PortDir::Read       => "reader",
+            PortDir::Write      => "writer",
+            PortDir::ReadWrite  => "readwriter",
+        };
+        write!(f, "{} => {}", kind, self.name)
     }
 }
 
 #[cfg(test)]
 impl Arbitrary for Port {
     fn arbitrary(g: &mut Gen) -> Self {
-        Self {name: Identifier::arbitrary(g).into(), kind: Arbitrary::arbitrary(g)}
+        Self {name: Identifier::arbitrary(g).into(), dir: Arbitrary::arbitrary(g)}
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         let res = Identifier::from(self.name.as_ref()).shrink().map({
-            let kind = self.kind;
-            move |n| Port {name: n.into(), kind}
-        }).chain(self.kind.shrink().map({
+            let dir = self.dir;
+            move |n| Port {name: n.into(), dir}
+        }).chain(self.dir.shrink().map({
             let n = self.name.clone();
-            move |kind| Port {name: n.clone(), kind}
+            move |dir| Port {name: n.clone(), dir}
         }));
         Box::new(res)
     }
