@@ -13,11 +13,10 @@ use nom::sequence::{preceded, tuple};
 use crate::expr::parsers::expr;
 use crate::indentation::Indentation;
 use crate::info::{WithInfo, parse as info};
-use crate::memory::parsers::memory;
+use crate::memory::parsers::{memory, register};
 use crate::module::Module;
 use crate::module::parsers::instance;
 use crate::parsers::{IResult, comma, decimal, identifier, kw, le, lp, op, rp, spaced};
-use crate::register::parsers::register;
 use crate::types::parsers::r#type;
 
 use super::print;

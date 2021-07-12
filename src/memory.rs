@@ -5,10 +5,12 @@ pub(crate) mod parsers;
 
 pub mod common;
 pub mod mem;
+pub mod register;
 
 #[cfg(test)]
 mod tests;
 
 pub use common::{PortDir, ReadUnderWrite};
 pub use mem::Memory;
+pub use register::Register;
 

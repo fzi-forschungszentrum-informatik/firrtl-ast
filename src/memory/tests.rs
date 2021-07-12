@@ -4,9 +4,9 @@ use nom::Finish;
 use nom::combinator::all_consuming;
 
 use crate::indentation::{DisplayIndented, Indentation};
-use crate::tests::Equivalence;
+use crate::tests::{Equivalence, Identifier};
 
-use super::{Memory, display::MemoryDecl, parsers};
+use super::{Memory, Register, display::MemoryDecl, parsers};
 
 
 #[quickcheck]
@@ -20,6 +20,16 @@ fn parse_memory(
     let res = all_consuming(|i| parsers::memory(i, &mut base))(&s)
         .finish()
         .map(|(_, parsed)| Equivalence::of((original, None), parsed))
+        .map_err(|e| e.to_string());
+    res
+}
+
+#[quickcheck]
+fn parse_register(original: Register<Identifier>) -> Result<Equivalence<Register<Identifier>>, String> {
+    let s = original.to_string();
+    let res = all_consuming(|i| parsers::register(|s| Some(s.into()), i))(&s)
+        .finish()
+        .map(|(_, parsed)| Equivalence::of(original, parsed))
         .map_err(|e| e.to_string());
     res
 }

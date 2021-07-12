@@ -6,9 +6,8 @@ use std::sync::Arc;
 use quickcheck::{Arbitrary, Gen};
 
 use crate::expr;
-use crate::memory::Memory;
+use crate::memory::{Memory, Register};
 use crate::module;
-use crate::register::Register;
 use crate::types;
 
 

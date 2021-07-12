@@ -13,7 +13,6 @@ pub mod expr;
 pub mod info;
 pub mod memory;
 pub mod module;
-pub mod register;
 pub mod stmt;
 pub mod types;
 
@@ -27,8 +26,7 @@ extern crate quickcheck_macros;
 
 pub use circuit::Circuit;
 pub use expr::Expression;
-pub use memory::Memory;
+pub use memory::{Memory, Register};
 pub use module::Module;
-pub use register::Register;
 pub use types::{GroundType, Type};
 

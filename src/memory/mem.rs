@@ -12,6 +12,8 @@ use crate::types;
 #[cfg(test)]
 use crate::tests::Identifier;
 
+use super::common;
+
 
 /// A FIRRTL memory
 #[derive(Clone, Debug, PartialEq)]
@@ -22,7 +24,7 @@ pub struct Memory {
     ports: Vec<Port>,
     read_latency: Latency,
     write_latency: Latency,
-    read_under_write: super::ReadUnderWrite,
+    read_under_write: common::ReadUnderWrite,
 }
 
 impl Memory {
@@ -101,12 +103,12 @@ impl Memory {
     }
 
     /// Set the read-under-write behaviour
-    pub fn with_read_under_write(self, behaviour: super::ReadUnderWrite) -> Self {
+    pub fn with_read_under_write(self, behaviour: common::ReadUnderWrite) -> Self {
         Self {read_under_write: behaviour, ..self}
     }
 
     /// Retrieve the read-under-write behaviour
-    pub fn read_under_write(&self) -> super::ReadUnderWrite {
+    pub fn read_under_write(&self) -> common::ReadUnderWrite {
         self.read_under_write
     }
 }
@@ -144,20 +146,20 @@ impl types::Typed for Memory {
         let mask = mask(&self.data_type());
 
         let port_type = |kind| match kind {
-            super::PortDir::Read        => vec![
+            common::PortDir::Read       => vec![
                 Field::new("data", self.data_type().clone()).flipped(),
                 addr_field.clone(),
                 en_field.clone(),
                 clk_field.clone(),
             ],
-            super::PortDir::Write       => vec![
+            common::PortDir::Write      => vec![
                 Field::new("data", self.data_type().clone()),
                 Field::new("mask", mask.clone()),
                 addr_field.clone(),
                 en_field.clone(),
                 clk_field.clone(),
             ],
-            super::PortDir::ReadWrite   => vec![
+            common::PortDir::ReadWrite  => vec![
                 Field::new("wmode", GT::UInt(Some(1))),
                 Field::new("rdata", self.data_type().clone()).flipped(),
                 Field::new("wdata", self.data_type().clone()),
@@ -260,15 +262,15 @@ pub type Latency = u16;
 #[derive(Clone, Debug, PartialEq)]
 pub struct Port {
     pub name: Arc<str>,
-    pub dir: super::PortDir,
+    pub dir: common::PortDir,
 }
 
 impl fmt::Display for Port {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let kind = match self.dir {
-            super::PortDir::Read        => "reader",
-            super::PortDir::Write       => "writer",
-            super::PortDir::ReadWrite   => "readwriter",
+            common::PortDir::Read       => "reader",
+            common::PortDir::Write      => "writer",
+            common::PortDir::ReadWrite  => "readwriter",
         };
         write!(f, "{} => {}", kind, self.name)
     }
