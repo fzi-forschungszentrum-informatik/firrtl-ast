@@ -10,6 +10,8 @@ use crate::types::Type;
 use crate::types::parsers::r#type;
 use crate::info::parse as info;
 
+use super::mem;
+
 
 /// Parse a Memory
 pub fn memory<'i>(
@@ -27,10 +29,10 @@ pub fn memory<'i>(
     let mut entries = iterator(input, map(tuple((indentation.parser(), entry, le)), |(_, e, _)| e));
 
     let mut data_type: Option<Type> = Default::default();
-    let mut depth: Option<super::Depth> = Default::default();
-    let mut read_latency: Option<super::Latency> = Default::default();
-    let mut write_latency: Option<super::Latency> = Default::default();
-    let mut ports: Vec<super::Port> = Default::default();
+    let mut depth: Option<mem::Depth> = Default::default();
+    let mut read_latency: Option<mem::Latency> = Default::default();
+    let mut write_latency: Option<mem::Latency> = Default::default();
+    let mut ports: Vec<mem::Port> = Default::default();
     let mut ruw: super::ReadUnderWrite = Default::default();
     (&mut entries).for_each(|e| match e {
         Entry::DataType(t)      => data_type = Some(t),
@@ -41,7 +43,7 @@ pub fn memory<'i>(
         Entry::RUW(v)           => ruw = v,
     });
 
-    let mut res = super::Memory::new(
+    let mut res = mem::Memory::new(
         name,
         data_type.ok_or_else(|| nom::Err::Error(parsers::Error::from_error_kind(input, EK::Permutation)))?,
         depth.ok_or_else(|| nom::Err::Error(parsers::Error::from_error_kind(input, EK::Permutation)))?,
@@ -61,10 +63,10 @@ pub fn memory<'i>(
 
 enum Entry {
     DataType(Type),
-    Depth(super::Depth),
-    Port(super::Port),
-    ReadLatency(super::Latency),
-    WriteLatency(super::Latency),
+    Depth(mem::Depth),
+    Port(mem::Port),
+    ReadLatency(mem::Latency),
+    WriteLatency(mem::Latency),
     RUW(super::ReadUnderWrite),
 }
 
@@ -75,15 +77,15 @@ fn entry<'i>(input: &'i str) -> IResult<'i, Entry> {
         map(tuple((kw("depth"), arrow, spaced(decimal))), |(.., v)| Entry::Depth(v)),
         map(
             tuple((kw("reader"), arrow, spaced(identifier))),
-            |(.., n)| Entry::Port(super::Port {name: n.into(), dir: super::PortDir::Read})
+            |(.., n)| Entry::Port(mem::Port {name: n.into(), dir: super::PortDir::Read})
         ),
         map(
             tuple((kw("writer"), arrow, spaced(identifier))),
-            |(.., n)| Entry::Port(super::Port {name: n.into(), dir: super::PortDir::Write})
+            |(.., n)| Entry::Port(mem::Port {name: n.into(), dir: super::PortDir::Write})
         ),
         map(
             tuple((kw("readwriter"), arrow, spaced(identifier))),
-            |(.., n)| Entry::Port(super::Port {name: n.into(), dir: super::PortDir::ReadWrite})
+            |(.., n)| Entry::Port(mem::Port {name: n.into(), dir: super::PortDir::ReadWrite})
         ),
         map(tuple((kw("read-latency"), arrow, spaced(decimal))), |(.., v)| Entry::ReadLatency(v)),
         map(tuple((kw("write-latency"), arrow, spaced(decimal))), |(.., v)| Entry::WriteLatency(v)),
