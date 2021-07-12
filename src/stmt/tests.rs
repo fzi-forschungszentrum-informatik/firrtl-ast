@@ -11,7 +11,7 @@ use crate::expr::{self, Expression, Reference};
 use crate::indentation::{DisplayIndented, Indentation};
 use crate::tests::{Equivalence, Identifier};
 
-use super::{Entity, Kind, Statement};
+use super::{Entity, Kind, Statement, print::PrintElement};
 
 
 #[quickcheck]
@@ -152,7 +152,9 @@ fn parse_fmt_string(original: FormatString) -> Result<TestResult, String> {
     use nom::multi::many1;
     use nom::sequence::tuple;
 
-    use super::{PrintElement as PE, parsers};
+    use super::parsers;
+
+    use PrintElement as PE;
     use parsers::FmtStrPart as FSP;
 
     let original: Vec<_> = original.into();
@@ -253,7 +255,7 @@ pub fn stmt_exprs(stmt: &Statement) -> Vec<&Expression<Arc<Entity>>> {
         Kind::Stop{clock, cond, ..}             => vec![clock, cond],
         Kind::Print{clock, cond, msg, ..}       => std::iter::once(clock)
             .chain(std::iter::once(cond))
-            .chain(msg.iter().filter_map(|p| if let super::PrintElement::Value(e, _) = p {
+            .chain(msg.iter().filter_map(|p| if let PrintElement::Value(e, _) = p {
                 Some(e)
             } else {
                 None
@@ -290,16 +292,16 @@ pub fn stmt_list(len: impl Into<usize>, g: &mut Gen) -> Vec<super::Statement> {
 /// `PrintElement::Literal`s and at least one `PrintElement::Value`.
 #[derive(Clone, Debug)]
 pub struct FormatString {
-    data: Vec<super::PrintElement>
+    data: Vec<PrintElement>
 }
 
-impl From<Vec<super::PrintElement>> for FormatString {
-    fn from(data: Vec<super::PrintElement>) -> Self {
+impl From<Vec<PrintElement>> for FormatString {
+    fn from(data: Vec<PrintElement>) -> Self {
         Self {data}
     }
 }
 
-impl From<FormatString> for Vec<super::PrintElement> {
+impl From<FormatString> for Vec<PrintElement> {
     fn from(string: FormatString) -> Self {
         string.data
     }
@@ -310,7 +312,7 @@ impl Arbitrary for FormatString {
         use expr::tests::{expr_with_type, source_flow};
         use crate::types::GroundType as GT;
 
-        use super::PrintElement as PE;
+        use PrintElement as PE;
 
         let mut data = vec![Arbitrary::arbitrary(g)];
 
@@ -331,7 +333,7 @@ impl Arbitrary for FormatString {
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
-        use super::PrintElement as PE;
+        use PrintElement as PE;
 
         let res = self.data.shrink().filter(|v| v.windows(2).all(|e| match e {
             [PE::Literal(..), PE::Literal(..)] => false,

@@ -5,6 +5,8 @@ use std::fmt;
 use crate::indentation::{DisplayIndented, Indentation};
 use crate::info::Info;
 
+use super::print;
+
 
 /// Utility for displaying an entity declaration
 pub(crate) struct EntityDecl<'a>(pub &'a super::Entity, pub Info<'a>);
@@ -30,12 +32,12 @@ impl DisplayIndented for EntityDecl<'_> {
 
 
 /// Utility for rendering a format string
-pub struct FormatString<'a>(pub &'a [super::PrintElement]);
+pub struct FormatString<'a>(pub &'a [print::PrintElement]);
 
 impl fmt::Display for FormatString<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use super::PrintElement as P;
-        use super::Format as F;
+        use print::PrintElement as P;
+        use print::Format as F;
 
         write!(f, "\"")?;
         for element in self.0 {

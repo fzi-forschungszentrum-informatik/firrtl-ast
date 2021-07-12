@@ -20,6 +20,8 @@ use crate::parsers::{IResult, comma, decimal, identifier, kw, le, lp, op, rp, sp
 use crate::register::parsers::register;
 use crate::types::parsers::r#type;
 
+use super::print;
+
 
 /// Parser for sequences of statements
 pub fn stmts<'i>(
@@ -57,7 +59,8 @@ pub fn stmt<'i>(
     input: &'i str,
     indentation: &'_ mut Indentation,
 ) -> IResult<'i, super::Statement> {
-    use super::{Kind, PrintElement as P, Statement as S};
+    use super::{Kind, Statement as S};
+    use print::PrintElement as P;
 
     let indent = indentation.clone().into_parser();
 
@@ -236,7 +239,7 @@ pub fn entity_decl<'i>(
 pub fn fmt_string_part<'i>(
     input: &'i str,
 ) -> IResult<'i, FmtStrPart> {
-    use super::Format as F;
+    use print::Format as F;
 
     alt((
         value(FmtStrPart::FormatSpec(F::Binary), tag("%b")),
@@ -262,7 +265,7 @@ pub fn fmt_string_part<'i>(
 #[derive(Clone, Debug)]
 pub enum FmtStrPart {
     Literal(String),
-    FormatSpec(super::Format)
+    FormatSpec(print::Format)
 }
 
 
