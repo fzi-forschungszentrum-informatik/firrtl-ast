@@ -20,7 +20,7 @@ use crate::types;
 #[cfg(test)]
 use crate::tests::Identifier;
 
-pub use common::ReadUnderWrite;
+pub use common::{PortDir, ReadUnderWrite};
 
 
 /// A FIRRTL memory

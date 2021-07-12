@@ -47,3 +47,15 @@ impl Arbitrary for ReadUnderWrite {
     }
 }
 
+
+/// The "kind" of a port
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum PortDir {Read, Write, ReadWrite}
+
+#[cfg(test)]
+impl Arbitrary for PortDir {
+    fn arbitrary(g: &mut Gen) -> Self {
+        g.choose(&[Self::Read, Self::Write, Self::ReadWrite]).unwrap().clone()
+    }
+}
+
