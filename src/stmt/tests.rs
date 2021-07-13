@@ -108,14 +108,14 @@ fn parse_entity(mut base: Indentation, original: Entity) -> Result<TestResult, S
         return Ok(TestResult::discard())
     }
 
-    // We depend on reference names to be unique. If they are not, the set of
-    // names will be smaller than the list of references.
-    let refs: Vec<_> = entity_exprs(&original)
+    let mut refs: Vec<_> = entity_exprs(&original)
         .into_iter()
         .flat_map(Expression::references)
         .cloned()
         .collect();
-    if refs.iter().map(|r| r.name()).collect::<std::collections::HashSet<_>>().len() != refs.len() {
+    refs.sort_unstable_by_key(|r| r.name().to_string());
+    if refs.windows(2).any(|p| p[0].name() == p[1].name()) {
+        // We depend on reference names to be unique.
         return Ok(TestResult::discard())
     }
 
@@ -131,7 +131,7 @@ fn parse_entity(mut base: Indentation, original: Entity) -> Result<TestResult, S
         .map_err(|e| e.to_string())?;
 
     let parser = move |i| super::parsers::entity_decl(
-        |n| refs.iter().find(|r| r.name() == n).cloned(),
+        |n| refs.binary_search_by_key(&n, |r| r.name()).ok().map(|i| refs[i].clone()),
         |n| module.clone().and_then(|m| if m.name() == n { Some(m) } else { None }),
         i,
         &mut base
