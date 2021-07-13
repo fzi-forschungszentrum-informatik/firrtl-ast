@@ -38,6 +38,26 @@ fn parse_simple_mem(original: simple::Memory) -> Result<Equivalence<simple::Memo
 
 
 #[quickcheck]
+fn parse_simple_mem_port(
+    original: simple::Port<Identifier>
+) -> Result<Equivalence<simple::Port<Identifier>>, String> {
+    let s = original.to_string();
+
+    let mem = original.memory().clone();
+    let parser = |i| parsers::simple_mem_port(
+        |s| if s == mem.name().as_ref() { Some(mem.clone()) } else { None },
+        |s| Some(s.into()),
+        i,
+    );
+    let res = all_consuming(parser)(&s)
+        .finish()
+        .map(|(_, parsed)| Equivalence::of(original, parsed))
+        .map_err(|e| e.to_string());
+    res
+}
+
+
+#[quickcheck]
 fn parse_register(original: Register<Identifier>) -> Result<Equivalence<Register<Identifier>>, String> {
     let s = original.to_string();
     let res = all_consuming(|i| parsers::register(|s| Some(s.into()), i))(&s)
