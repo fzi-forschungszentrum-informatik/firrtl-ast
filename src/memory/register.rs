@@ -1,10 +1,5 @@
 //! Register type
 
-pub(crate) mod parsers;
-
-#[cfg(test)]
-pub mod tests;
-
 use std::fmt;
 use std::sync::Arc;
 
