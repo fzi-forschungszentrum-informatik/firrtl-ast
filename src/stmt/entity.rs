@@ -6,7 +6,7 @@ use std::sync::Arc;
 use quickcheck::{Arbitrary, Gen};
 
 use crate::expr;
-use crate::memory::{Memory, Register};
+use crate::memory::{Memory, Register, simple as simple_mem};
 use crate::module;
 use crate::types;
 
@@ -22,6 +22,7 @@ pub enum Entity {
     Register(Register<Arc<Self>>),
     Node{name: Arc<str>, value: expr::Expression<Arc<Self>>},
     Memory(Memory),
+    SimpleMemPort(simple_mem::Port<Arc<Self>>),
     Instance(module::Instance),
 }
 
@@ -56,6 +57,12 @@ impl From<Memory> for Entity {
     }
 }
 
+impl From<simple_mem::Port<Arc<Entity>>> for Entity {
+    fn from(port: simple_mem::Port<Arc<Entity>>) -> Self {
+        Self::SimpleMemPort(port)
+    }
+}
+
 impl From<module::Instance> for Entity {
     fn from(inst: module::Instance) -> Self {
         Self::Instance(inst)
@@ -65,23 +72,25 @@ impl From<module::Instance> for Entity {
 impl expr::Reference for Arc<Entity> {
     fn name(&self) -> &str {
         match self.as_ref() {
-            Entity::Port(port)      => port.name(),
-            Entity::Wire{name, ..}  => name.as_ref(),
-            Entity::Register(reg)   => reg.name(),
-            Entity::Node{name, ..}  => name.as_ref(),
-            Entity::Memory(mem)     => mem.name(),
-            Entity::Instance(inst)  => inst.name(),
+            Entity::Port(port)          => port.name(),
+            Entity::Wire{name, ..}      => name.as_ref(),
+            Entity::Register(reg)       => reg.name(),
+            Entity::Node{name, ..}      => name.as_ref(),
+            Entity::Memory(mem)         => mem.name(),
+            Entity::SimpleMemPort(port) => port.name(),
+            Entity::Instance(inst)      => inst.name(),
         }
     }
 
     fn flow(&self) -> Option<expr::Flow> {
         match self.as_ref() {
-            Entity::Port(port)      => port.flow(),
-            Entity::Wire{..}        => Some(expr::Flow::Duplex),
-            Entity::Register(reg)   => reg.flow(),
-            Entity::Node{..}        => Some(expr::Flow::Source),
-            Entity::Memory(mem)     => mem.flow(),
-            Entity::Instance(inst)  => inst.flow(),
+            Entity::Port(port)          => port.flow(),
+            Entity::Wire{..}            => Some(expr::Flow::Duplex),
+            Entity::Register(reg)       => reg.flow(),
+            Entity::Node{..}            => Some(expr::Flow::Source),
+            Entity::Memory(mem)         => mem.flow(),
+            Entity::SimpleMemPort(port) => port.flow(),
+            Entity::Instance(inst)      => inst.flow(),
         }
     }
 }
@@ -98,6 +107,7 @@ impl types::Typed for Arc<Entity> {
             Entity::Register(reg)       => reg.r#type().map_err(|_| self.clone()),
             Entity::Node{value, ..}     => value.r#type().map_err(|_| self.clone()),
             Entity::Memory(mem)         => mem.r#type().map_err(|_| self.clone()),
+            Entity::SimpleMemPort(port) => port.r#type().map_err(|_| self.clone()),
             Entity::Instance(inst)      => inst.r#type().map_err(|_| self.clone()),
         }
     }
@@ -193,6 +203,7 @@ impl Arbitrary for Entity {
                 Box::new(res)
             },
             Self::Memory(mem)           => Box::new(mem.shrink().map(Into::into)),
+            Self::SimpleMemPort(port)   => Box::new(port.shrink().map(Into::into)),
             Self::Instance(inst)        => Box::new(inst.shrink().map(Into::into)),
         }
     }

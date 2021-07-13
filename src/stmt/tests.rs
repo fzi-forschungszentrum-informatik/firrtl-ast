@@ -274,11 +274,12 @@ pub fn stmt_exprs(stmt: &Statement) -> Vec<&Expression<Arc<Entity>>> {
 /// Retrieve all expressions occuring in an entity decl
 fn entity_exprs(entity: &Entity) -> Vec<&Expression<Arc<Entity>>> {
     match entity {
-        Entity::Register(reg)   => std::iter::once(reg.clock())
+        Entity::Register(reg)       => std::iter::once(reg.clock())
             .chain(reg.reset_signal())
             .chain(reg.reset_value())
             .collect(),
-        Entity::Node{value, ..} => vec![value],
+        Entity::Node{value, ..}     => vec![value],
+        Entity::SimpleMemPort(port) => vec![port.address(), port.clock()],
         _ => Default::default(),
     }
 }
