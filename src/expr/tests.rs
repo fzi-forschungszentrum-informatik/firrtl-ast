@@ -184,8 +184,8 @@ impl super::Reference for Entity {
         self.name.name()
     }
 
-    fn flow(&self) -> Flow {
-        self.flow
+    fn flow(&self) -> Option<Flow> {
+        Some(self.flow)
     }
 }
 
