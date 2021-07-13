@@ -13,7 +13,7 @@ use nom::sequence::{preceded, tuple};
 use crate::expr::parsers::expr;
 use crate::indentation::Indentation;
 use crate::info::{WithInfo, parse as info};
-use crate::memory::parsers::{memory, register};
+use crate::memory::parsers::{memory, register, simple_mem};
 use crate::module::Module;
 use crate::module::parsers::instance;
 use crate::parsers::{IResult, comma, decimal, identifier, kw, le, lp, op, rp, spaced};
@@ -82,6 +82,10 @@ pub fn stmt<'i>(
             entity_decl(reference, module, i, &mut indent)
                 .map(|(i, (e, info))| (i, (indent, S::from(Kind::Declaration(Arc::new(e))).with_info(info))))
         },
+        map(
+            tuple((indent.clone(), simple_mem, info, le)),
+            |(i, mem, info, _)| (i, S::from(Kind::SimpleMemDecl(Arc::new(mem))).with_info(info)),
+        ),
         map(
             tuple((indent.clone(), &expr, spaced(kw("is")), spaced(kw("invalid")), info, le)),
             |(i, e, .., info, _)| (i, S::from(Kind::Invalidate(e)).with_info(info)),
