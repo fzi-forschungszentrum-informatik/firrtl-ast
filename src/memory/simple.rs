@@ -148,3 +148,25 @@ impl<R: expr::Reference> expr::Reference for Port<R> {
     }
 }
 
+impl<R: expr::Reference> fmt::Display for Port<R> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use expr::Reference;
+
+        let mdir = match self.direction() {
+            Some(PortDir::Read)         => "read",
+            Some(PortDir::Write)        => "write",
+            Some(PortDir::ReadWrite)    => "rdwr",
+            None                        => "infer",
+        };
+        write!(
+            f,
+            "{} mport {} {}[{}], {}",
+            mdir,
+            self.name(),
+            self.memory().name(),
+            self.address(),
+            self.clock()
+        )
+    }
+}
+
