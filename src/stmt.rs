@@ -194,7 +194,7 @@ impl Arbitrary for Statement {
             return Kind::Empty.into()
         }
 
-        let opts: [&dyn Fn(&mut Gen) -> Kind; 9] = [
+        let opts: [&dyn Fn(&mut Gen) -> Kind; 10] = [
             &|g| {
                 let t = Type::arbitrary(g);
                 Kind::Connection{
@@ -216,6 +216,7 @@ impl Arbitrary for Statement {
                     .unwrap();
                     Kind::Declaration(Arc::new(e))
             },
+            &|g| Kind::SimpleMemDecl(Arbitrary::arbitrary(g)),
             &|g| Kind::Invalidate(expr_with_type(Type::arbitrary(g), expr::Flow::Source, g)),
             &|g| {
                 let t = GT::Analog(Arbitrary::arbitrary(g));
