@@ -27,6 +27,20 @@ fn parse_stmt(mut base: Indentation, original: Statement) -> Result<TestResult, 
         return Ok(TestResult::discard())
     }
 
+    let mut mems: Vec<_> = original
+        .declarations()
+        .filter_map(|e| if let Entity::SimpleMemPort(m) = e.as_ref() {
+            Some(m.memory().clone())
+        } else {
+            None
+        })
+        .collect();
+    mems.sort_unstable_by_key(|r| r.name().clone());
+    if mems.windows(2).any(|p| p[0].name() == p[1].name()) {
+        // We depend on memory names to be unique.
+        return Ok(TestResult::discard())
+    }
+
     let mut mods: Vec<_> = original.instantiations().map(|i| i.module().clone()).collect();
     mods.sort_unstable_by_key(|r| r.name().to_string());
     if mods.windows(2).any(|p| p[0].name() == p[1].name()) {
@@ -39,6 +53,7 @@ fn parse_stmt(mut base: Indentation, original: Statement) -> Result<TestResult, 
 
     let parser = move |i| super::parsers::stmt(
         |n| refs.binary_search_by_key(&n, |r| r.name()).ok().map(|i| refs[i].clone()),
+        |n| mems.binary_search_by_key(&n, |r| r.name()).ok().map(|i| mems[i].clone()),
         |n| mods.binary_search_by_key(&n, |r| r.name()).ok().map(|i| mods[i].clone()),
         i,
         &mut base
@@ -89,6 +104,7 @@ fn parse_stmts(mut base: Indentation, original: Statement) -> Result<TestResult,
 
     let parser = move |i| super::parsers::stmts(
         |n| ports.binary_search_by_key(&n, |r| r.name()).ok().map(|i| Arc::new(ports[i].clone().into())),
+        |_| None,
         |n| mods.binary_search_by_key(&n, |r| r.name()).ok().map(|i| mods[i].clone()),
         i,
         &mut base
@@ -119,6 +135,12 @@ fn parse_entity(mut base: Indentation, original: Entity) -> Result<TestResult, S
         return Ok(TestResult::discard())
     }
 
+    let mems = if let Entity::SimpleMemPort(m) = &original {
+        Some(m.memory().clone())
+    } else {
+        None
+    };
+
     let module = if let Entity::Instance(m) = &original {
         Some(m.module().clone())
     } else {
@@ -132,6 +154,7 @@ fn parse_entity(mut base: Indentation, original: Entity) -> Result<TestResult, S
 
     let parser = move |i| super::parsers::entity_decl(
         |n| refs.binary_search_by_key(&n, |r| r.name()).ok().map(|i| refs[i].clone()),
+        |n| mems.clone().filter(|m| m.name().as_ref() == n),
         |n| module.clone().filter(|m| m.name() == n),
         i,
         &mut base
