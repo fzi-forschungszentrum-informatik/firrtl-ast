@@ -227,3 +227,49 @@ impl<R: expr::Reference> fmt::Display for Port<R> {
     }
 }
 
+#[cfg(test)]
+impl<R: expr::tests::TypedRef + Clone + 'static> Arbitrary for Port<R> {
+    fn arbitrary(g: &mut Gen) -> Self {
+        use crate::tests::Identifier;
+        use expr::tests::{expr_with_type, source_flow};
+
+        Self::new(
+            Identifier::arbitrary(g),
+            Arbitrary::arbitrary(g),
+            Arbitrary::arbitrary(g),
+            expr_with_type(types::GroundType::UInt(Arbitrary::arbitrary(g)), source_flow(g), g),
+            expr_with_type(types::GroundType::Clock, source_flow(g), g),
+        )
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        use crate::tests::Identifier;
+        use expr::Reference;
+
+        let res = Identifier::from(self.name())
+            .shrink()
+            .map({
+                let m = self.memory().clone();
+                let d = self.direction().clone();
+                let a = self.address().clone();
+                let c = self.clock().clone();
+                move |n| Self::new(n, m.clone(), d, a.clone(), c.clone())
+            })
+            .chain(self.memory().shrink().map({
+                let n = self.name.clone();
+                let d = self.direction().clone();
+                let a = self.address().clone();
+                let c = self.clock().clone();
+                move |m| Self::new(n.clone(), m, d, a.clone(), c.clone())
+            }))
+            .chain(self.direction().shrink().map({
+                let n = self.name.clone();
+                let m = self.memory().clone();
+                let a = self.address().clone();
+                let c = self.clock().clone();
+                move |d| Self::new(n.clone(), m.clone(), d, a.clone(), c.clone())
+            }));
+        Box::new(res)
+    }
+}
+
