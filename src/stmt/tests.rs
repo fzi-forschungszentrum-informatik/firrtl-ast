@@ -251,6 +251,7 @@ pub fn stmt_exprs(stmt: &Statement) -> Vec<&Expression<Arc<Entity>>> {
         Kind::PartialConnection{from, to}       => vec![from, to],
         Kind::Empty                             => Default::default(),
         Kind::Declaration(entity)               => entity_exprs(entity.as_ref()),
+        Kind::SimpleMemDecl(_)                  => Default::default(),
         Kind::Invalidate(expr)                  => vec![expr],
         Kind::Attach(v)                         => v.iter().collect(),
         Kind::Conditional{cond, when, r#else}   => std::iter::once(cond)

@@ -18,6 +18,7 @@ use quickcheck::{Arbitrary, Gen};
 use crate::expr;
 use crate::indentation::{DisplayIndented, Indentation};
 use crate::info;
+use crate::memory::simple::Memory as SimpleMem;
 use crate::module;
 
 pub use entity::Entity;
@@ -149,6 +150,7 @@ impl DisplayIndented for Statement {
                 writeln!(f, "{}{} <- {}{}", indent.lock(), to, from, info),
             Kind::Empty                             => writeln!(f, "{}skip{}", indent.lock(), info),
             Kind::Declaration(entity)               => display::EntityDecl(entity, info).fmt(indent, f),
+            Kind::SimpleMemDecl(mem)                => writeln!(f, "{}{}{}", indent.lock(), mem, info),
             Kind::Invalidate(expr)                  => writeln!(f, "{}{} is invalid", indent.lock(), expr),
             Kind::Attach(exprs)                     =>
                 writeln!(f, "{}attach({}){}", indent.lock(), CommaSeparated::from(exprs), info),
@@ -335,6 +337,7 @@ pub enum Kind {
     PartialConnection{from: Expression, to: Expression},
     Empty,
     Declaration(Arc<Entity>),
+    SimpleMemDecl(Arc<SimpleMem>),
     Invalidate(Expression),
     Attach(Vec<Expression>),
     Conditional{cond: Expression, when: Arc<[Statement]>, r#else: Arc<[Statement]>},
