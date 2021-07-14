@@ -132,7 +132,7 @@ fn shrink_primitive_op<R: TypedRef + Clone>(
         // Comparisions mask operand types
         PO::Pad(e, _)           => vec![with_width(e, None)],
         // For casts, we only know the target type
-        PO::Shl(e, b)           => vec![with_width(e, r#type.width().and_then(|w| w.checked_sub(b.get())))],
+        PO::Shl(e, b)           => vec![with_width(e, r#type.width().and_then(|w| w.checked_sub(*b)))],
         PO::Shr(e, _)           => vec![with_width(e, None)],
         PO::DShl(e, b)          => vec![with_width(e, None), uint(b)],
         PO::DShr(e, b)          => vec![with_width(e, None), uint(b)],

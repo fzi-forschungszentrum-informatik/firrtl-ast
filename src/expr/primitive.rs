@@ -39,9 +39,9 @@ pub enum Operation<R: Reference> {
     /// Type cast
     Cast(Arc<Expression<R>>, types::GroundType),
     /// Shift left (static)
-    Shl(Arc<Expression<R>>, NonZeroU16),
+    Shl(Arc<Expression<R>>, u16),
     /// Shift right (static)
-    Shr(Arc<Expression<R>>, NonZeroU16),
+    Shr(Arc<Expression<R>>, u16),
     /// Shift left (dynamic)
     DShl(Arc<Expression<R>>, Arc<Expression<R>>),
     /// Shift right (dynamic)
@@ -191,12 +191,12 @@ impl<R> types::Typed for Operation<R>
                 .map(|t| t.with_width(max(t.width(), Some(bits.get())))),
             Self::Cast(sub, target)         => ground(sub).map(|t| target.with_width(t.width())),
             Self::Shl(sub, bits)            => ground(sub)
-                .map(|t| t.with_width(t.width().and_then(|w| w.checked_add(bits.get())))),
+                .map(|t| t.with_width(t.width().and_then(|w| w.checked_add(*bits)))),
             Self::Shr(sub, bits)            => ground(sub).and_then(|t| match t {
-                GT::UInt(w)                 => Ok(GT::UInt(w.map(|w| max(w.saturating_sub(bits.get()), 1)))),
-                GT::SInt(w)                 => Ok(GT::SInt(w.map(|w| max(w.saturating_sub(bits.get()), 1)))),
+                GT::UInt(w)                 => Ok(GT::UInt(w.map(|w| max(w.saturating_sub(*bits), 1)))),
+                GT::SInt(w)                 => Ok(GT::SInt(w.map(|w| max(w.saturating_sub(*bits), 1)))),
                 GT::Fixed(Some(w), Some(p)) => Ok(
-                    GT::Fixed(w.checked_sub(bits.get()).map(|w| max(w, max(p, 1) as u16)), Some(p))
+                    GT::Fixed(w.checked_sub(*bits).map(|w| max(w, max(p, 1) as u16)), Some(p))
                 ),
                 GT::Fixed(..)               => Ok(GT::Fixed(None, None)),
                 _ => Err(self.clone().into()),
