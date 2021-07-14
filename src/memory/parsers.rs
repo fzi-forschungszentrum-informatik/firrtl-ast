@@ -102,7 +102,7 @@ pub fn simple_mem_port<'i, R: Reference + Clone>(
             )),
             spaced(kw("mport")),
             spaced(identifier),
-            map_opt(spaced(identifier), |m| memory(m)),
+            map_opt(spaced(identifier), memory),
             spaced(op("[")),
             spaced(|i| expr(reference, i)),
             spaced(op("]")),
