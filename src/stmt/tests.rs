@@ -119,7 +119,7 @@ fn parse_entity(mut base: Indentation, original: Entity) -> Result<TestResult, S
         return Ok(TestResult::discard())
     }
 
-    let module: Option<_> = if let Entity::Instance(m) = &original {
+    let module = if let Entity::Instance(m) = &original {
         Some(m.module().clone())
     } else {
         None
@@ -132,7 +132,7 @@ fn parse_entity(mut base: Indentation, original: Entity) -> Result<TestResult, S
 
     let parser = move |i| super::parsers::entity_decl(
         |n| refs.binary_search_by_key(&n, |r| r.name()).ok().map(|i| refs[i].clone()),
-        |n| module.clone().and_then(|m| if m.name() == n { Some(m) } else { None }),
+        |n| module.clone().filter(|m| m.name() == n),
         i,
         &mut base
     );
