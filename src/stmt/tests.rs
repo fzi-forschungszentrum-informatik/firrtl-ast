@@ -9,6 +9,7 @@ use quickcheck::{Arbitrary, Gen, TestResult, Testable};
 
 use crate::expr::{self, Expression, Reference};
 use crate::indentation::{DisplayIndented, Indentation};
+use crate::memory::simple::Memory as SimpleMem;
 use crate::tests::{Equivalence, Identifier};
 
 use super::{Entity, Kind, Statement, print::PrintElement};
@@ -69,7 +70,11 @@ fn parse_stmt(mut base: Indentation, original: Statement) -> Result<TestResult, 
 
 #[quickcheck]
 fn parse_stmts(mut base: Indentation, original: Statement) -> Result<TestResult, String> {
-    let original = if let Some(stmts) = stmt_with_decls(original, &mut Default::default()) {
+    let original = if let Some(stmts) = stmt_with_decls(
+        original,
+        &mut Default::default(),
+        &mut Default::default()
+    ) {
         stmts
     } else {
         return Ok(TestResult::discard())
@@ -218,10 +223,11 @@ fn parse_optional_name(original: Option<Identifier>) -> Result<Equivalence<Optio
 /// potentially only contain a subset of the input.
 pub fn stmts_with_decls(statements: impl IntoIterator<Item = Statement>) -> impl Iterator<Item = Statement> {
     let mut entities = Default::default();
+    let mut memories = Default::default();
 
     statements
         .into_iter()
-        .map(move |s| stmt_with_decls(s, &mut entities))
+        .map(move |s| stmt_with_decls(s, &mut entities, &mut memories))
         .take_while(Option::is_some)
         .flat_map(|v| v.unwrap_or_default())
 }
@@ -234,30 +240,49 @@ pub fn stmts_with_decls(statements: impl IntoIterator<Item = Statement>) -> impl
 pub fn stmt_with_decls(
     statement: Statement,
     entities: &mut std::collections::HashMap<String, Arc<Entity>>,
+    memories: &mut std::collections::HashMap<Arc<str>, Arc<SimpleMem>>,
 ) -> Option<Vec<Statement>> {
     use std::collections::hash_map::Entry;
+
+    let mut new_decls = Default::default();
+
+    // Make sure memories used in port declarations are defined
+    if let Kind::Declaration(e) = statement.kind() {
+        if let Entity::SimpleMemPort(p) = e.as_ref() {
+            new_decls = stmt_with_decls(
+                Kind::SimpleMemDecl(p.memory().clone()).into(),
+                entities,
+                memories,
+            )?;
+        }
+    }
 
     let new_decls = stmt_exprs(&statement)
         .into_iter()
         .flat_map(Expression::references)
-        .try_fold(Vec::default(), |mut d, r| {
+        .try_fold(new_decls, |mut d, r| {
             match entities.entry(r.name().into()) {
                 Entry::Occupied(e) => if e.get() != r { return None }
                 Entry::Vacant(e) => {
                     e.insert(r.clone());
                     if r.is_declarable() {
-                        d.extend(stmt_with_decls(Kind::Declaration(r.clone()).into(), entities)?)
+                        d.extend(stmt_with_decls(Kind::Declaration(r.clone()).into(), entities, memories)?)
                     }
                 }
             };
             Some(d)
         });
 
-    if let Kind::Declaration(entity) = statement.kind() {
-        match entities.entry(entity.name().into()) {
+    match statement.kind() {
+        Kind::Declaration(entity) => match entities.entry(entity.name().into()) {
             Entry::Occupied(e) => if e.get() != entity { return None }
             Entry::Vacant(e) => { e.insert(entity.clone()); }
-        }
+        },
+        Kind::SimpleMemDecl(mem)  => match memories.entry(mem.name().clone()) {
+            Entry::Occupied(e) => if e.get() != mem { return None }
+            Entry::Vacant(e) => { e.insert(mem.clone()); }
+        },
+        _ => (),
     }
 
     new_decls.map(|mut v| {
