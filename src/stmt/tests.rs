@@ -214,8 +214,6 @@ pub fn stmt_with_decls(
 ) -> Option<Vec<Statement>> {
     use std::collections::hash_map::Entry;
 
-    entities.extend(statement.declarations().map(|d| (d.name().into(), d.clone())));
-
     let new_decls = stmt_exprs(&statement)
         .into_iter()
         .flat_map(Expression::references)
@@ -231,6 +229,13 @@ pub fn stmt_with_decls(
             };
             Some(d)
         });
+
+    if let Kind::Declaration(entity) = statement.kind() {
+        match entities.entry(entity.name().into()) {
+            Entry::Occupied(e) => if e.get() != entity { return None }
+            Entry::Vacant(e) => { e.insert(entity.clone()); }
+        }
+    }
 
     new_decls.map(|mut v| {
         v.push(statement);
