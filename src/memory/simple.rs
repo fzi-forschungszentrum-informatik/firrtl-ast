@@ -54,7 +54,7 @@ impl fmt::Display for Memory {
         let kind = self.kind();
         write!(f, "{} {}: {}", kind.keyword(), self.name(), self.data_type)?;
         if let Kind::Sequential(Some(ruw)) = kind {
-            write!(f, " {}", ruw)?;
+            write!(f, ", {}", ruw)?;
         }
         Ok(())
     }

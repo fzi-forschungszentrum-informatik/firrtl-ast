@@ -64,6 +64,8 @@ pub fn memory<'i>(
 
 /// Parse a simple memory
 pub fn simple_mem(input: &str) -> IResult<simple::Memory> {
+    use nom::sequence::preceded;
+
     use simple::Kind;
 
     #[derive(Copy, Clone, Debug)]
@@ -78,7 +80,7 @@ pub fn simple_mem(input: &str) -> IResult<simple::Memory> {
 
     let (input, kind) = match k {
         K::Cmem => (input, Kind::Combinatory),
-        K::Smem => map(opt(spaced(ruw)), |ruw| Kind::Sequential(ruw))(input)?,
+        K::Smem => map(opt(preceded(comma, spaced(ruw))), |ruw| Kind::Sequential(ruw))(input)?,
     };
     Ok((input, super::simple::Memory::new(name, r#type, kind)))
 }
