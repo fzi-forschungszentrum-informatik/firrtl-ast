@@ -69,8 +69,8 @@ impl<R: expr::Reference> expr::Reference for Register<R> {
         self.name.as_ref()
     }
 
-    fn flow(&self) -> expr::Flow {
-        expr::Flow::Duplex
+    fn flow(&self) -> Option<expr::Flow> {
+        Some(expr::Flow::Duplex)
     }
 }
 

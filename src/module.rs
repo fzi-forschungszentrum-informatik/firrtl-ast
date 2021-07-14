@@ -381,11 +381,11 @@ impl expr::Reference for Port {
         self.name.as_ref()
     }
 
-    fn flow(&self) -> expr::Flow {
-        match self.direction {
+    fn flow(&self) -> Option<expr::Flow> {
+        Some(match self.direction {
             Direction::Input  => expr::Flow::Source,
             Direction::Output => expr::Flow::Sink,
-        }
+        })
     }
 }
 
@@ -503,8 +503,8 @@ impl expr::Reference for Instance {
         self.name.as_ref()
     }
 
-    fn flow(&self) -> expr::Flow {
-        expr::Flow::Source
+    fn flow(&self) -> Option<expr::Flow> {
+        Some(expr::Flow::Source)
     }
 }
 

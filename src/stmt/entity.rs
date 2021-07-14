@@ -74,12 +74,12 @@ impl expr::Reference for Arc<Entity> {
         }
     }
 
-    fn flow(&self) -> expr::Flow {
+    fn flow(&self) -> Option<expr::Flow> {
         match self.as_ref() {
             Entity::Port(port)      => port.flow(),
-            Entity::Wire{..}        => expr::Flow::Duplex,
+            Entity::Wire{..}        => Some(expr::Flow::Duplex),
             Entity::Register(reg)   => reg.flow(),
-            Entity::Node{..}        => expr::Flow::Source,
+            Entity::Node{..}        => Some(expr::Flow::Source),
             Entity::Memory(mem)     => mem.flow(),
             Entity::Instance(inst)  => inst.flow(),
         }

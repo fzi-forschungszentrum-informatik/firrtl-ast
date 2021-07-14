@@ -1,7 +1,7 @@
 //! Parsers related to memory elements
 
 use nom::branch::alt;
-use nom::combinator::{iterator, map, opt, value};
+use nom::combinator::{iterator, map, map_opt, opt, value};
 use nom::sequence::tuple;
 
 use crate::expr::{Reference, parsers::expr};
@@ -11,7 +11,7 @@ use crate::types::Type;
 use crate::types::parsers::r#type;
 use crate::info::parse as info;
 
-use super::mem;
+use super::{common, mem, simple};
 
 
 /// Parse a Memory
@@ -59,6 +59,58 @@ pub fn memory<'i>(
     }
 
     entries.finish().map(|(i, _)| (i, (res, info)))
+}
+
+
+/// Parse a simple memory
+pub fn simple_mem(input: &str) -> IResult<simple::Memory> {
+    use simple::Kind;
+
+    #[derive(Copy, Clone, Debug)]
+    enum K {Cmem, Smem}
+
+    let (input, (k, name, _, r#type)) = tuple((
+        alt((value(K::Cmem, kw("cmem")), value(K::Smem, kw("smem")))),
+        spaced(identifier),
+        spaced(op(":")),
+        spaced(r#type),
+    ))(input)?;
+
+    let (input, kind) = match k {
+        K::Cmem => (input, Kind::Combinatory),
+        K::Smem => map(opt(spaced(ruw)), |ruw| Kind::Sequential(ruw))(input)?,
+    };
+    Ok((input, super::simple::Memory::new(name, r#type, kind)))
+}
+
+
+/// Parse a simple memory port
+pub fn simple_mem_port<'i, R: Reference + Clone>(
+    memory: impl Fn(&str) -> Option<std::sync::Arc<simple::Memory>> + Copy,
+    reference: impl Fn(&str) -> Option<R> + Copy,
+    input: &'i str
+) -> IResult<'i, simple::Port<R>> {
+    use common::PortDir as D;
+
+    map(
+        tuple((
+            alt((
+                value(Some(D::Read),        kw("read")),
+                value(Some(D::Write),       kw("write")),
+                value(Some(D::ReadWrite),   kw("rdwr")),
+                value(None,                 kw("infer")),
+            )),
+            spaced(kw("mport")),
+            spaced(identifier),
+            map_opt(spaced(identifier), |m| memory(m)),
+            spaced(op("[")),
+            spaced(|i| expr(reference, i)),
+            spaced(op("]")),
+            spaced(opt(op(","))),
+            spaced(|i| expr(reference, i)),
+        )),
+        |(dir, _, name, mem, _, addr, _, _, clock)| simple::Port::new(name, mem, dir, addr, clock)
+    )(input)
 }
 
 

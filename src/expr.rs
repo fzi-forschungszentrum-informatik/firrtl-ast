@@ -46,7 +46,7 @@ where Self: Typed<Type = types::Type, Err = Expression<R>> + Clone,
     /// Determine the flow of this expression
     pub fn flow(&self) -> Result<Flow, <Self as types::Typed>::Err> {
         match self {
-            Self::Reference(reference)  => Ok(reference.flow()),
+            Self::Reference(reference)  => reference.flow().ok_or(self.clone()),
             Self::SubField{base, index} => base.flow().and_then(|f| base
                 .r#type()
                 .and_then(|b| b.field(index.as_ref()).map(|b| f + b.orientation()).ok_or(self.clone()))
@@ -154,7 +154,10 @@ pub trait Reference {
     fn name(&self) -> &str;
 
     /// Retrieve the flow associated with the referenced entity
-    fn flow(&self) -> Flow;
+    ///
+    /// This function returns the flow associated with the entity or `None` if
+    /// the flow undetermined.
+    fn flow(&self) -> Option<Flow>;
 }
 
 #[cfg(test)]
@@ -163,8 +166,8 @@ impl Reference for Identifier {
         self.as_ref()
     }
 
-    fn flow(&self) -> Flow {
-        Flow::Duplex
+    fn flow(&self) -> Option<Flow> {
+        Some(Flow::Duplex)
     }
 }
 

@@ -118,8 +118,8 @@ impl expr::Reference for Memory {
         self.name.as_ref()
     }
 
-    fn flow(&self) -> expr::Flow {
-        expr::Flow::Source
+    fn flow(&self) -> Option<expr::Flow> {
+        Some(expr::Flow::Source)
     }
 }
 
