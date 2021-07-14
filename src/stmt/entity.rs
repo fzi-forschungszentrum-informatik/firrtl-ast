@@ -165,7 +165,7 @@ impl Arbitrary for Entity {
 
         use expr::tests::{expr_with_type, source_flow};
 
-        let opts: [&dyn Fn(&mut Gen) -> Entity; 6] = [
+        let opts: [&dyn Fn(&mut Gen) -> Entity; 7] = [
             &|g| Arc::new(module::Port::arbitrary(g)).into(),
             &|g| Entity::Wire{name: Identifier::arbitrary(g).into(), r#type: Arbitrary::arbitrary(g)},
             &|g| Register::arbitrary(g).into(),
@@ -174,6 +174,7 @@ impl Arbitrary for Entity {
                 value: expr_with_type(types::Type::arbitrary(g), source_flow(g), g)
             },
             &|g| Memory::arbitrary(g).into(),
+            &|g| simple_mem::Port::arbitrary(g).into(),
             &|g| module::Instance::arbitrary(g).into(),
         ];
 
