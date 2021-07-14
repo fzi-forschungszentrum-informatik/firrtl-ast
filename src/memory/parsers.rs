@@ -102,6 +102,7 @@ pub fn simple_mem_port<'i, R: Reference + Clone>(
             )),
             spaced(kw("mport")),
             spaced(identifier),
+            spaced(op("=")),
             map_opt(spaced(identifier), memory),
             spaced(op("[")),
             spaced(|i| expr(reference, i)),
@@ -109,7 +110,7 @@ pub fn simple_mem_port<'i, R: Reference + Clone>(
             spaced(opt(op(","))),
             spaced(|i| expr(reference, i)),
         )),
-        |(dir, _, name, mem, _, addr, _, _, clock)| simple::Port::new(name, mem, dir, addr, clock)
+        |(dir, _, name, _, mem, _, addr, _, _, clock)| simple::Port::new(name, mem, dir, addr, clock)
     )(input)
 }
 

@@ -217,7 +217,7 @@ impl<R: expr::Reference> fmt::Display for Port<R> {
         };
         write!(
             f,
-            "{} mport {} {}[{}], {}",
+            "{} mport {} = {}[{}], {}",
             mdir,
             self.name(),
             self.memory().name(),
