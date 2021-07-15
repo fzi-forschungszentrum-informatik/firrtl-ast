@@ -26,6 +26,13 @@ pub trait Context {
 
     /// Retrieve the module with the given name
     fn module(&self, name: &str) -> Option<Arc<Module>>;
+
+    /// Create a SubContext for this Context
+    fn sub(&mut self) -> SubContext
+    where Self: Sized
+    {
+        SubContext::of(self)
+    }
 }
 
 
