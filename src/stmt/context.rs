@@ -86,3 +86,46 @@ impl<M: Fn(&str) -> Option<Arc<Module>>> Context for TopContext<M> {
     }
 }
 
+
+/// Sub-Context
+///
+/// A `SubContext` is linked to another `Context`. While all items in the parent
+/// `Context` are visible via associated `SubContext`s, each `SubContext` keeps
+/// its own `Entity`s and `Memory`s and priotizes them during lookup.
+pub struct SubContext<'p> {
+    parent: &'p dyn Context,
+    entities: HashMap<Arc<str>, Arc<Entity>>,
+    memories: HashMap<Arc<str>, Arc<SimpleMem>>,
+}
+
+impl<'p> SubContext<'p> {
+    /// Create a new `SubContext` of the given parent
+    pub fn of(parent: &'p mut dyn Context) -> Self {
+        Self {parent, entities: Default::default(), memories: Default::default()}
+    }
+}
+
+impl<'p> Context for SubContext<'p> {
+    fn entity(&self, name: &str) -> Option<Arc<Entity>> {
+        self.entities.get(name).cloned().or_else(|| self.parent.entity(name))
+    }
+
+    fn add_entity(&mut self, entity: Arc<Entity>) {
+        use crate::expr::Reference;
+
+        self.entities.insert(entity.name().into(), entity);
+    }
+
+    fn memory(&self, name: &str) -> Option<Arc<SimpleMem>> {
+        self.memories.get(name).cloned().or_else(|| self.parent.memory(name))
+    }
+
+    fn add_memory(&mut self, memory: Arc<SimpleMem>) {
+        self.memories.insert(memory.name().clone(), memory);
+    }
+
+    fn module(&self, name: &str) -> Option<Arc<Module>> {
+        self.parent.module(name)
+    }
+}
+
