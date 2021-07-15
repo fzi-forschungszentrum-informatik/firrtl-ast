@@ -72,7 +72,7 @@ pub fn stmt<'i>(
 
     let expr = |i| expr(reference, i);
 
-    let (input, (indent, stmt)) = alt((
+    let res = alt((
         map(
             tuple((indent.clone(), &expr, spaced(op("<=")), spaced(&expr), info, le)),
             |(i, to, _, from, info, _)| (i, S::from(Kind::Connection{from, to}).with_info(info)),
@@ -101,13 +101,6 @@ pub fn stmt<'i>(
             tuple((indent.clone(), kw("attach"), lp, separated_list1(comma, spaced(&expr)), rp, info, le)),
             |(i, _, _, e, _, info, _)| (i, S::from(Kind::Attach(e)).with_info(info)),
         ),
-        |i| {
-            use nom::Parser;
-
-            let (i, mut indent) = indent.clone().parse(i)?;
-            indented_condition(&reference, &memref, module, i, &mut indent)
-                .map(|(i, stmt)| (i, (indent, stmt)))
-        },
         map(
             tuple((
                 indent.clone(),
@@ -155,7 +148,15 @@ pub fn stmt<'i>(
             |(i, _, _, clock, _, cond, _, msg, _, name, info, ..)|
                 (i, S::from(Kind::Print{name, clock, cond, msg}).with_info(info)),
         ),
-    ))(input)?;
+    ))(input);
+
+    let (input, (indent, stmt)) = res.or_else(|_| {
+        use nom::Parser;
+
+        let (i, mut indent) = indent.clone().parse(input)?;
+        indented_condition(&reference, &memref, module, i, &mut indent)
+            .map(|(i, stmt)| (i, (indent, stmt)))
+    })?;
 
     *indentation = indent;
 
