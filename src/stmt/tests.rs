@@ -56,13 +56,8 @@ fn parse_stmt(mut base: Indentation, original: Statement) -> Result<TestResult, 
     let mut s: String = Default::default();
     original.fmt(&mut base, &mut s).map_err(|e| e.to_string())?;
 
-    let parser = move |i| super::parsers::stmt(
-        |n| refs.binary_search_by_key(&n, |r| r.name()).ok().map(|i| refs[i].clone()),
-        |n| mems.binary_search_by_key(&n, |r| r.name()).ok().map(|i| mems[i].clone()),
-        |n| mods.binary_search_by_key(&n, |r| r.name()).ok().map(|i| mods[i].clone()),
-        i,
-        &mut base
-    );
+    let mut ctx = BinSearchCtx {refs, mems, mods};
+    let parser = move |i| super::parsers::stmt(&mut ctx, i, &mut base);
 
     let res = all_consuming(parser)(&s)
         .finish()
@@ -112,13 +107,12 @@ fn parse_stmts(mut base: Indentation, original: Statement) -> Result<TestResult,
     let mut buf: String = Default::default();
     original.iter().try_for_each(|s| s.fmt(&mut base, &mut buf)).map_err(|e| e.to_string())?;
 
-    let parser = move |i| super::parsers::stmts(
-        |n| ports.binary_search_by_key(&n, |r| r.name()).ok().map(|i| Arc::new(ports[i].clone().into())),
-        |_| None,
-        |n| mods.binary_search_by_key(&n, |r| r.name()).ok().map(|i| mods[i].clone()),
-        i,
-        &mut base
-    );
+    let mut ctx = BinSearchCtx {
+        refs: ports.into_iter().map(Into::into).map(Arc::new).collect(),
+        mems: Default::default(),
+        mods
+    };
+    let parser = move |i| super::parsers::stmts(ctx.sub(), i, &mut base);
 
     let res = all_consuming(parser)(&buf)
         .finish()
@@ -146,15 +140,15 @@ fn parse_entity(mut base: Indentation, original: Entity) -> Result<TestResult, S
     }
 
     let mems = if let Entity::SimpleMemPort(m) = &original {
-        Some(m.memory().clone())
+        vec![m.memory().clone()]
     } else {
-        None
+        Default::default()
     };
 
-    let module = if let Entity::Instance(m) = &original {
-        Some(m.module().clone())
+    let mods = if let Entity::Instance(m) = &original {
+        vec![m.module().clone()]
     } else {
-        None
+        Default::default()
     };
 
     let mut s: String = Default::default();
@@ -162,13 +156,8 @@ fn parse_entity(mut base: Indentation, original: Entity) -> Result<TestResult, S
         .fmt(&mut base, &mut s)
         .map_err(|e| e.to_string())?;
 
-    let parser = move |i| super::parsers::entity_decl(
-        |n| refs.binary_search_by_key(&n, |r| r.name()).ok().map(|i| refs[i].clone()),
-        |n| mems.clone().filter(|m| m.name().as_ref() == n),
-        |n| module.clone().filter(|m| m.name() == n),
-        i,
-        &mut base
-    );
+    let ctx = BinSearchCtx {refs, mems, mods};
+    let parser = move |i| super::parsers::entity_decl(&ctx, i, &mut base);
 
     let res = all_consuming(parser)(&s)
         .finish()

@@ -14,39 +14,25 @@ use crate::expr::parsers::expr;
 use crate::indentation::Indentation;
 use crate::info::{WithInfo, parse as info};
 use crate::memory::parsers::{memory, register, simple_mem, simple_mem_port};
-use crate::memory::simple::Memory as SimpleMem;
-use crate::module::Module;
 use crate::module::parsers::instance;
 use crate::parsers::{IResult, comma, decimal, identifier, kw, le, lp, op, rp, spaced};
 use crate::types::parsers::r#type;
 
-use super::print;
+use super::{context::Context, print};
 
 
 /// Parser for sequences of statements
 pub fn stmts<'i>(
-    reference: impl Fn(&str) -> Option<std::sync::Arc<super::Entity>>,
-    memref: impl Fn(&str) -> Option<std::sync::Arc<SimpleMem>> + Copy,
-    module: impl Fn(&str) -> Option<std::sync::Arc<Module>> + Copy,
+    mut ctx: impl Context,
     mut input: &'i str,
     indentation: &'_ mut Indentation,
 ) -> IResult<'i, Vec<super::Statement>> {
-    use crate::expr::Reference;
-
     let mut res: Vec<super::Statement> = Default::default();
-    let mut entities: std::collections::HashMap<String, Arc<super::Entity>> = Default::default();
-    let mut memories: std::collections::HashMap<Arc<str>, Arc<SimpleMem>> = Default::default();
 
-    while let Ok((i, stmt)) = stmt(
-        |n| entities.get(n).cloned().or_else(|| reference(n)),
-        |n| memories.get(n).cloned().or_else(|| memref(n)),
-        module,
-        input,
-        indentation,
-    ) {
+    while let Ok((i, stmt)) = stmt(&mut ctx, input, indentation) {
         match stmt.as_ref() {
-            super::Kind::Declaration(e)     => { entities.insert(e.name().to_string(), e.clone()); },
-            super::Kind::SimpleMemDecl(m)   => { memories.insert(m.name().clone(), m.clone()); },
+            super::Kind::Declaration(e)     => ctx.add_entity(e.clone()),
+            super::Kind::SimpleMemDecl(m)   => ctx.add_memory(m.clone()),
             _ => (),
         }
         res.push(stmt);
@@ -59,9 +45,7 @@ pub fn stmts<'i>(
 
 /// Parser for individual statements
 pub fn stmt<'i>(
-    reference: impl Fn(&str) -> Option<std::sync::Arc<super::Entity>> + Copy,
-    memref: impl Fn(&str) -> Option<std::sync::Arc<SimpleMem>> + Copy,
-    module: impl Fn(&str) -> Option<std::sync::Arc<Module>> + Copy,
+    ctx: &'_ mut impl Context,
     input: &'i str,
     indentation: &'_ mut Indentation,
 ) -> IResult<'i, super::Statement> {
@@ -70,7 +54,7 @@ pub fn stmt<'i>(
 
     let indent = indentation.clone().into_parser();
 
-    let expr = |i| expr(reference, i);
+    let expr = |i| expr(|n| ctx.entity(n), i);
 
     let res = alt((
         map(
@@ -86,7 +70,7 @@ pub fn stmt<'i>(
             |(i, _, info, ..)| (i, S::from(Kind::Empty).with_info(info))),
         |i| {
             let mut indent = indent.clone().into();
-            entity_decl(reference, memref, module, i, &mut indent)
+            entity_decl(ctx, i, &mut indent)
                 .map(|(i, (e, info))| (i, (indent, S::from(Kind::Declaration(Arc::new(e))).with_info(info))))
         },
         map(
@@ -154,8 +138,7 @@ pub fn stmt<'i>(
         use nom::Parser;
 
         let (i, mut indent) = indent.clone().parse(input)?;
-        indented_condition(&reference, &memref, module, i, &mut indent)
-            .map(|(i, stmt)| (i, (indent, stmt)))
+        indented_condition(ctx, i, &mut indent).map(|(i, stmt)| (i, (indent, stmt)))
     })?;
 
     *indentation = indent;
@@ -170,24 +153,22 @@ pub fn stmt<'i>(
 /// `when` right at the beginning of the input and aussumes that is matches the
 /// given indentation.
 fn indented_condition<'i>(
-    reference: &dyn Fn(&str) -> Option<std::sync::Arc<super::Entity>>,
-    memref: &dyn Fn(&str) -> Option<std::sync::Arc<SimpleMem>>,
-    module: impl Fn(&str) -> Option<std::sync::Arc<Module>> + Copy,
+    ctx: &'_ mut impl Context,
     input: &'i str,
     indentation: &mut Indentation,
 ) -> IResult<'i, super::Statement> {
     let (input, (cond, when_info)) = map(
-        tuple((kw("when"), spaced(|i| expr(reference, i)), spaced(op(":")), info, le)),
+        tuple((kw("when"), spaced(|i| expr(|n| ctx.entity(n), i)), spaced(op(":")), info, le)),
         |(_, e, _, info, ..)| (e, info),
     )(input)?;
 
-    let (input, when) = stmts(&reference, memref, module, input, &mut indentation.sub())?;
+    let (input, when) = stmts(ctx.sub(), input, &mut indentation.sub())?;
 
     let (input, r#else) = if let Ok((i, _)) = tuple((indentation.clone().parser(), kw("else")))(input) {
         if let Ok((i, _)) = tuple((spaced(op(":")), info, le))(i) {
-            stmts(reference, memref, module, i, &mut indentation.sub())
+            stmts(ctx.sub(), i, &mut indentation.sub())
         } else {
-            map(spaced(|i| indented_condition(reference, memref, module, i, indentation)), |s| vec![s],)(i)
+            map(spaced(|i| indented_condition(&mut ctx.sub(), i, indentation)), |s| vec![s],)(i)
         }?
     } else {
         (input, Default::default())
@@ -200,9 +181,7 @@ fn indented_condition<'i>(
 
 /// Parser for entity declarations
 pub fn entity_decl<'i>(
-    reference: impl Fn(&str) -> Option<std::sync::Arc<super::Entity>> + Copy,
-    memref: impl Fn(&str) -> Option<std::sync::Arc<SimpleMem>> + Copy,
-    module: impl Fn(&str) -> Option<std::sync::Arc<Module>> + Copy,
+    ctx: &'_ impl Context,
     input: &'i str,
     indentation: &'_ mut Indentation,
 ) -> IResult<'i, (super::Entity, Option<String>)> {
@@ -217,7 +196,7 @@ pub fn entity_decl<'i>(
             |(i, _, n, _, r#type, info, _)| (i, super::Entity::Wire{name: n.into(), r#type}, info)
         ),
         map(
-            tuple((indent.clone(), |i| register(reference, i), info, le)),
+            tuple((indent.clone(), |i| register(|n| ctx.entity(n), i), info, le)),
             |(i, r, info, _)| (i, r.into(), info)
         ),
         map(
@@ -226,7 +205,7 @@ pub fn entity_decl<'i>(
                 kw("node"),
                 &ident,
                 spaced(op("=")),
-                spaced(|i| expr(reference, i)),
+                spaced(|i| expr(|n| ctx.entity(n), i)),
                 info,
                 le
             )),
@@ -237,11 +216,11 @@ pub fn entity_decl<'i>(
             memory(i, &mut indent).map(|(i, (m, info))| (i, (indent, m.into(), info)))
         },
         map(
-            tuple((indent.clone(), |i| simple_mem_port(memref, reference, i), info, le)),
+            tuple((indent.clone(), |i| simple_mem_port(|n| ctx.memory(n), |n| ctx.entity(n), i), info, le)),
             |(i, r, info, _)| (i, r.into(), info)
         ),
         map(
-            tuple((indent.clone(), |i| instance(module, i), info, le)),
+            tuple((indent.clone(), |i| instance(|n| ctx.module(n), i), info, le)),
             |(i, inst, info, _)| (i, inst.into(), info)
         ),
     ))(input)?;
