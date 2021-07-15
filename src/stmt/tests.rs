@@ -10,9 +10,10 @@ use quickcheck::{Arbitrary, Gen, TestResult, Testable};
 use crate::expr::{self, Expression, Reference};
 use crate::indentation::{DisplayIndented, Indentation};
 use crate::memory::simple::Memory as SimpleMem;
+use crate::module::Module;
 use crate::tests::{Equivalence, Identifier};
 
-use super::{Entity, Kind, Statement, print::PrintElement};
+use super::{Entity, Kind, Statement, context::Context, print::PrintElement};
 
 
 #[quickcheck]
@@ -426,6 +427,33 @@ impl Arbitrary for FormatString {
             _ => true,
         })).map(Into::into);
         Box::new(res)
+    }
+}
+
+
+/// A bunch of sorted `Vec`s as a Context
+#[derive(Clone)]
+struct BinSearchCtx {
+    pub refs: Vec<Arc<Entity>>,
+    pub mems: Vec<Arc<SimpleMem>>,
+    pub mods: Vec<Arc<Module>>,
+}
+
+impl Context for BinSearchCtx {
+    fn entity(&self, name: &str) -> Option<Arc<Entity>> {
+        self.refs.binary_search_by_key(&name, |r| r.name()).ok().map(|i| self.refs[i].clone())
+    }
+
+    fn add_entity(&mut self, _: Arc<Entity>) {}
+
+    fn memory(&self, name: &str) -> Option<Arc<SimpleMem>> {
+        self.mems.binary_search_by_key(&name, |r| r.name()).ok().map(|i| self.mems[i].clone())
+    }
+
+    fn add_memory(&mut self, _: Arc<SimpleMem>) {}
+
+    fn module(&self, name: &str) -> Option<Arc<Module>> {
+        self.mods.binary_search_by_key(&name, |r| r.name()).ok().map(|i| self.mods[i].clone())
     }
 }
 
