@@ -3,6 +3,7 @@
 pub(crate) mod display;
 pub(crate) mod parsers;
 
+pub mod context;
 pub mod entity;
 pub mod print;
 
