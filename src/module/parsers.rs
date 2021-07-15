@@ -115,6 +115,7 @@ pub fn module<'i>(
                     .iter()
                     .find(|p| p.name.as_ref() == n)
                     .map(|p| Arc::new(p.clone().into())),
+                |_| None,
                 module,
                 input,
                 &mut indentation,

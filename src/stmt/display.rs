@@ -25,6 +25,7 @@ impl DisplayIndented for EntityDecl<'_> {
             E::Node{name, value}    =>
                 writeln!(f, "{}node {} = {}{}", indentation.lock(), name, value, self.1),
             E::Memory(mem)          => MemoryDecl(mem, self.1.clone()).fmt(indentation, f),
+            E::SimpleMemPort(port)  => writeln!(f, "{}{}{}", indentation.lock(), port, self.1),
             E::Instance(inst)       => writeln!(f, "{}{}{}", indentation.lock(), inst, self.1),
         }
     }

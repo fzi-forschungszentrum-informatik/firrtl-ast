@@ -18,6 +18,7 @@ use quickcheck::{Arbitrary, Gen};
 use crate::expr;
 use crate::indentation::{DisplayIndented, Indentation};
 use crate::info;
+use crate::memory::simple::Memory as SimpleMem;
 use crate::module;
 
 pub use entity::Entity;
@@ -149,6 +150,7 @@ impl DisplayIndented for Statement {
                 writeln!(f, "{}{} <- {}{}", indent.lock(), to, from, info),
             Kind::Empty                             => writeln!(f, "{}skip{}", indent.lock(), info),
             Kind::Declaration(entity)               => display::EntityDecl(entity, info).fmt(indent, f),
+            Kind::SimpleMemDecl(mem)                => writeln!(f, "{}{}{}", indent.lock(), mem, info),
             Kind::Invalidate(expr)                  => writeln!(f, "{}{} is invalid", indent.lock(), expr),
             Kind::Attach(exprs)                     =>
                 writeln!(f, "{}attach({}){}", indent.lock(), CommaSeparated::from(exprs), info),
@@ -192,7 +194,7 @@ impl Arbitrary for Statement {
             return Kind::Empty.into()
         }
 
-        let opts: [&dyn Fn(&mut Gen) -> Kind; 9] = [
+        let opts: [&dyn Fn(&mut Gen) -> Kind; 10] = [
             &|g| {
                 let t = Type::arbitrary(g);
                 Kind::Connection{
@@ -214,6 +216,7 @@ impl Arbitrary for Statement {
                     .unwrap();
                     Kind::Declaration(Arc::new(e))
             },
+            &|g| Kind::SimpleMemDecl(Arbitrary::arbitrary(g)),
             &|g| Kind::Invalidate(expr_with_type(Type::arbitrary(g), expr::Flow::Source, g)),
             &|g| {
                 let t = GT::Analog(Arbitrary::arbitrary(g));
@@ -335,6 +338,7 @@ pub enum Kind {
     PartialConnection{from: Expression, to: Expression},
     Empty,
     Declaration(Arc<Entity>),
+    SimpleMemDecl(Arc<SimpleMem>),
     Invalidate(Expression),
     Attach(Vec<Expression>),
     Conditional{cond: Expression, when: Arc<[Statement]>, r#else: Arc<[Statement]>},
