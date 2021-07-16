@@ -238,11 +238,27 @@ pub fn stmts_with_decls(statements: impl IntoIterator<Item = Statement>) -> impl
 /// This function prepends the given statement with all declarations necessary
 /// for it to be valid. If this is not possible, the function returns `None`.
 pub fn stmt_with_decls(
-    statement: Statement,
+    mut statement: Statement,
     entities: &mut std::collections::HashMap<String, Arc<Entity>>,
     memories: &mut std::collections::HashMap<Arc<str>, Arc<SimpleMem>>,
 ) -> Option<Vec<Statement>> {
-    use std::collections::hash_map::Entry;
+    use std::collections::hash_map::{Entry, HashMap};
+
+    use crate::info::WithInfo;
+
+    fn stmts_with_decls(
+        stmts: &[Statement],
+        entities: &mut HashMap<String, Arc<Entity>>,
+        memories: &mut HashMap<Arc<str>, Arc<SimpleMem>>,
+    ) -> Arc<[Statement]> {
+        stmts
+            .iter()
+            .cloned()
+            .map(|s| stmt_with_decls(s, entities, memories))
+            .take_while(Option::is_some)
+            .flat_map(|v| v.unwrap_or_default())
+            .collect()
+    }
 
     let mut new_decls = Default::default();
 
@@ -274,13 +290,24 @@ pub fn stmt_with_decls(
         });
 
     match statement.kind() {
-        Kind::Declaration(entity) => match entities.entry(entity.name().into()) {
+        Kind::Declaration(entity)       => match entities.entry(entity.name().into()) {
             Entry::Occupied(e) => if e.get() != entity { return None }
             Entry::Vacant(e) => { e.insert(entity.clone()); }
         },
-        Kind::SimpleMemDecl(mem)  => match memories.entry(mem.name().clone()) {
+        Kind::SimpleMemDecl(mem)        => match memories.entry(mem.name().clone()) {
             Entry::Occupied(e) => if e.get() != mem { return None }
             Entry::Vacant(e) => { e.insert(mem.clone()); }
+        },
+        Kind::Conditional{cond, when, r#else} => {
+            let mut when = stmts_with_decls(when.as_ref(), entities, memories);
+            if when.is_empty() {
+                // The when branch must not be empty
+                when = vec![Kind::Empty.into()].into();
+            }
+            let r#else = stmts_with_decls(r#else.as_ref(), entities, memories);
+            let info = statement.info().map(Into::into);
+            statement = Statement::from(Kind::Conditional{cond: cond.clone(), when, r#else})
+                .with_info(info)
         },
         _ => (),
     }
