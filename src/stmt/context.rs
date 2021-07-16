@@ -92,8 +92,10 @@ impl<M: Fn(&str) -> Option<Arc<Module>>> Context for TopContext<M> {
 /// A `SubContext` is linked to another `Context`. While all items in the parent
 /// `Context` are visible via associated `SubContext`s, each `SubContext` keeps
 /// its own `Entity`s and `Memory`s and priotizes them during lookup.
+///
+/// When dropped, all items accumulated are added to the parent `Context`.
 pub struct SubContext<'p> {
-    parent: &'p dyn Context,
+    parent: &'p mut dyn Context,
     entities: HashMap<Arc<str>, Arc<Entity>>,
     memories: HashMap<Arc<str>, Arc<SimpleMem>>,
 }
@@ -126,6 +128,15 @@ impl<'p> Context for SubContext<'p> {
 
     fn module(&self, name: &str) -> Option<Arc<Module>> {
         self.parent.module(name)
+    }
+}
+
+impl Drop for SubContext<'_> {
+    fn drop(&mut self) {
+        use std::mem::take;
+
+        take(&mut self.entities).into_iter().for_each(|(_, e)| self.parent.add_entity(e));
+        take(&mut self.memories).into_iter().for_each(|(_, m)| self.parent.add_memory(m));
     }
 }
 
