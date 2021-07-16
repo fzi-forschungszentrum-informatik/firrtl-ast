@@ -17,8 +17,11 @@ use super::{Entity, Kind, Statement, print::PrintElement};
 
 #[quickcheck]
 fn parse_stmt(mut base: Indentation, original: Statement) -> Result<TestResult, String> {
-    let mut refs: Vec<_> = stmt_exprs(&original)
-        .into_iter()
+    use transiter::AutoTransIter;
+
+    let mut refs: Vec<_> = original
+        .trans_iter()
+        .flat_map(stmt_exprs)
         .flat_map(Expression::references)
         .cloned()
         .collect();
@@ -82,6 +85,7 @@ fn parse_stmts(mut base: Indentation, original: Statement) -> Result<TestResult,
 
     let mut ports: Vec<_> = original
         .iter()
+        .flat_map(transiter::AutoTransIter::trans_iter)
         .flat_map(stmt_exprs)
         .into_iter()
         .flat_map(Expression::references)
@@ -238,11 +242,27 @@ pub fn stmts_with_decls(statements: impl IntoIterator<Item = Statement>) -> impl
 /// This function prepends the given statement with all declarations necessary
 /// for it to be valid. If this is not possible, the function returns `None`.
 pub fn stmt_with_decls(
-    statement: Statement,
+    mut statement: Statement,
     entities: &mut std::collections::HashMap<String, Arc<Entity>>,
     memories: &mut std::collections::HashMap<Arc<str>, Arc<SimpleMem>>,
 ) -> Option<Vec<Statement>> {
-    use std::collections::hash_map::Entry;
+    use std::collections::hash_map::{Entry, HashMap};
+
+    use crate::info::WithInfo;
+
+    fn stmts_with_decls(
+        stmts: &[Statement],
+        entities: &mut HashMap<String, Arc<Entity>>,
+        memories: &mut HashMap<Arc<str>, Arc<SimpleMem>>,
+    ) -> Arc<[Statement]> {
+        stmts
+            .iter()
+            .cloned()
+            .map(|s| stmt_with_decls(s, entities, memories))
+            .take_while(Option::is_some)
+            .flat_map(|v| v.unwrap_or_default())
+            .collect()
+    }
 
     let mut new_decls = Default::default();
 
@@ -274,13 +294,24 @@ pub fn stmt_with_decls(
         });
 
     match statement.kind() {
-        Kind::Declaration(entity) => match entities.entry(entity.name().into()) {
+        Kind::Declaration(entity)       => match entities.entry(entity.name().into()) {
             Entry::Occupied(e) => if e.get() != entity { return None }
             Entry::Vacant(e) => { e.insert(entity.clone()); }
         },
-        Kind::SimpleMemDecl(mem)  => match memories.entry(mem.name().clone()) {
+        Kind::SimpleMemDecl(mem)        => match memories.entry(mem.name().clone()) {
             Entry::Occupied(e) => if e.get() != mem { return None }
             Entry::Vacant(e) => { e.insert(mem.clone()); }
+        },
+        Kind::Conditional{cond, when, r#else} => {
+            let mut when = stmts_with_decls(when.as_ref(), entities, memories);
+            if when.is_empty() {
+                // The when branch must not be empty
+                when = vec![Kind::Empty.into()].into();
+            }
+            let r#else = stmts_with_decls(r#else.as_ref(), entities, memories);
+            let info = statement.info().map(Into::into);
+            statement = Statement::from(Kind::Conditional{cond: cond.clone(), when, r#else})
+                .with_info(info)
         },
         _ => (),
     }
@@ -292,22 +323,22 @@ pub fn stmt_with_decls(
 }
 
 
-/// Retrieve all expressions occuring in a statement
+/// Retrieve all expressions occuring immediately in a statement
+///
+/// For conditional statements, this function will only yield the condition. It
+/// will not recurse into branches.
 pub fn stmt_exprs(stmt: &Statement) -> Vec<&Expression<Arc<Entity>>> {
     match stmt.as_ref() {
-        Kind::Connection{from, to}              => vec![from, to],
-        Kind::PartialConnection{from, to}       => vec![from, to],
-        Kind::Empty                             => Default::default(),
-        Kind::Declaration(entity)               => entity_exprs(entity.as_ref()),
-        Kind::SimpleMemDecl(_)                  => Default::default(),
-        Kind::Invalidate(expr)                  => vec![expr],
-        Kind::Attach(v)                         => v.iter().collect(),
-        Kind::Conditional{cond, when, r#else}   => std::iter::once(cond)
-            .chain(when.iter().flat_map(stmt_exprs))
-            .chain(r#else.iter().flat_map(stmt_exprs))
-            .collect(),
-        Kind::Stop{clock, cond, ..}             => vec![clock, cond],
-        Kind::Print{clock, cond, msg, ..}       => std::iter::once(clock)
+        Kind::Connection{from, to}          => vec![from, to],
+        Kind::PartialConnection{from, to}   => vec![from, to],
+        Kind::Empty                         => Default::default(),
+        Kind::Declaration(entity)           => entity_exprs(entity.as_ref()),
+        Kind::SimpleMemDecl(_)              => Default::default(),
+        Kind::Invalidate(expr)              => vec![expr],
+        Kind::Attach(v)                     => v.iter().collect(),
+        Kind::Conditional{cond, ..}         => vec![cond],
+        Kind::Stop{clock, cond, ..}         => vec![clock, cond],
+        Kind::Print{clock, cond, msg, ..}   => std::iter::once(clock)
             .chain(std::iter::once(cond))
             .chain(msg.iter().filter_map(|p| if let PrintElement::Value(e, _) = p {
                 Some(e)

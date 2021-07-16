@@ -124,6 +124,7 @@ impl Arbitrary for Module {
             let ports: HashMap<_, _> = kind
                 .statements()
                 .iter()
+                .flat_map(transiter::AutoTransIter::trans_iter)
                 .flat_map(stmt_exprs)
                 .flat_map(expr::Expression::references)
                 .filter_map(|e| if let stmt::Entity::Port(p) = e.as_ref() { Some(p) } else { None })
