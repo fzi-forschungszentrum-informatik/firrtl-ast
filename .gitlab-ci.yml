@@ -34,3 +34,26 @@ cargo_test:
     <<: *general_cache
     policy: pull
 
+cargo_examples:
+  stage: test
+  tags:
+    - docker
+  script:
+    - cargo build --examples
+  cache:
+    <<: *general_cache
+    policy: pull
+
+cargo_moddep:
+  stage: test
+  tags:
+    - docker
+  script:
+    - mkdir firrtl_examples
+    - wget "$FIRRTL_EXAMPLE_URI"
+    - tar -C firrtl_examples  -xf *.tar.gz
+    - cargo run --example moddep -- firrtl_examples/*.fir
+  cache:
+    <<: *general_cache
+    policy: pull
+
