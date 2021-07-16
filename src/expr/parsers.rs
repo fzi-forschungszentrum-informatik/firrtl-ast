@@ -15,6 +15,8 @@ pub fn expr<'i, R: super::Reference + Clone>(
     reference: impl Fn(&str) -> Option<R> + Copy,
     input: &'i str
 ) -> IResult<'i, super::Expression<R>> {
+    use std::convert::TryInto;
+
     use types::parsers::{bitwidth, field_name};
 
     use super::Expression as E;
@@ -24,18 +26,18 @@ pub fn expr<'i, R: super::Reference + Clone>(
     let (input, res) = alt((
         map(
             tuple((kw("UInt"), spaced(bitwidth), lp, spaced(num_lit), rp)),
-            |(_, width, _, value, _)| {
+            |(_, width, _, value, _): (_, _, _, num_bigint::BigUint, _)| {
                 let width = width
-                    .or_else(|| (0..u16::MAX).find(|i| value >> i == 0))
+                    .or_else(|| value.bits().try_into().ok())
                     .expect("Could not determine appropriate width");
                 E::UIntLiteral{value, width}
             }
         ),
         map(
             tuple((kw("SInt"), spaced(bitwidth), lp, spaced(num_lit), rp)),
-            |(_, width, _, value, _)| {
+            |(_, width, _, value, _): (_, _, _, num_bigint::BigInt, _)| {
                 let width = width
-                    .or_else(|| (1..u16::MAX).find(|i| value >> (i - 1) == 0 || value >> i == -1))
+                    .or_else(|| value.bits().checked_add(1).and_then(|b| b.try_into().ok()))
                     .expect("Could not determine appropriate width");
                 E::SIntLiteral{value, width}
             }

@@ -247,11 +247,11 @@ where R: TypedRef,
     if let (Some(r#type), true) = (r#type.ground_type(), flow.is_source()) {
         opts.push(&|t, f, g| match t.ground_type().expect("Not a ground type") {
             GT::UInt(width) => Expression::UIntLiteral{
-                value: Arbitrary::arbitrary(g),
+                value: u128::arbitrary(g).into(),
                 width: width.unwrap_or_else(|| Arbitrary::arbitrary(g))
             },
             GT::SInt(width) => Expression::SIntLiteral{
-                value: Arbitrary::arbitrary(g),
+                value: i128::arbitrary(g).into(),
                 width: width.unwrap_or_else(|| Arbitrary::arbitrary(g))
             },
             _ => Expression::Reference(TypedRef::with_type(t.into(), f, g)),

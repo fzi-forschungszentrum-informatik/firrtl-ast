@@ -20,9 +20,9 @@ use crate::tests::Identifier;
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expression<R: Reference> {
     /// An UInt literal
-    UIntLiteral{value: u128, width: u16},
+    UIntLiteral{value: num_bigint::BigUint, width: u16},
     /// An SInt literal
-    SIntLiteral{value: i128, width: u16},
+    SIntLiteral{value: num_bigint::BigInt, width: u16},
     /// A referernce expression
     Reference(R),
     /// A sub-field expression
