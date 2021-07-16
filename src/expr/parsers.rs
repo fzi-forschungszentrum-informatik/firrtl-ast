@@ -157,7 +157,7 @@ pub fn primitive_op<'i, R: super::Reference + Clone>(
 /// Parse FIRRTL's weird stringified number literal format
 ///
 /// This parser yields the value and radix.
-fn num_lit<T: FromStrRadix + std::str::FromStr>(input: &str) -> IResult<T> {
+fn num_lit<T: num_traits::Num + std::str::FromStr>(input: &str) -> IResult<T> {
     use nom::character::complete::{alphanumeric1, char as chr};
     use nom::combinator::{map_res, recognize, opt};
 
@@ -170,7 +170,7 @@ fn num_lit<T: FromStrRadix + std::str::FromStr>(input: &str) -> IResult<T> {
                 recognize(preceded(opt(alt((chr('+'), chr('-')))), alphanumeric1)),
                 chr('"'),
             )),
-            |(_, radix, value, _)| FromStrRadix::from_str_radix(value, radix)
+            |(_, radix, value, _)| num_traits::Num::from_str_radix(value, radix)
         )
     ))(input)
 }
