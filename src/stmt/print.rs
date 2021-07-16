@@ -46,12 +46,12 @@ impl Arbitrary for PrintElement {
 
 /// Foramt specifier for print statements
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub enum Format {Binary, Decimal, Hexadecimal}
+pub enum Format {Binary, Decimal, Hexadecimal, Character}
 
 #[cfg(test)]
 impl Arbitrary for Format {
     fn arbitrary(g: &mut Gen) -> Self {
-        g.choose(&[Self::Binary, Self::Decimal, Self::Hexadecimal]).unwrap().clone()
+        g.choose(&[Self::Binary, Self::Decimal, Self::Hexadecimal, Self::Character]).unwrap().clone()
     }
 }
 

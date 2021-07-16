@@ -55,6 +55,7 @@ impl fmt::Display for FormatString<'_> {
                 P::Value(_, F::Binary)      => write!(f, "%b"),
                 P::Value(_, F::Decimal)     => write!(f, "%d"),
                 P::Value(_, F::Hexadecimal) => write!(f, "%x"),
+                P::Value(_, F::Character)   => write!(f, "%c"),
             }?
         }
         write!(f, "\"")

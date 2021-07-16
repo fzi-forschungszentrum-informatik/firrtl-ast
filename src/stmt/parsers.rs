@@ -241,6 +241,7 @@ pub fn fmt_string_part<'i>(
         value(FmtStrPart::FormatSpec(F::Binary), tag("%b")),
         value(FmtStrPart::FormatSpec(F::Decimal), tag("%d")),
         value(FmtStrPart::FormatSpec(F::Hexadecimal), tag("%x")),
+        value(FmtStrPart::FormatSpec(F::Character), tag("%c")),
         map(
             many1(alt((
                 value('%', tag("%%")),
