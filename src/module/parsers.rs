@@ -12,7 +12,7 @@ use crate::error::{ParseError, convert_error};
 use crate::indentation::Indentation;
 use crate::info::{WithInfo, parse as parse_info};
 use crate::parsers::{IResult, decimal, float, identifier, kw, le, op, spaced, unquoted_string};
-use crate::stmt::parsers::stmts as parse_stmts;
+use crate::stmt::{self, parsers::stmts as parse_stmts};
 use crate::types::parsers::r#type;
 
 
@@ -110,16 +110,8 @@ pub fn module<'i>(
 
     let input = match &mut kind {
         super::Kind::Regular{stmts} => {
-            let (input, s) = parse_stmts(
-                |n| ports
-                    .iter()
-                    .find(|p| p.name.as_ref() == n)
-                    .map(|p| Arc::new(p.clone().into())),
-                |_| None,
-                module,
-                input,
-                &mut indentation,
-            )?;
+            let ctx = stmt::context::TopContext::new(module).with_ports(ports.clone());
+            let (input, s) = parse_stmts(ctx, input, &mut indentation)?;
 
             *stmts = s;
             input
