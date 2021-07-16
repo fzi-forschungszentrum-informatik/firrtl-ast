@@ -17,8 +17,11 @@ use super::{Entity, Kind, Statement, print::PrintElement};
 
 #[quickcheck]
 fn parse_stmt(mut base: Indentation, original: Statement) -> Result<TestResult, String> {
-    let mut refs: Vec<_> = stmt_exprs(&original)
-        .into_iter()
+    use transiter::AutoTransIter;
+
+    let mut refs: Vec<_> = original
+        .trans_iter()
+        .flat_map(stmt_exprs)
         .flat_map(Expression::references)
         .cloned()
         .collect();
@@ -82,6 +85,7 @@ fn parse_stmts(mut base: Indentation, original: Statement) -> Result<TestResult,
 
     let mut ports: Vec<_> = original
         .iter()
+        .flat_map(transiter::AutoTransIter::trans_iter)
         .flat_map(stmt_exprs)
         .into_iter()
         .flat_map(Expression::references)
@@ -319,22 +323,22 @@ pub fn stmt_with_decls(
 }
 
 
-/// Retrieve all expressions occuring in a statement
+/// Retrieve all expressions occuring immediately in a statement
+///
+/// For conditional statements, this function will only yield the condition. It
+/// will not recurse into branches.
 pub fn stmt_exprs(stmt: &Statement) -> Vec<&Expression<Arc<Entity>>> {
     match stmt.as_ref() {
-        Kind::Connection{from, to}              => vec![from, to],
-        Kind::PartialConnection{from, to}       => vec![from, to],
-        Kind::Empty                             => Default::default(),
-        Kind::Declaration(entity)               => entity_exprs(entity.as_ref()),
-        Kind::SimpleMemDecl(_)                  => Default::default(),
-        Kind::Invalidate(expr)                  => vec![expr],
-        Kind::Attach(v)                         => v.iter().collect(),
-        Kind::Conditional{cond, when, r#else}   => std::iter::once(cond)
-            .chain(when.iter().flat_map(stmt_exprs))
-            .chain(r#else.iter().flat_map(stmt_exprs))
-            .collect(),
-        Kind::Stop{clock, cond, ..}             => vec![clock, cond],
-        Kind::Print{clock, cond, msg, ..}       => std::iter::once(clock)
+        Kind::Connection{from, to}          => vec![from, to],
+        Kind::PartialConnection{from, to}   => vec![from, to],
+        Kind::Empty                         => Default::default(),
+        Kind::Declaration(entity)           => entity_exprs(entity.as_ref()),
+        Kind::SimpleMemDecl(_)              => Default::default(),
+        Kind::Invalidate(expr)              => vec![expr],
+        Kind::Attach(v)                     => v.iter().collect(),
+        Kind::Conditional{cond, ..}         => vec![cond],
+        Kind::Stop{clock, cond, ..}         => vec![clock, cond],
+        Kind::Print{clock, cond, msg, ..}   => std::iter::once(clock)
             .chain(std::iter::once(cond))
             .chain(msg.iter().filter_map(|p| if let PrintElement::Value(e, _) = p {
                 Some(e)
