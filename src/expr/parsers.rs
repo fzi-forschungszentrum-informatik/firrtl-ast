@@ -1,6 +1,5 @@
 //! Parsers for expressions
 
-use std::num::ParseIntError;
 use std::sync::Arc;
 
 use nom::branch::alt;
@@ -173,23 +172,5 @@ fn num_lit<T: num_traits::Num + std::str::FromStr>(input: &str) -> IResult<T> {
             |(_, radix, value, _)| num_traits::Num::from_str_radix(value, radix)
         )
     ))(input)
-}
-
-
-/// Helper trait for generalizing from_str_radix
-trait FromStrRadix: Sized {
-    fn from_str_radix(value: &str, radix: u32) -> Result<Self, ParseIntError>;
-}
-
-impl FromStrRadix for u128 {
-    fn from_str_radix(value: &str, radix: u32) -> Result<Self, ParseIntError> {
-        u128::from_str_radix(value, radix)
-    }
-}
-
-impl FromStrRadix for i128 {
-    fn from_str_radix(value: &str, radix: u32) -> Result<Self, ParseIntError> {
-        i128::from_str_radix(value, radix)
-    }
 }
 
