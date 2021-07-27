@@ -1,3 +1,5 @@
+// Copyright (c) 2021 FZI Forschungszentrum Informatik
+// SPDX-License-Identifier: Apache-2.0
 //! Example reading FIRRTL code from files and printing each module's dependencies
 
 fn main() {
