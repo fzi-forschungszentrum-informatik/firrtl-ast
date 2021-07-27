@@ -273,11 +273,11 @@ pub fn stmt_with_decls(
         .try_for_each(|r| {
             match entities.entry(r.name().into()) {
                 Entry::Occupied(e) => if e.get() != r { return None }
-                Entry::Vacant(e) => {
-                    e.insert(r.clone());
+                Entry::Vacant(_) => {
                     if r.is_declarable() {
                         new_decls.extend(stmt_with_decls(Kind::Declaration(r.clone()).into(), entities, memories)?)
                     }
+                    entities.insert(r.name().into(), r.clone());
                 }
             };
             Some(())
