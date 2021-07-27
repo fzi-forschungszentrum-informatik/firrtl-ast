@@ -267,20 +267,20 @@ pub fn stmt_with_decls(
         }
     }
 
-    let mut new_decls = stmt_exprs(&statement)
+    stmt_exprs(&statement)
         .into_iter()
         .flat_map(Expression::references)
-        .try_fold(new_decls, |mut d, r| {
+        .try_for_each(|r| {
             match entities.entry(r.name().into()) {
                 Entry::Occupied(e) => if e.get() != r { return None }
                 Entry::Vacant(e) => {
                     e.insert(r.clone());
                     if r.is_declarable() {
-                        d.extend(stmt_with_decls(Kind::Declaration(r.clone()).into(), entities, memories)?)
+                        new_decls.extend(stmt_with_decls(Kind::Declaration(r.clone()).into(), entities, memories)?)
                     }
                 }
             };
-            Some(d)
+            Some(())
         })?;
 
     match statement.kind() {
