@@ -24,6 +24,20 @@ cargo_build:
   script:
     - cargo build
 
+check_spdx:
+  stage: build
+  tags:
+    - docker
+  script:
+    - >
+      find src -name '*.rs' | while read s; do
+        grep -qx '// Copyright (c) 2021 FZI Forschungszentrum Informatik' $s || exit 1
+        grep -qx '// SPDX-License-Identifier: Apache-2.0' $s || exit 1
+      done
+  cache:
+    <<: *general_cache
+    policy: pull
+
 cargo_test:
   stage: test
   tags:
