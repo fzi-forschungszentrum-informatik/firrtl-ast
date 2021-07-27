@@ -267,21 +267,21 @@ pub fn stmt_with_decls(
         }
     }
 
-    let new_decls = stmt_exprs(&statement)
+    stmt_exprs(&statement)
         .into_iter()
         .flat_map(Expression::references)
-        .try_fold(new_decls, |mut d, r| {
+        .try_for_each(|r| {
             match entities.entry(r.name().into()) {
                 Entry::Occupied(e) => if e.get() != r { return None }
-                Entry::Vacant(e) => {
-                    e.insert(r.clone());
+                Entry::Vacant(_) => {
                     if r.is_declarable() {
-                        d.extend(stmt_with_decls(Kind::Declaration(r.clone()).into(), entities, memories)?)
+                        new_decls.extend(stmt_with_decls(Kind::Declaration(r.clone()).into(), entities, memories)?)
                     }
+                    entities.insert(r.name().into(), r.clone());
                 }
             };
-            Some(d)
-        });
+            Some(())
+        })?;
 
     match statement.kind() {
         Kind::Declaration(entity)       => match entities.entry(entity.name().into()) {
@@ -306,10 +306,8 @@ pub fn stmt_with_decls(
         _ => (),
     }
 
-    new_decls.map(|mut v| {
-        v.push(statement);
-        v
-    })
+    new_decls.push(statement);
+    Some(new_decls)
 }
 
 
