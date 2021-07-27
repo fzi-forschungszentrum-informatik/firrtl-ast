@@ -267,7 +267,7 @@ pub fn stmt_with_decls(
         }
     }
 
-    let new_decls = stmt_exprs(&statement)
+    let mut new_decls = stmt_exprs(&statement)
         .into_iter()
         .flat_map(Expression::references)
         .try_fold(new_decls, |mut d, r| {
@@ -281,7 +281,7 @@ pub fn stmt_with_decls(
                 }
             };
             Some(d)
-        });
+        })?;
 
     match statement.kind() {
         Kind::Declaration(entity)       => match entities.entry(entity.name().into()) {
@@ -306,10 +306,8 @@ pub fn stmt_with_decls(
         _ => (),
     }
 
-    new_decls.map(|mut v| {
-        v.push(statement);
-        v
-    })
+    new_decls.push(statement);
+    Some(new_decls)
 }
 
 
