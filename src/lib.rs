@@ -1,3 +1,5 @@
+// Copyright (c) 2021 FZI Forschungszentrum Informatik
+// SPDX-License-Identifier: Apache-2.0
 //! FIRRTL data structure
 //!
 //! [FIRRTL](https://chisel-lang.org/firrtl/) is a simple register-transfer

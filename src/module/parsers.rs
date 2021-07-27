@@ -1,3 +1,5 @@
+// Copyright (c) 2021 FZI Forschungszentrum Informatik
+// SPDX-License-Identifier: Apache-2.0
 //! Parsers for modules and related items
 
 use std::sync::Arc;

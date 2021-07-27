@@ -1,3 +1,5 @@
+// Copyright (c) 2021 FZI Forschungszentrum Informatik
+// SPDX-License-Identifier: Apache-2.0
 //! Tests related to modules
 
 use nom::Finish;

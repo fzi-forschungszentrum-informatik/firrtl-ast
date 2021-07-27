@@ -1,3 +1,5 @@
+// Copyright (c) 2021 FZI Forschungszentrum Informatik
+// SPDX-License-Identifier: Apache-2.0
 //! Utilities related to printf statments
 
 use super::Expression;
