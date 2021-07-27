@@ -12,6 +12,7 @@ cache: &general_cache
   key:
     files:
       - Cargo.toml
+  policy: pull
 
 stages:
   - build
@@ -23,6 +24,9 @@ cargo_build:
     - docker
   script:
     - cargo build
+  cache:
+    <<: *general_cache
+    policy: pull-push
 
 check_spdx:
   stage: build
@@ -34,9 +38,6 @@ check_spdx:
         grep -qx '// Copyright (c) 2021 FZI Forschungszentrum Informatik' $s || exit 1
         grep -qx '// SPDX-License-Identifier: Apache-2.0' $s || exit 1
       done
-  cache:
-    <<: *general_cache
-    policy: pull
 
 cargo_test:
   stage: test
@@ -44,9 +45,6 @@ cargo_test:
     - docker
   script:
     - cargo test
-  cache:
-    <<: *general_cache
-    policy: pull
 
 cargo_examples:
   stage: test
@@ -54,9 +52,6 @@ cargo_examples:
     - docker
   script:
     - cargo build --examples
-  cache:
-    <<: *general_cache
-    policy: pull
 
 cargo_moddep:
   stage: test
@@ -67,7 +62,4 @@ cargo_moddep:
     - wget "$FIRRTL_EXAMPLE_URI"
     - tar -C firrtl_examples  -xf *.tar.gz
     - cargo run --example moddep -- firrtl_examples/*.fir
-  cache:
-    <<: *general_cache
-    policy: pull
 
