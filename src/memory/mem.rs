@@ -9,6 +9,7 @@ use std::sync::Arc;
 use quickcheck::{Arbitrary, Gen};
 
 use crate::expr;
+use crate::named::Named;
 use crate::types;
 
 #[cfg(test)]
@@ -122,6 +123,14 @@ impl expr::Reference for Memory {
 
     fn flow(&self) -> Option<expr::Flow> {
         Some(expr::Flow::Source)
+    }
+}
+
+impl Named for Memory {
+    type Name = Arc<str>;
+
+    fn name(&self) -> &Self::Name {
+        &self.name
     }
 }
 
