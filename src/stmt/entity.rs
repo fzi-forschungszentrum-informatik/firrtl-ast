@@ -73,18 +73,6 @@ impl From<module::Instance> for Entity {
 }
 
 impl expr::Reference for Arc<Entity> {
-    fn name(&self) -> &str {
-        match self.as_ref() {
-            Entity::Port(port)          => expr::Reference::name(port.as_ref()),
-            Entity::Wire{name, ..}      => name.as_ref(),
-            Entity::Register(reg)       => expr::Reference::name(reg),
-            Entity::Node{name, ..}      => name.as_ref(),
-            Entity::Memory(mem)         => expr::Reference::name(mem),
-            Entity::SimpleMemPort(port) => expr::Reference::name(port),
-            Entity::Instance(inst)      => expr::Reference::name(inst),
-        }
-    }
-
     fn flow(&self) -> Option<expr::Flow> {
         match self.as_ref() {
             Entity::Port(port)          => port.flow(),

@@ -183,10 +183,6 @@ impl super::Typed for Entity {
 }
 
 impl super::Reference for Entity {
-    fn name(&self) -> &str {
-        self.name.as_ref()
-    }
-
     fn flow(&self) -> Option<Flow> {
         Some(self.flow)
     }

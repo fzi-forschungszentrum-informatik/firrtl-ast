@@ -198,10 +198,6 @@ impl<R: expr::Reference> types::Typed for Port<R> {
 }
 
 impl<R: expr::Reference> expr::Reference for Port<R> {
-    fn name(&self) -> &str {
-        self.name.as_ref()
-    }
-
     fn flow(&self) -> Option<expr::Flow> {
         self.dir.map(|d| match d {
             PortDir::Read       => expr::Flow::Source,

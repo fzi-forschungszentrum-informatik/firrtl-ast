@@ -153,9 +153,6 @@ impl<R: Reference> fmt::Display for Expression<R> {
 
 /// A reference to a named entity
 pub trait Reference: Named {
-    /// Retrieve the name of the referenced entity
-    fn name(&self) -> &str;
-
     /// Retrieve the flow associated with the referenced entity
     ///
     /// This function returns the flow associated with the entity or `None` if
@@ -165,10 +162,6 @@ pub trait Reference: Named {
 
 #[cfg(test)]
 impl Reference for Identifier {
-    fn name(&self) -> &str {
-        self.as_ref()
-    }
-
     fn flow(&self) -> Option<Flow> {
         Some(Flow::Duplex)
     }
