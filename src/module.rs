@@ -515,6 +515,14 @@ impl expr::Reference for Instance {
     }
 }
 
+impl Named for Instance {
+    type Name = Arc<str>;
+
+    fn name(&self) -> &Self::Name {
+        &self.name
+    }
+}
+
 impl types::Typed for Instance {
     type Err = Self;
 
@@ -540,8 +548,6 @@ impl types::Typed for Instance {
 
 impl fmt::Display for Instance {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use expr::Reference;
-
         write!(f, "inst {} of {}", self.name(), self.module().name())
     }
 }
