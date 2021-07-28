@@ -17,6 +17,7 @@ use quickcheck::{Arbitrary, Gen};
 use crate::expr;
 use crate::indentation::{DisplayIndented, Indentation};
 use crate::info;
+use crate::named::Named;
 use crate::stmt::Statement;
 use crate::types::{self, Type};
 
@@ -358,11 +359,6 @@ impl Port {
         Self {name: name.into(), r#type, direction, info: Default::default()}
     }
 
-    /// Retrieve the I/O port's name
-    pub fn name(&self) -> &str {
-        self.name.as_ref()
-    }
-
     /// Retrieve the I/O port's type
     pub fn r#type(&self) -> &Type {
         &self.r#type
@@ -389,6 +385,14 @@ impl expr::Reference for Port {
             Direction::Input  => expr::Flow::Source,
             Direction::Output => expr::Flow::Sink,
         })
+    }
+}
+
+impl Named for Port {
+    type Name = Arc<str>;
+
+    fn name(&self) -> &Self::Name {
+        &self.name
     }
 }
 
@@ -428,7 +432,7 @@ impl Arbitrary for Port {
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         let d = self.direction;
-        let res = crate::tests::Identifier::from(self.name())
+        let res = crate::tests::Identifier::from(self.name_ref())
             .shrink()
             .map({
                 let t = self.r#type.clone();
