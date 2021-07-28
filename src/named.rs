@@ -28,3 +28,12 @@ impl<N: Named> Named for std::sync::Arc<N> {
     }
 }
 
+#[cfg(test)]
+impl Named for crate::tests::Identifier {
+    type Name = Self;
+
+    fn name(&self) -> &Self::Name {
+        &self
+    }
+}
+
