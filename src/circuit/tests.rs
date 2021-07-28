@@ -5,6 +5,7 @@
 use quickcheck::{Gen, TestResult, Testable};
 
 use crate::error::ParseError;
+use crate::named::Named;
 use crate::tests::Equivalence;
 
 use super::{Circuit, parsers};

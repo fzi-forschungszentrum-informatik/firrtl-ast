@@ -17,6 +17,7 @@ use crate::error::ParseError;
 use crate::indentation;
 use crate::info::{self, WithInfo};
 use crate::module::Module;
+use crate::named::Named;
 
 pub use parsers::{circuit as parse, consumer};
 
@@ -151,7 +152,7 @@ where I: Iterator<Item = Result<Arc<Module>, E>>,
         match self.top_module {
             TopState::Name(n)   => self
                 .modules
-                .find(|m| m.as_ref().ok().map(|m| m.name() == n).unwrap_or(true))
+                .find(|m| m.as_ref().ok().map(|m| m.name_ref() == n).unwrap_or(true))
                 .map(|r| r.map_err(Into::into))
                 .unwrap_or_else(|| Err("top module not found".to_owned().into())),
             TopState::Module(m) => Ok(m),
@@ -165,7 +166,7 @@ impl<I: Iterator<Item = Result<Arc<Module>, E>>, E> Iterator for ModuleConsumer<
     fn next(&mut self) -> Option<Self::Item> {
         let res = self.modules.next();
         if let (Some(Ok(m)), TopState::Name(n)) = (res.as_ref(), &self.top_module) {
-            if n == m.name() {
+            if n == m.name_ref() {
                 self.top_module = TopState::Module(m.clone())
             }
         }

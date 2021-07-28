@@ -39,11 +39,6 @@ impl Module {
         Self {name, ports: ports.into_iter().collect(), kind, info: Default::default()}
     }
 
-    /// Retrieve the module's name
-    pub fn name(&self) -> &str {
-        self.name.as_ref()
-    }
-
     /// Retrieve the module's I/O ports
     pub fn ports(&self) -> impl Iterator<Item = &Arc<Port>> {
         self.ports.iter()
@@ -72,6 +67,14 @@ impl Module {
     /// Retrieve all modules referenced from this module via instantiations
     pub fn referenced_modules(&self) -> impl Iterator<Item = &Arc<Self>> {
         self.statements().iter().flat_map(Statement::instantiations).map(Instance::module)
+    }
+}
+
+impl Named for Module {
+    type Name = Arc<str>;
+
+    fn name(&self) -> &Self::Name {
+        &self.name
     }
 }
 
@@ -140,7 +143,7 @@ impl Arbitrary for Module {
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
-        let res = crate::tests::Identifier::from(self.name())
+        let res = crate::tests::Identifier::from(self.name_ref())
             .shrink()
             .map({
                 let p = self.ports.clone();
