@@ -8,6 +8,7 @@ use nom::combinator::all_consuming;
 use nom::Finish;
 use quickcheck::{Arbitrary, Gen};
 
+use crate::named::Named;
 use crate::tests::{Equivalence, Identifier};
 use crate::types;
 

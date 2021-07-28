@@ -123,6 +123,8 @@ impl expr::tests::TypedRef for Arc<Entity> {
         use expr::tests::{expr_with_type, source_flow};
 
         fn field_to_port(field: &types::BundleField) -> Arc<module::Port> {
+            use crate::named::Named;
+
             let dir = match field.orientation() {
                 types::Orientation::Normal  => module::Direction::Output,
                 types::Orientation::Flipped => module::Direction::Input,
