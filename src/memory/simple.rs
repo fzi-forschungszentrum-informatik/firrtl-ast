@@ -211,10 +211,16 @@ impl<R: expr::Reference> expr::Reference for Port<R> {
     }
 }
 
+impl<R: expr::Reference> Named for Port<R> {
+    type Name = Arc<str>;
+
+    fn name(&self) -> &Self::Name {
+        &self.name
+    }
+}
+
 impl<R: expr::Reference> fmt::Display for Port<R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use expr::Reference;
-
         let mdir = match self.direction() {
             Some(PortDir::Read)         => "read",
             Some(PortDir::Write)        => "write",
@@ -250,9 +256,8 @@ impl<R: expr::tests::TypedRef + Clone + 'static> Arbitrary for Port<R> {
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         use crate::tests::Identifier;
-        use expr::Reference;
 
-        let res = Identifier::from(self.name())
+        let res = Identifier::from(self.name_ref())
             .shrink()
             .map({
                 let m = self.memory().clone();
