@@ -15,6 +15,7 @@ pub mod expr;
 pub mod info;
 pub mod memory;
 pub mod module;
+pub mod named;
 pub mod stmt;
 pub mod types;
 
