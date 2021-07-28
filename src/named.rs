@@ -20,3 +20,11 @@ pub trait Named {
     }
 }
 
+impl<N: Named> Named for std::sync::Arc<N> {
+    type Name = N::Name;
+
+    fn name(&self) -> &Self::Name {
+        self.as_ref().name()
+    }
+}
+
