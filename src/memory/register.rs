@@ -9,6 +9,7 @@ use std::sync::Arc;
 use quickcheck::{Arbitrary, Gen};
 
 use crate::expr;
+use crate::named::Named;
 use crate::types;
 
 
@@ -76,6 +77,14 @@ impl<R: expr::Reference> expr::Reference for Register<R> {
     }
 }
 
+impl<R: expr::Reference> Named for Register<R> {
+    type Name = Arc<str>;
+
+    fn name(&self) -> &Self::Name {
+        &self.name
+    }
+}
+
 impl<R: expr::Reference> types::Typed for Register<R> {
     type Err = Self;
 
@@ -88,8 +97,6 @@ impl<R: expr::Reference> types::Typed for Register<R> {
 
 impl<R: expr::Reference> fmt::Display for Register<R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use expr::Reference;
-
         write!(f, "reg {}: {}, {}", self.name(), self.r#type, self.clock())?;
         if let Some((sig, val)) = self.reset.as_ref() {
             write!(f, " with: (reset => ({}, {}))", sig, val)?;
