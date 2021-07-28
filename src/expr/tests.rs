@@ -192,6 +192,14 @@ impl super::Reference for Entity {
     }
 }
 
+impl Named for Entity {
+    type Name = Identifier;
+
+    fn name(&self) -> &Self::Name {
+        &self.name
+    }
+}
+
 
 /// Utility trait for generating references with a given type
 pub trait TypedRef: super::Reference {
