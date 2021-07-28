@@ -43,6 +43,8 @@ fn parse_simple_mem(original: simple::Memory) -> Result<Equivalence<simple::Memo
 fn parse_simple_mem_port(
     original: simple::Port<Identifier>
 ) -> Result<Equivalence<simple::Port<Identifier>>, String> {
+    use crate::named::Named;
+
     let s = original.to_string();
 
     let mem = original.memory().clone();

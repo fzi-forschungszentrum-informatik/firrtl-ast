@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 use crate::memory::simple::Memory as SimpleMem;
 use crate::module::{Module, Port as ModPort};
+use crate::named::Named;
 use super::entity::Entity;
 
 

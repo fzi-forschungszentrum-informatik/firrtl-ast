@@ -9,6 +9,7 @@ use std::sync::Arc;
 use quickcheck::{Arbitrary, Gen};
 
 use crate::expr;
+use crate::named::Named;
 use crate::types;
 
 use super::common::{PortDir, ReadUnderWrite};
@@ -30,14 +31,17 @@ impl Memory {
         Self {name: name.into(), data_type: data_type.into(), kind}
     }
 
-    /// Retrieve the memory's name
-    pub fn name(&self) -> &Arc<str> {
-        &self.name
-    }
-
     /// Retrieve the kind of simple memory
     pub fn kind(&self) -> Kind {
         self.kind
+    }
+}
+
+impl Named for Memory {
+    type Name = Arc<str>;
+
+    fn name(&self) -> &Self::Name {
+        &self.name
     }
 }
 
@@ -79,7 +83,7 @@ impl Arbitrary for Memory {
         use crate::tests::Identifier;
 
         let k = self.kind();
-        let res = Identifier::from(self.name().as_ref())
+        let res = Identifier::from(self.name_ref())
             .shrink()
             .map({
                 let t = self.data_type.clone();
