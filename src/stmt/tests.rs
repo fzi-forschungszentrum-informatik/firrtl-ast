@@ -9,7 +9,7 @@ use nom::Finish;
 
 use quickcheck::{Arbitrary, Gen, TestResult, Testable};
 
-use crate::expr::{self, Expression, Reference};
+use crate::expr::{self, Expression};
 use crate::indentation::{DisplayIndented, Indentation};
 use crate::memory::simple::Memory as SimpleMem;
 use crate::module::Module;
@@ -236,7 +236,7 @@ pub fn stmts_with_decls(statements: impl IntoIterator<Item = Statement>) -> impl
 /// for it to be valid. If this is not possible, the function returns `None`.
 pub fn stmt_with_decls(
     mut statement: Statement,
-    entities: &mut std::collections::HashMap<String, Arc<Entity>>,
+    entities: &mut std::collections::HashMap<Arc<str>, Arc<Entity>>,
     memories: &mut std::collections::HashMap<Arc<str>, Arc<SimpleMem>>,
 ) -> Option<Vec<Statement>> {
     use std::collections::hash_map::{Entry, HashMap};
@@ -245,7 +245,7 @@ pub fn stmt_with_decls(
 
     fn stmts_with_decls(
         stmts: &[Statement],
-        entities: &mut HashMap<String, Arc<Entity>>,
+        entities: &mut HashMap<Arc<str>, Arc<Entity>>,
         memories: &mut HashMap<Arc<str>, Arc<SimpleMem>>,
     ) -> Arc<[Statement]> {
         stmts
@@ -274,20 +274,20 @@ pub fn stmt_with_decls(
         .into_iter()
         .flat_map(Expression::references)
         .try_for_each(|r| {
-            match entities.entry(r.name().into()) {
+            match entities.entry(r.name().clone()) {
                 Entry::Occupied(e) => if e.get() != r { return None }
                 Entry::Vacant(_) => {
                     if r.is_declarable() {
                         new_decls.extend(stmt_with_decls(Kind::Declaration(r.clone()).into(), entities, memories)?)
                     }
-                    entities.insert(r.name().into(), r.clone());
+                    entities.insert(r.name().clone(), r.clone());
                 }
             };
             Some(())
         })?;
 
     match statement.kind() {
-        Kind::Declaration(entity)       => match entities.entry(entity.name().into()) {
+        Kind::Declaration(entity)       => match entities.entry(entity.name().clone()) {
             Entry::Occupied(e) => if e.get() != entity { return None }
             Entry::Vacant(e) => { e.insert(entity.clone()); }
         },

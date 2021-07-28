@@ -55,9 +55,7 @@ impl<M> TopContext<M> {
 
     /// Create a new toplevel Context
     pub fn with_entities(self, entities: impl IntoIterator<Item = Arc<Entity>>) -> Self {
-        use crate::expr::Reference;
-
-        Self {entities: entities.into_iter().map(|e| (e.name().into(), e)).collect(), ..self}
+        Self {entities: entities.into_iter().map(|e| (e.name().clone(), e)).collect(), ..self}
     }
 
     /// Create a new toplevel Context
@@ -78,9 +76,7 @@ impl<M: Fn(&str) -> Option<Arc<Module>>> Context for TopContext<M> {
     }
 
     fn add_entity(&mut self, entity: Arc<Entity>) {
-        use crate::expr::Reference;
-
-        self.entities.insert(entity.name().into(), entity);
+        self.entities.insert(entity.name().clone(), entity);
     }
 
     fn memory(&self, name: &str) -> Option<Arc<SimpleMem>> {
@@ -123,9 +119,7 @@ impl<'p> Context for SubContext<'p> {
     }
 
     fn add_entity(&mut self, entity: Arc<Entity>) {
-        use crate::expr::Reference;
-
-        self.entities.insert(entity.name().into(), entity);
+        self.entities.insert(entity.name().clone(), entity);
     }
 
     fn memory(&self, name: &str) -> Option<Arc<SimpleMem>> {

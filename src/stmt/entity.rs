@@ -10,6 +10,7 @@ use quickcheck::{Arbitrary, Gen};
 use crate::expr;
 use crate::memory::{Memory, Register, simple as simple_mem};
 use crate::module;
+use crate::named::Named;
 use crate::types;
 
 
@@ -74,13 +75,13 @@ impl From<module::Instance> for Entity {
 impl expr::Reference for Arc<Entity> {
     fn name(&self) -> &str {
         match self.as_ref() {
-            Entity::Port(port)          => port.name(),
+            Entity::Port(port)          => expr::Reference::name(port.as_ref()),
             Entity::Wire{name, ..}      => name.as_ref(),
-            Entity::Register(reg)       => reg.name(),
+            Entity::Register(reg)       => expr::Reference::name(reg),
             Entity::Node{name, ..}      => name.as_ref(),
-            Entity::Memory(mem)         => mem.name(),
-            Entity::SimpleMemPort(port) => port.name(),
-            Entity::Instance(inst)      => inst.name(),
+            Entity::Memory(mem)         => expr::Reference::name(mem),
+            Entity::SimpleMemPort(port) => expr::Reference::name(port),
+            Entity::Instance(inst)      => expr::Reference::name(inst),
         }
     }
 
@@ -93,6 +94,22 @@ impl expr::Reference for Arc<Entity> {
             Entity::Memory(mem)         => mem.flow(),
             Entity::SimpleMemPort(port) => port.flow(),
             Entity::Instance(inst)      => inst.flow(),
+        }
+    }
+}
+
+impl Named for Entity {
+    type Name = Arc<str>;
+
+    fn name(&self) -> &Self::Name {
+        match self {
+            Entity::Port(port)          => port.name(),
+            Entity::Wire{name, ..}      => name,
+            Entity::Register(reg)       => reg.name(),
+            Entity::Node{name, ..}      => name,
+            Entity::Memory(mem)         => mem.name(),
+            Entity::SimpleMemPort(port) => port.name(),
+            Entity::Instance(inst)      => inst.name(),
         }
     }
 }
@@ -123,8 +140,6 @@ impl expr::tests::TypedRef for Arc<Entity> {
         use expr::tests::{expr_with_type, source_flow};
 
         fn field_to_port(field: &types::BundleField) -> Arc<module::Port> {
-            use crate::named::Named;
-
             let dir = match field.orientation() {
                 types::Orientation::Normal  => module::Direction::Output,
                 types::Orientation::Flipped => module::Direction::Input,
