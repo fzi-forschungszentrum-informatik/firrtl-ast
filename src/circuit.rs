@@ -1,6 +1,15 @@
 // Copyright (c) 2021 FZI Forschungszentrum Informatik
 // SPDX-License-Identifier: Apache-2.0
-//! Circuit specific definitions and functions
+//! FIRRTL circuit and associated utilities
+//!
+//! This module defines [Circuit], the root node in any FIRRTL AST. [Circuit]
+//! implements [std::fmt::Display], making formatting straght-forward. There are
+//! multiple APIs for parsing a `Circuit` and therefore an entire AST:
+//!  * [Circuit::from_read] allows reading an AST, e.g. from a file.
+//!  * The [parse] function allows reading an AST from a buffer.
+//!  * A [ModuleConsumer] built via the [consumer] function also allows reading
+//!    an AST from a buffer, but allows accessing every single parsed module
+//!    while parsing.
 
 pub(crate) mod parsers;
 
