@@ -5,6 +5,8 @@
 fn main() {
     use std::io::Read;
 
+    use firrtl_ast::Named;
+
     for path in std::env::args_os().skip(1) {
         let mut buf = Default::default();
         std::fs::File::open(path)

@@ -15,6 +15,7 @@ pub mod expr;
 pub mod info;
 pub mod memory;
 pub mod module;
+pub mod named;
 pub mod stmt;
 pub mod types;
 
@@ -30,5 +31,6 @@ pub use circuit::Circuit;
 pub use expr::Expression;
 pub use memory::{Memory, Register};
 pub use module::Module;
+pub use named::Named;
 pub use types::{GroundType, Type};
 

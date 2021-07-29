@@ -8,6 +8,8 @@ use std::sync::Arc;
 #[cfg(test)]
 use quickcheck::{Arbitrary, Gen};
 
+use crate::named::Named;
+
 use super::{Combinator, GroundType, Orientation, OrientedType, TypeExt};
 
 /// FIRRTL Type
@@ -250,11 +252,6 @@ impl BundleField {
         Self {orientation: self.orientation + Orientation::Flipped, ..self}
     }
 
-    /// Retrieve the field's name
-    pub fn name(&self) -> &Arc<str> {
-        &self.name
-    }
-
     /// Retrieve the field's type
     pub fn r#type(&self) -> &Type {
         &self.r#type
@@ -263,6 +260,14 @@ impl BundleField {
     /// Retrieve the field's orientation
     pub fn orientation(&self) -> Orientation {
         self.orientation
+    }
+}
+
+impl Named for BundleField {
+    type Name = Arc<str>;
+
+    fn name(&self) -> &Self::Name {
+        &self.name
     }
 }
 

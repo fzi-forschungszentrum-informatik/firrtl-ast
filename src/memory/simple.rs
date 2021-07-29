@@ -9,6 +9,7 @@ use std::sync::Arc;
 use quickcheck::{Arbitrary, Gen};
 
 use crate::expr;
+use crate::named::Named;
 use crate::types;
 
 use super::common::{PortDir, ReadUnderWrite};
@@ -30,14 +31,17 @@ impl Memory {
         Self {name: name.into(), data_type: data_type.into(), kind}
     }
 
-    /// Retrieve the memory's name
-    pub fn name(&self) -> &Arc<str> {
-        &self.name
-    }
-
     /// Retrieve the kind of simple memory
     pub fn kind(&self) -> Kind {
         self.kind
+    }
+}
+
+impl Named for Memory {
+    type Name = Arc<str>;
+
+    fn name(&self) -> &Self::Name {
+        &self.name
     }
 }
 
@@ -79,7 +83,7 @@ impl Arbitrary for Memory {
         use crate::tests::Identifier;
 
         let k = self.kind();
-        let res = Identifier::from(self.name().as_ref())
+        let res = Identifier::from(self.name_ref())
             .shrink()
             .map({
                 let t = self.data_type.clone();
@@ -194,10 +198,6 @@ impl<R: expr::Reference> types::Typed for Port<R> {
 }
 
 impl<R: expr::Reference> expr::Reference for Port<R> {
-    fn name(&self) -> &str {
-        self.name.as_ref()
-    }
-
     fn flow(&self) -> Option<expr::Flow> {
         self.dir.map(|d| match d {
             PortDir::Read       => expr::Flow::Source,
@@ -207,10 +207,16 @@ impl<R: expr::Reference> expr::Reference for Port<R> {
     }
 }
 
+impl<R: expr::Reference> Named for Port<R> {
+    type Name = Arc<str>;
+
+    fn name(&self) -> &Self::Name {
+        &self.name
+    }
+}
+
 impl<R: expr::Reference> fmt::Display for Port<R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use expr::Reference;
-
         let mdir = match self.direction() {
             Some(PortDir::Read)         => "read",
             Some(PortDir::Write)        => "write",
@@ -246,9 +252,8 @@ impl<R: expr::tests::TypedRef + Clone + 'static> Arbitrary for Port<R> {
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         use crate::tests::Identifier;
-        use expr::Reference;
 
-        let res = Identifier::from(self.name())
+        let res = Identifier::from(self.name_ref())
             .shrink()
             .map({
                 let m = self.memory().clone();

@@ -8,6 +8,7 @@ use nom::combinator::all_consuming;
 use quickcheck::{Gen, TestResult, Testable};
 
 use crate::indentation::{DisplayIndented, Indentation};
+use crate::named::Named;
 use crate::tests::Equivalence;
 
 use super::{Direction, Instance, Module, ParamValue, Port, parsers};
@@ -56,7 +57,7 @@ fn parse_instance(original: Instance) -> Result<Equivalence<Instance>, String> {
     let s = original.to_string();
 
     let m = original.module().clone();
-    let lookup = move |n: &str| if n == m.name() {
+    let lookup = move |n: &str| if n == m.name_ref() {
         Some(m.clone())
     } else {
         None

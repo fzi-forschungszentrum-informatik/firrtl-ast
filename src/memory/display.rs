@@ -12,7 +12,7 @@ pub(crate) struct MemoryDecl<'a>(pub &'a super::Memory, pub Info<'a>);
 
 impl DisplayIndented for MemoryDecl<'_> {
     fn fmt<W: fmt::Write>(&self, indentation: &mut Indentation, f: &mut W) -> fmt::Result {
-        use crate::expr::Reference;
+        use crate::named::Named;
 
         writeln!(f, "{}mem {}:{}", indentation.lock(), self.0.name(), self.1)?;
         let mut indentation = indentation.sub();

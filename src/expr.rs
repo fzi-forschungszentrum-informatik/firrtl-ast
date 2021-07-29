@@ -11,6 +11,7 @@ pub mod tests;
 use std::fmt;
 use std::sync::Arc;
 
+use crate::named::Named;
 use crate::types;
 use types::Typed;
 
@@ -138,7 +139,7 @@ impl<R: Reference> fmt::Display for Expression<R> {
         match self {
             Self::UIntLiteral{value, width} => write!(f, "UInt<{}>({})", width, value),
             Self::SIntLiteral{value, width} => write!(f, "SInt<{}>({})", width, value),
-            Self::Reference(reference)      => fmt::Display::fmt(reference.name(), f),
+            Self::Reference(reference)      => fmt::Display::fmt(reference.name_ref(), f),
             Self::SubField{base, index}     => write!(f, "{}.{}", base, index),
             Self::SubIndex{base, index}     => write!(f, "{}[{}]", base, index),
             Self::SubAccess{base, index}    => write!(f, "{}[{}]", base, index),
@@ -151,10 +152,7 @@ impl<R: Reference> fmt::Display for Expression<R> {
 
 
 /// A reference to a named entity
-pub trait Reference {
-    /// Retrieve the name of the referenced entity
-    fn name(&self) -> &str;
-
+pub trait Reference: Named {
     /// Retrieve the flow associated with the referenced entity
     ///
     /// This function returns the flow associated with the entity or `None` if
@@ -164,10 +162,6 @@ pub trait Reference {
 
 #[cfg(test)]
 impl Reference for Identifier {
-    fn name(&self) -> &str {
-        self.as_ref()
-    }
-
     fn flow(&self) -> Option<Flow> {
         Some(Flow::Duplex)
     }

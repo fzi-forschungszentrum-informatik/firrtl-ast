@@ -17,6 +17,7 @@ use quickcheck::{Arbitrary, Gen};
 use crate::expr;
 use crate::indentation::{DisplayIndented, Indentation};
 use crate::info;
+use crate::named::Named;
 use crate::stmt::Statement;
 use crate::types::{self, Type};
 
@@ -36,11 +37,6 @@ impl Module {
     /// Create a new module
     pub fn new(name: Arc<str>, ports: impl IntoIterator<Item = Arc<Port>>, kind: Kind) -> Self {
         Self {name, ports: ports.into_iter().collect(), kind, info: Default::default()}
-    }
-
-    /// Retrieve the module's name
-    pub fn name(&self) -> &str {
-        self.name.as_ref()
     }
 
     /// Retrieve the module's I/O ports
@@ -71,6 +67,14 @@ impl Module {
     /// Retrieve all modules referenced from this module via instantiations
     pub fn referenced_modules(&self) -> impl Iterator<Item = &Arc<Self>> {
         self.statements().iter().flat_map(Statement::instantiations).map(Instance::module)
+    }
+}
+
+impl Named for Module {
+    type Name = Arc<str>;
+
+    fn name(&self) -> &Self::Name {
+        &self.name
     }
 }
 
@@ -139,7 +143,7 @@ impl Arbitrary for Module {
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
-        let res = crate::tests::Identifier::from(self.name())
+        let res = crate::tests::Identifier::from(self.name_ref())
             .shrink()
             .map({
                 let p = self.ports.clone();
@@ -358,11 +362,6 @@ impl Port {
         Self {name: name.into(), r#type, direction, info: Default::default()}
     }
 
-    /// Retrieve the I/O port's name
-    pub fn name(&self) -> &str {
-        self.name.as_ref()
-    }
-
     /// Retrieve the I/O port's type
     pub fn r#type(&self) -> &Type {
         &self.r#type
@@ -380,15 +379,19 @@ impl Port {
 }
 
 impl expr::Reference for Port {
-    fn name(&self) -> &str {
-        self.name.as_ref()
-    }
-
     fn flow(&self) -> Option<expr::Flow> {
         Some(match self.direction {
             Direction::Input  => expr::Flow::Source,
             Direction::Output => expr::Flow::Sink,
         })
+    }
+}
+
+impl Named for Port {
+    type Name = Arc<str>;
+
+    fn name(&self) -> &Self::Name {
+        &self.name
     }
 }
 
@@ -428,7 +431,7 @@ impl Arbitrary for Port {
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         let d = self.direction;
-        let res = crate::tests::Identifier::from(self.name())
+        let res = crate::tests::Identifier::from(self.name_ref())
             .shrink()
             .map({
                 let t = self.r#type.clone();
@@ -502,12 +505,16 @@ impl Instance {
 }
 
 impl expr::Reference for Instance {
-    fn name(&self) -> &str {
-        self.name.as_ref()
-    }
-
     fn flow(&self) -> Option<expr::Flow> {
         Some(expr::Flow::Source)
+    }
+}
+
+impl Named for Instance {
+    type Name = Arc<str>;
+
+    fn name(&self) -> &Self::Name {
+        &self.name
     }
 }
 
@@ -536,8 +543,6 @@ impl types::Typed for Instance {
 
 impl fmt::Display for Instance {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use expr::Reference;
-
         write!(f, "inst {} of {}", self.name(), self.module().name())
     }
 }
