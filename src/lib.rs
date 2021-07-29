@@ -31,5 +31,6 @@ pub use circuit::Circuit;
 pub use expr::Expression;
 pub use memory::{Memory, Register};
 pub use module::Module;
+pub use named::Named;
 pub use types::{GroundType, Type};
 
