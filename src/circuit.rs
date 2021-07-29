@@ -33,8 +33,9 @@ pub use parsers::{circuit as parse, consumer};
 
 /// FIRRTL circuit
 ///
-/// A `Circuit` is the top level construct in FIRRTL. It contains an arbitrary
-/// number of modules, one of which is defined as the "top" module.
+/// A `Circuit` is the top level construct in FIRRTL. A circuit is defined by
+/// its "top module", which may contain instantiations any number of modules
+/// which need to be part of the same circuit.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Circuit {
     top: Arc<Module>,
