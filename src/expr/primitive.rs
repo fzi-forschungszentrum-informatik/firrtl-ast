@@ -3,7 +3,6 @@
 //! Primitive operations
 
 use std::fmt;
-use std::num::NonZeroU16;
 use std::sync::Arc;
 
 use crate::types;
