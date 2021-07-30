@@ -1,6 +1,6 @@
 // Copyright (c) 2021 FZI Forschungszentrum Informatik
 // SPDX-License-Identifier: Apache-2.0
-//! "Simple" memories
+//! FIRRTL `cmem`s or `smem`s
 
 use std::fmt;
 use std::sync::Arc;
