@@ -1,6 +1,6 @@
 // Copyright (c) 2021 FZI Forschungszentrum Informatik
 // SPDX-License-Identifier: Apache-2.0
-//! Module specific definitions and functions
+//! FIRRTL module and associated utilties
 
 pub(crate) mod parsers;
 
