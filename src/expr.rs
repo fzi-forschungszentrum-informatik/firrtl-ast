@@ -1,6 +1,6 @@
 // Copyright (c) 2021 FZI Forschungszentrum Informatik
 // SPDX-License-Identifier: Apache-2.0
-//! Datatypes and utilities specific to expressions
+//! FIRRTL expressions and associated utilities
 
 pub(crate) mod parsers;
 pub mod primitive;
