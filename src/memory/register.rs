@@ -1,6 +1,6 @@
 // Copyright (c) 2021 FZI Forschungszentrum Informatik
 // SPDX-License-Identifier: Apache-2.0
-//! Register type
+//! FIRRTL register
 
 use std::fmt;
 use std::sync::Arc;
