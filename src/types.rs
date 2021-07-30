@@ -28,7 +28,7 @@ pub use r#type::bundle_fields;
 /// Bit-width of a ground-type, i.e. the number of "physical" wires or signals
 ///
 /// A bit-width may be undefined in some instances, i.e. they may need to be
-/// inferred later. However, if it is defined, it can never be zero.
+/// inferred later.
 pub type BitWidth = Option<u16>;
 
 /// Number of elements in a vector
