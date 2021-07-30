@@ -8,7 +8,7 @@ use super::Expression;
 use quickcheck::{Arbitrary, Gen};
 
 
-/// An element in a print statement
+/// An element in a [super::Kind::Print] statement
 #[derive(Clone, Debug, PartialEq)]
 pub enum PrintElement {
     Literal(String),
@@ -46,7 +46,7 @@ impl Arbitrary for PrintElement {
 }
 
 
-/// Foramt specifier for print statements
+/// Foramt specifier for [super::Kind::Print] statements
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Format {Binary, Decimal, Hexadecimal, Character}
 
