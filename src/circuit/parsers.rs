@@ -11,9 +11,11 @@ use crate::info::parse as parse_info;
 use crate::module::parsers::Modules;
 use crate::parsers::{identifier, kw, le, op, spaced};
 
+use super::{Circuit, ModuleConsumer};
+
 
 /// Parse a Circuit
-pub fn circuit(input: &str) -> Result<super::Circuit, ParseError> {
+pub fn circuit(input: &str) -> Result<Circuit, ParseError> {
     consumer(input)?.into_circuit()
 }
 
@@ -23,7 +25,7 @@ pub fn circuit(input: &str) -> Result<super::Circuit, ParseError> {
 /// The input is expected to contain a full circuit definition. The function
 /// will return a `ModuleConsumer` which will construct a `Circuit` from that
 /// input.
-pub fn consumer(input: &str) -> Result<super::ModuleConsumer<Modules, ParseError>, ParseError> {
+pub fn consumer(input: &str) -> Result<ModuleConsumer<Modules, ParseError>, ParseError> {
     let (mod_input, (top_name, info)) = map(
         tuple((
             fold_many0(le, (), |_, _| ()),
@@ -36,6 +38,6 @@ pub fn consumer(input: &str) -> Result<super::ModuleConsumer<Modules, ParseError
         |(_, _, n, _, i, ..)| (n, i)
     )(input).map_err(|e| convert_error(input, e))?;
 
-    Ok(super::ModuleConsumer::new(top_name, info, Modules::new_with_origin(mod_input, input)))
+    Ok(ModuleConsumer::new(top_name, info, Modules::new_with_origin(mod_input, input)))
 }
 
