@@ -179,7 +179,8 @@ pub enum Flow {
 impl Flow {
     /// Determine whether the flow allows an entity to serve as a source of data
     ///
-    /// This function returns true if the flow is either `Source` or `Duplex`.
+    /// This function returns true if the flow is either [Flow::Source] or
+    /// [Flow::Duplex].
     pub fn is_source(&self) -> bool {
         match self {
             Self::Source => true,
@@ -190,7 +191,8 @@ impl Flow {
 
     /// Determine whether the flow allows an entity to serve as a fink for data
     ///
-    /// This function returns true if the flow is either `Sink` or `Duplex`.
+    /// This function returns true if the flow is either [Flow::Sink] or
+    /// [Flow::Duplex].
     pub fn is_sink(&self) -> bool {
         match self {
             Self::Source => false,
