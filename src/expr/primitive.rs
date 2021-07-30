@@ -71,9 +71,9 @@ pub enum Operation<R: Reference> {
     /// Bit extraction
     Bits(Arc<Expression<R>>, Option<u16>, Option<u16>),
     /// Increase precision (of "fixed")
-    IncPrecision(Arc<Expression<R>>, NonZeroU16),
+    IncPrecision(Arc<Expression<R>>, u16),
     /// Decrease precision (of "fixed")
-    DecPrecision(Arc<Expression<R>>, NonZeroU16),
+    DecPrecision(Arc<Expression<R>>, u16),
     /// Set precision (of "fixed")
     SetPrecision(Arc<Expression<R>>, i16),
 }
@@ -235,12 +235,12 @@ impl<R> types::Typed for Operation<R>
                 .map(|w| w + 1)
             )),
             Self::IncPrecision(sub, bits)   => fixed(sub).map(|(w, p)| GT::Fixed(
-                w.and_then(|w| w.checked_add(bits.get())),
-                p.and_then(|p| p.checked_add(bits.get() as i16))
+                w.and_then(|w| w.checked_add(*bits)),
+                p.and_then(|p| p.checked_add(*bits as i16))
             )),
             Self::DecPrecision(sub, bits)   => fixed(sub).map(|(w, p)| GT::Fixed(
-                w.and_then(|w| w.checked_sub(bits.get())),
-                p.and_then(|p| p.checked_sub(bits.get() as i16))
+                w.and_then(|w| w.checked_sub(*bits)),
+                p.and_then(|p| p.checked_sub(*bits as i16))
             )),
             Self::SetPrecision(sub, bits)   => fixed(sub).map(|(w, p)| GT::Fixed(
                 w.and_then(|w| p.and_then(|p| (w as i16).checked_sub(p)))
