@@ -3,13 +3,13 @@
 //! Types
 
 pub mod combinator;
+pub mod ground;
+pub mod orientation;
+pub mod oriented;
+pub mod r#type;
 pub(crate) mod parsers;
 
 mod display;
-mod ground;
-mod orientation;
-mod oriented;
-mod r#type;
 
 #[cfg(test)]
 mod tests;
