@@ -486,8 +486,7 @@ impl Arbitrary for Direction {
 }
 
 
-/// Representation of a module instance
-///
+/// Representation of a [Module] instance
 #[derive(Clone, Debug, PartialEq)]
 pub struct Instance {
     name: Arc<str>,
@@ -496,13 +495,11 @@ pub struct Instance {
 
 impl Instance {
     /// Create a new module instance
-    ///
     pub fn new(name: impl Into<Arc<str>>, module: Arc<Module>) -> Self {
         Self {name: name.into(), module}
     }
 
-    /// Retrieve the instantiated module
-    ///
+    /// Retrieve the instantiated [Module]
     pub fn module(&self) -> &Arc<Module> {
         &self.module
     }
