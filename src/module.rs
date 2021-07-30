@@ -24,7 +24,11 @@ use crate::types::{self, Type};
 pub use parsers::Modules;
 
 
-/// A hardware block
+/// FIRRTL `module` or `extmodule`
+///
+/// A `Module` represents a hardware block. Two [Kind]s of `Module`s exist in
+/// FIRRTL: `module`s are defined via FIRRTL [Statement]s while `exmodule`s are
+/// black boxes and may refer to external definitions such as Verilog sources.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Module {
     name: Arc<str>,
