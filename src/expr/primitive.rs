@@ -37,7 +37,7 @@ pub enum Operation<R: Reference> {
     /// Not equal
     NEq(Arc<Expression<R>>, Arc<Expression<R>>),
     /// Padding
-    Pad(Arc<Expression<R>>, NonZeroU16),
+    Pad(Arc<Expression<R>>, u16),
     /// Type cast
     Cast(Arc<Expression<R>>, types::GroundType),
     /// Shift left (static)
@@ -189,8 +189,7 @@ impl<R> types::Typed for Operation<R>
             Self::GEq(..)                   => Ok(GT::UInt(Some(1))),
             Self::Eq(..)                    => Ok(GT::UInt(Some(1))),
             Self::NEq(..)                   => Ok(GT::UInt(Some(1))),
-            Self::Pad(sub, bits)            => ground(sub)
-                .map(|t| t.with_width(max(t.width(), Some(bits.get())))),
+            Self::Pad(sub, bits)            => ground(sub).map(|t| t.with_width(max(t.width(), Some(*bits)))),
             Self::Cast(sub, target)         => ground(sub).map(|t| target.with_width(t.width())),
             Self::Shl(sub, bits)            => ground(sub)
                 .map(|t| t.with_width(t.width().and_then(|w| w.checked_add(*bits)))),
