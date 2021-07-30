@@ -1,6 +1,6 @@
 // Copyright (c) 2021 FZI Forschungszentrum Informatik
 // SPDX-License-Identifier: Apache-2.0
-//! Types
+//! FIRRTL types
 
 pub mod combinator;
 pub(crate) mod parsers;
