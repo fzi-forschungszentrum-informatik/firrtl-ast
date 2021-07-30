@@ -30,10 +30,10 @@ pub enum Entity {
 }
 
 impl Entity {
-    /// Checks whether this entity can be declared via a statement
+    /// Checks whether this entity can be declared via a [super::Statement]
     ///
     /// Returns true if the entity can be declared, which will be the case for
-    /// most entities. Note that `Port`s cannot be declared.
+    /// most entities. Note that [module::Port]s cannot be declared.
     pub fn is_declarable(&self) -> bool {
         match self {
             Self::Port(..)  => false,
