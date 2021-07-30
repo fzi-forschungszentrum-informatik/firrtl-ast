@@ -25,7 +25,7 @@ pub use r#type::{BundleField, Type};
 pub use r#type::bundle_fields;
 
 
-/// Bit-width of a ground-type, i.e. the number of "physical" wires or signals
+/// Bit-width of a [GroundType], i.e. the number of "physical" wires or signals
 ///
 /// A bit-width may be undefined in some instances, i.e. they may need to be
 /// inferred later.
@@ -43,7 +43,7 @@ pub trait TypeExt {
     /// function determines whether two types are equivalent under that
     /// definition.
     ///
-    /// In order to avoid confusion with `PartialEq` and `Eq`, users are encouraged
+    /// In order to avoid confusion with [PartialEq] and [Eq], users are encouraged
     /// to call `eq` as an associated function, e.g. as `TypeEq::eq(a, b)`.
     fn eq(&self, rhs: &Self) -> bool;
 
