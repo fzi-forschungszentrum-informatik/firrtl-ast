@@ -13,7 +13,7 @@ use super::entity::Entity;
 
 /// Context for named things
 ///
-/// A `Context` allows looking up `Entity`s, `SimpleMem`s and `Module`s.
+/// A `Context` allows looking up [Entity]s, [SimpleMem]s and [Module]s.
 pub trait Context {
     /// Retrieve the entity with the given name, if any
     fn entity(&self, name: &str) -> Option<Arc<Entity>>;
@@ -30,7 +30,7 @@ pub trait Context {
     /// Retrieve the module with the given name
     fn module(&self, name: &str) -> Option<Arc<Module>>;
 
-    /// Create a SubContext for this Context
+    /// Create a [SubContext] for this Context
     fn sub(&mut self) -> SubContext
     where Self: Sized
     {
@@ -39,7 +39,7 @@ pub trait Context {
 }
 
 
-/// Toplevel Context
+/// Toplevel [Context]
 #[derive(Clone, Debug, Default)]
 pub struct TopContext<M> {
     entities: HashMap<Arc<str>, Arc<Entity>>,
@@ -93,13 +93,13 @@ impl<M: Fn(&str) -> Option<Arc<Module>>> Context for TopContext<M> {
 }
 
 
-/// Sub-Context
+/// Sub-[Context]
 ///
-/// A `SubContext` is linked to another `Context`. While all items in the parent
-/// `Context` are visible via associated `SubContext`s, each `SubContext` keeps
-/// its own `Entity`s and `Memory`s and priotizes them during lookup.
+/// A `SubContext` is linked to another [Context]. While all items in the parent
+/// [Context] are visible via associated `SubContext`s, each `SubContext` keeps
+/// its own [Entity]s and [SimpleMem]s and priotizes them during lookup.
 ///
-/// When dropped, all items accumulated are added to the parent `Context`.
+/// When dropped, all items accumulated are added to the parent [Context].
 pub struct SubContext<'p> {
     parent: &'p mut dyn Context,
     entities: HashMap<Arc<str>, Arc<Entity>>,

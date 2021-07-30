@@ -21,7 +21,7 @@ pub enum Type {
 }
 
 impl Type {
-    /// Convert to an `OrientedType` with a defined root orientation
+    /// Convert to an [OrientedType] with a defined root orientation
     pub fn with_orientation(&self, orientation: Orientation) -> OrientedType {
         match self {
             Self::GroundType(g) => OrientedType::GroundType(*g, orientation),
@@ -36,7 +36,7 @@ impl Type {
 
     /// Check whether this type is weakly equivalent to another type
     ///
-    /// Two `Type`s are weakly equivalent if their corresponding `OrientedType`s
+    /// Two `Type`s are weakly equivalent if their corresponding [OrientedType]s
     /// are (type) equivalent.
     pub fn weak_eq(&self, rhs: &Self) -> bool {
         TypeExt::eq(&self.with_orientation(Default::default()), &rhs.with_orientation(Default::default()))
@@ -229,7 +229,7 @@ pub struct BundleField {
 impl BundleField {
     /// Create a new field with the given name and type
     ///
-    /// The field will have default (i.e. normal) orientation.
+    /// The field will have default (i.e. normal) [Orientation].
     pub fn new(name: impl Into<Arc<str>>, r#type: impl Into<Type>) -> Self {
         Self {name: name.into(), r#type: r#type.into(), orientation: Default::default()}
     }
@@ -246,8 +246,9 @@ impl BundleField {
 
     /// Flip the field orientation
     ///
-    /// This function flips the field orientaiton. If the orientation is normal,
-    /// the returned field will be flipped and vice versa.
+    /// This function flips the field [Orientation]. If it is
+    /// [Orientation::Normal], the returned field will be [Orientation::Flipped]
+    /// and vice versa.
     pub fn flipped(self) -> Self {
         Self {orientation: self.orientation + Orientation::Flipped, ..self}
     }
@@ -323,9 +324,9 @@ impl Arbitrary for BundleField {
 }
 
 
-/// Generate a hashmap containing `BundleField`s, mapped to by their name
+/// Generate a hashmap containing [BundleField]s, mapped to by their name
 ///
-/// Naturally, the `BundleField`s are guranteed to have unique names.
+/// Naturally, the [BundleField]s are guranteed to have unique names.
 #[cfg(test)]
 pub fn bundle_fields(max_size: usize, g: &mut Gen) -> std::collections::HashMap<Arc<str>, BundleField> {
     if max_size == 0 {

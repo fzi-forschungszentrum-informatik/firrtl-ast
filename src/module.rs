@@ -1,6 +1,6 @@
 // Copyright (c) 2021 FZI Forschungszentrum Informatik
 // SPDX-License-Identifier: Apache-2.0
-//! Module specific definitions and functions
+//! FIRRTL module and associated utilties
 
 pub(crate) mod parsers;
 
@@ -24,7 +24,11 @@ use crate::types::{self, Type};
 pub use parsers::Modules;
 
 
-/// A hardware block
+/// FIRRTL `module` or `extmodule`
+///
+/// A `Module` represents a hardware block. Two [Kind]s of `Module`s exist in
+/// FIRRTL: `module`s are defined via FIRRTL [Statement]s while `exmodule`s are
+/// black boxes and may refer to external definitions such as Verilog sources.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Module {
     name: Arc<str>,
@@ -347,7 +351,7 @@ impl Arbitrary for ParamValue {
 }
 
 
-/// An I/O port of a module
+/// An I/O port of a [Module]
 #[derive(Clone, Debug, PartialEq)]
 pub struct Port {
     name: Arc<str>,
@@ -371,8 +375,8 @@ impl Port {
     ///
     /// An I/O port may be either an input or an output. The direction is
     /// generally expressed in terms of the module. Ports with an direction of
-    /// `Input` will be a sink outside the context of the module and a source
-    /// within the context of the module, at least at the top level.
+    /// [Direction::Input] will be an [expr::Flow::Source] within the context of
+    /// the module.
     pub fn direction(&self) -> Direction {
         self.direction
     }
@@ -482,8 +486,7 @@ impl Arbitrary for Direction {
 }
 
 
-/// Representation of a module instance
-///
+/// Representation of a [Module] instance
 #[derive(Clone, Debug, PartialEq)]
 pub struct Instance {
     name: Arc<str>,
@@ -492,13 +495,11 @@ pub struct Instance {
 
 impl Instance {
     /// Create a new module instance
-    ///
     pub fn new(name: impl Into<Arc<str>>, module: Arc<Module>) -> Self {
         Self {name: name.into(), module}
     }
 
-    /// Retrieve the instantiated module
-    ///
+    /// Retrieve the instantiated [Module]
     pub fn module(&self) -> &Arc<Module> {
         &self.module
     }

@@ -1,9 +1,13 @@
 // Copyright (c) 2021 FZI Forschungszentrum Informatik
 // SPDX-License-Identifier: Apache-2.0
-//! FIRRTL data structure
+//! FIRRTL AST representation and utilities
 //!
-//! [FIRRTL](https://chisel-lang.org/firrtl/) is a simple register-transfer
-//! level HDL.
+//! [FIRRTL](https://chisel-lang.org/firrtl/) is a register-transfer level HDL.
+//! This library provides an represenation for its AST as well as parsing,
+//! formatting and typing utilities.
+//!
+//! The AST's toplevel element is a [Circuit]. That type can be found in the
+//! [circuit] module alongside toplevel parsing utilities.
 
 mod display;
 mod indentation;

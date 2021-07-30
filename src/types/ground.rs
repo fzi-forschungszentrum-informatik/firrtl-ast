@@ -46,8 +46,9 @@ impl GroundType {
     /// Create a copy of the type with the given width
     ///
     /// This function returns a copy of the type, with the width replaced by the
-    /// given one. In the case of `Fixed`, the point will be preserved; in the
-    /// case of `Clock`, this function will return a simple copy.
+    /// given one. In the case of [GroundType::Fixed], the point will be
+    /// preserved; in the case of [GroundType::Clock], this function will return
+    /// a simple copy.
     pub fn with_width(&self, width: BitWidth) -> Self {
         match self {
             Self::UInt(_)     => Self::UInt(width),
@@ -83,11 +84,12 @@ impl super::TypeExt for GroundType {
     }
 }
 
-/// Combinator impl for BitWidth combination of ground types
+/// [Combinator] impl for [BitWidth] combination of [GroundType]s
 ///
-/// This `Combinator` combines `UInt`s, `SInt`s und `Analog` based on `BitWidth`
-/// combination. `Clock`s are combined to a `Clock`. Combination of different
-/// `GroundType` variants or `Fixed` will result in an `Err`.
+/// This [Combinator] combines [GroundType::UInt]s, [GroundType::SInt]s and
+/// [GroundType::Analog] based on [BitWidth] combination. [GroundType::Clock]s
+/// are combined to [GroundType::Clock]. Combination of different
+/// [GroundType] variants or [GroundType::Fixed] will result in an `Err`.
 impl<C: Combinator<BitWidth>> Combinator<GroundType> for C {
     fn combine<'a>(
         &self,
@@ -160,15 +162,16 @@ impl Arbitrary for GroundType {
 pub enum ResetKind {Regular, Async}
 
 
-/// Maximum width Combinator
+/// Maximum width [Combinator]
 ///
-/// Creating an `FnWidth` using `std::cmp::max` will yield a combinator which
-/// selects the maximum width of the input `GroundType`s. However, it will yield
-/// an error for fixed types.
+/// Creating an [FnWidth][super::combinator::FnWidth] using [std::cmp::max] will
+/// yield a [Combinator] which selects the maximum width of the input
+/// [GroundType]s.  However, it will yield an error for fixed types.
 ///
-/// This `Combinator` extends the `FnWidth` for fixed types. For two `Fixed`
-/// variants, the combinator computes a fixed type, taking into account both
-/// point offsets. All other combinations are forwarded to an `FnWidth`.
+/// This [Combinator] extends the [FnWidth][super::combinator::FnWidth] for
+/// fixed types. For two [GroundType::Fixed], the [Combinator] computes a fixed
+/// type, taking into account both point offsets. All other combinations are
+/// forwarded to an [FnWidth][super::combinator::FnWidth].
 pub struct MaxWidth {}
 
 impl MaxWidth {

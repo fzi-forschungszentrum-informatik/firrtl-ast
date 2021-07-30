@@ -1,6 +1,6 @@
 // Copyright (c) 2021 FZI Forschungszentrum Informatik
 // SPDX-License-Identifier: Apache-2.0
-//! Types and utilities related to FIRRTL statements
+//! FIRRTL statements and associated utilities
 
 pub(crate) mod display;
 pub(crate) mod parsers;
@@ -53,7 +53,7 @@ impl Statement {
 
     /// Retrieve all instantiations appearing in this statement
     ///
-    /// This function retrieves all module instantiations (declarations) in a
+    /// This function retrieves all [module::Instance]s (declarations) in a
     /// given statement. This includes instantiations in nested statements,
     /// e.g. inside conditional branches.
     pub fn instantiations(&self) -> impl Iterator<Item = &module::Instance> {
@@ -64,7 +64,7 @@ impl Statement {
         })
     }
 
-    /// Retrieve the statement kind
+    /// Retrieve the statement [Kind]
     pub fn kind(&self) -> &Kind {
         &self.kind
     }
@@ -334,7 +334,7 @@ impl Arbitrary for Statement {
 }
 
 
-/// Statement kind
+/// [Statement] kind
 #[derive(Clone, Debug, PartialEq)]
 pub enum Kind {
     Connection{from: Expression, to: Expression},
@@ -350,6 +350,6 @@ pub enum Kind {
 }
 
 
-/// Expression type suitable for statements
+/// Expression type suitable for [Statement]s
 type Expression = expr::Expression<Arc<Entity>>;
 
