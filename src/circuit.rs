@@ -60,7 +60,7 @@ impl Circuit {
     /// # Note
     ///
     /// This function reads the entire source into a separate buffer in memory.
-    /// Consider using `parse` if the source is in memory already.
+    /// Consider using [parse] if the source is in memory already.
     pub fn from_read(mut read: impl std::io::Read) -> Result<Self, ParseError> {
         let mut buf = Default::default();
         read.read_to_string(&mut buf)?;
@@ -120,9 +120,9 @@ impl Arbitrary for Circuit {
 
 /// Iterator adapter/wrapper for creating a circuit
 ///
-/// Instances of this type wrap an iterator over `Module`s. It allows iterating
+/// Instances of this type wrap an iterator over [Module]s. It allows iterating
 /// over the modules yielded by the inner iterator transparently, seeking out
-/// the top module for a target circuit by name.
+/// the top module for a target [Circuit] by name.
 #[derive(Clone, Debug)]
 pub struct ModuleConsumer<I: Iterator<Item = Result<Arc<Module>, E>>, E> {
     top_module: TopState,
@@ -136,9 +136,9 @@ where I: Iterator<Item = Result<Arc<Module>, E>>,
 {
     /// Create a new adapter for the given target top module name
     ///
-    /// The adapter will allow constructing a `Circuit` with a top-module with
+    /// The adapter will allow constructing a [Circuit] with a top-module with
     /// the given `top_name`, provided that `modules` will yield such a module.
-    /// The constructed `Circuit` with the given `info`. Note that `None` is a
+    /// The constructed [Circuit] with the given `info`. Note that `None` is a
     /// valid choice, e.g. if the `info` is to be set later.
     pub fn new(top_name: impl Into<String>, info: impl Into<Option<String>>, modules: I) -> Self {
         Self {top_module: TopState::Name(top_name.into()), info: info.into(), modules}
