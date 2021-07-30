@@ -351,7 +351,7 @@ impl Arbitrary for ParamValue {
 }
 
 
-/// An I/O port of a module
+/// An I/O port of a [Module]
 #[derive(Clone, Debug, PartialEq)]
 pub struct Port {
     name: Arc<str>,
