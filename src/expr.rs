@@ -13,7 +13,7 @@ use std::sync::Arc;
 
 use crate::named::Named;
 use crate::types;
-use types::Typed;
+use types::{Typed, UBits, VecWidth};
 
 #[cfg(test)]
 use crate::tests::Identifier;
@@ -23,15 +23,15 @@ use crate::tests::Identifier;
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expression<R: Reference> {
     /// An UInt literal
-    UIntLiteral{value: num_bigint::BigUint, width: u16},
+    UIntLiteral{value: num_bigint::BigUint, width: UBits},
     /// An SInt literal
-    SIntLiteral{value: num_bigint::BigInt, width: u16},
+    SIntLiteral{value: num_bigint::BigInt, width: UBits},
     /// A referernce expression
     Reference(R),
     /// A sub-field expression
     SubField{base: Arc<Expression<R>>, index: Arc<str>},
     /// A sub-index expression
-    SubIndex{base: Arc<Expression<R>>, index: u16},
+    SubIndex{base: Arc<Expression<R>>, index: VecWidth},
     /// A sub-access expression
     SubAccess{base: Arc<Expression<R>>, index: Arc<Expression<R>>},
     /// A multiplexer expression

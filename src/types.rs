@@ -29,10 +29,17 @@ pub use r#type::bundle_fields;
 ///
 /// A bit-width may be undefined in some instances, i.e. they may need to be
 /// inferred later.
-pub type BitWidth = Option<u16>;
+pub type BitWidth = Option<UBits>;
 
 /// Number of elements in a vector
 pub type VecWidth = u16;
+
+
+/// Data type for expressing an unsigned number of bits
+pub type UBits = u16;
+
+/// Data type for expressing a signed number of bits
+pub type SBits = i16;
 
 
 /// Trait representing common FIRRTL type concepts
@@ -77,7 +84,7 @@ pub trait Typed: Sized {
 
 
 /// Compute the width necessary to address the given number of elements
-pub fn required_address_width(num: impl Into<u128>) -> u16 {
+pub fn required_address_width(num: impl Into<u128>) -> UBits {
     let mut res = 0;
     let mut num = num.into().saturating_sub(1);
     while num > 0 {
