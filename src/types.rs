@@ -84,7 +84,7 @@ pub trait Typed: Sized {
 
 
 /// Compute the width necessary to address the given number of elements
-pub fn required_address_width(num: impl Into<u128>) -> u16 {
+pub fn required_address_width(num: impl Into<u128>) -> UBits {
     let mut res = 0;
     let mut num = num.into().saturating_sub(1);
     while num > 0 {
