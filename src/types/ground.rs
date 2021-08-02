@@ -7,7 +7,7 @@ use std::fmt;
 #[cfg(test)]
 use quickcheck::{Arbitrary, Gen};
 
-use super::{BitWidth, Combinator};
+use super::{BitWidth, Combinator, SBits};
 
 
 /// FIRRTL ground type
@@ -18,7 +18,7 @@ pub enum GroundType {
     /// Signed integer type with width
     SInt(BitWidth),
     /// Fixed point type, with width and negative exponent
-    Fixed(BitWidth, Option<i16>),
+    Fixed(BitWidth, Option<SBits>),
     /// Clock type
     Clock,
     /// Reset type
