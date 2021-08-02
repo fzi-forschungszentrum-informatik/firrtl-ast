@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Combinator trait and implementations
 
-use super::BitWidth;
+use super::{BitWidth, UBits};
 
 
 /// Combinator for two entities
@@ -24,11 +24,11 @@ pub trait Combinator<T> {
 /// This `Combinator` will return a width from two known widths computed via a
 /// given function. If one of the width is unknown, the `Combinator` yields an
 /// unknown width (i.e. `None`). It never yields an error.
-pub struct FnWidth<F: Fn(u16, u16) -> Option<u16>> {
+pub struct FnWidth<F: Fn(UBits, UBits) -> Option<UBits>> {
     inner: F
 }
 
-impl<F: Fn(u16, u16) -> Option<u16>> FnWidth<F> {
+impl<F: Fn(UBits, UBits) -> Option<UBits>> FnWidth<F> {
     /// Combine two widths
     ///
     /// This function performs the combination, but returns the result bare,
@@ -42,7 +42,7 @@ impl<F: Fn(u16, u16) -> Option<u16>> FnWidth<F> {
     }
 }
 
-impl<F: Fn(u16, u16) -> Option<u16>> Combinator<BitWidth> for FnWidth<F> {
+impl<F: Fn(UBits, UBits) -> Option<UBits>> Combinator<BitWidth> for FnWidth<F> {
     fn combine<'a>(
         &self,
         lhs: &'a BitWidth,
@@ -52,7 +52,7 @@ impl<F: Fn(u16, u16) -> Option<u16>> Combinator<BitWidth> for FnWidth<F> {
     }
 }
 
-impl<F: Fn(u16, u16) -> Option<u16>> From<F> for FnWidth<F> {
+impl<F: Fn(UBits, UBits) -> Option<UBits>> From<F> for FnWidth<F> {
     fn from(inner: F) -> Self {
         Self {inner}
     }
