@@ -4,7 +4,7 @@
 
 use std::fmt;
 
-use super::BitWidth;
+use super::{BitWidth, SBits};
 
 
 /// Utility type for formatting bit widths
@@ -33,17 +33,17 @@ impl fmt::Display for Width {
 
 /// Utility type for formatting point offsets
 pub struct PointOff {
-    off: Option<i16>,
+    off: Option<SBits>,
 }
 
-impl From<&Option<i16>> for PointOff {
-    fn from(off: &Option<i16>) -> Self {
+impl From<&Option<SBits>> for PointOff {
+    fn from(off: &Option<SBits>) -> Self {
         Self::from(*off)
     }
 }
 
-impl From<Option<i16>> for PointOff {
-    fn from(off: Option<i16>) -> Self {
+impl From<Option<SBits>> for PointOff {
+    fn from(off: Option<SBits>) -> Self {
         Self {off}
     }
 }
