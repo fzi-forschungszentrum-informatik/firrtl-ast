@@ -57,7 +57,11 @@ pub fn expr<'i, R: super::Reference + Clone>(
     ))(input)?;
 
     /// Utility enum for parsing subscripts
-    enum Subscript<R: super::Reference> {Field(Arc<str>), Index(u16), Access(Arc<super::Expression<R>>)}
+    enum Subscript<R: super::Reference> {
+        Field(Arc<str>),
+        Index(types::UBits),
+        Access(Arc<super::Expression<R>>),
+    }
 
     fold_many0(
         spaced(alt((
