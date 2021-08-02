@@ -5,7 +5,7 @@
 use std::fmt;
 use std::sync::Arc;
 
-use crate::types;
+use crate::types::{self, SBits, UBits};
 
 use super::{Expression, Reference};
 
@@ -36,13 +36,13 @@ pub enum Operation<R: Reference> {
     /// Not equal
     NEq(Arc<Expression<R>>, Arc<Expression<R>>),
     /// Padding
-    Pad(Arc<Expression<R>>, u16),
+    Pad(Arc<Expression<R>>, UBits),
     /// Type cast
     Cast(Arc<Expression<R>>, types::GroundType),
     /// Shift left (static)
-    Shl(Arc<Expression<R>>, u16),
+    Shl(Arc<Expression<R>>, UBits),
     /// Shift right (static)
-    Shr(Arc<Expression<R>>, u16),
+    Shr(Arc<Expression<R>>, UBits),
     /// Shift left (dynamic)
     DShl(Arc<Expression<R>>, Arc<Expression<R>>),
     /// Shift right (dynamic)
@@ -68,13 +68,13 @@ pub enum Operation<R: Reference> {
     /// Concatenation
     Cat(Arc<Expression<R>>, Arc<Expression<R>>),
     /// Bit extraction
-    Bits(Arc<Expression<R>>, Option<u16>, Option<u16>),
+    Bits(Arc<Expression<R>>, Option<UBits>, Option<UBits>),
     /// Increase precision (of "fixed")
-    IncPrecision(Arc<Expression<R>>, u16),
+    IncPrecision(Arc<Expression<R>>, UBits),
     /// Decrease precision (of "fixed")
-    DecPrecision(Arc<Expression<R>>, u16),
+    DecPrecision(Arc<Expression<R>>, UBits),
     /// Set precision (of "fixed")
-    SetPrecision(Arc<Expression<R>>, i16),
+    SetPrecision(Arc<Expression<R>>, SBits),
 }
 
 impl<R: Reference> Operation<R> {
@@ -133,7 +133,7 @@ impl<R> types::Typed for Operation<R>
         use combinator::FnWidth;
 
         let max_width = |l: BitWidth, r: BitWidth| types::MaxWidth::combine_widths(l, r);
-        let sum_width = |l: BitWidth, r: BitWidth| FnWidth::from(u16::checked_add)
+        let sum_width = |l: BitWidth, r: BitWidth| FnWidth::from(UBits::checked_add)
             .combine_widths(l, r);
 
         let ground = |e: &Arc<Expression<R>>| e
@@ -196,14 +196,14 @@ impl<R> types::Typed for Operation<R>
                 GT::UInt(w)                 => Ok(GT::UInt(w.map(|w| max(w.saturating_sub(*bits), 1)))),
                 GT::SInt(w)                 => Ok(GT::SInt(w.map(|w| max(w.saturating_sub(*bits), 1)))),
                 GT::Fixed(Some(w), Some(p)) => Ok(
-                    GT::Fixed(w.checked_sub(*bits).map(|w| max(w, max(p, 1) as u16)), Some(p))
+                    GT::Fixed(w.checked_sub(*bits).map(|w| max(w, max(p, 1) as UBits)), Some(p))
                 ),
                 GT::Fixed(..)               => Ok(GT::Fixed(None, None)),
                 _ => Err(self.clone().into()),
             }),
             Self::DShl(sub, bits)           => ground(sub).and_then(|t| Ok(t
                 .with_width(match (t.width(), ground(bits)?.width()) {
-                    (Some(ws), Some(wb)) => 1u16
+                    (Some(ws), Some(wb)) => (1 as UBits)
                         .checked_shl(wb.into())
                         .and_then(|w| w.checked_add(ws))
                         .map(|w| w - 1),
@@ -235,14 +235,14 @@ impl<R> types::Typed for Operation<R>
             )),
             Self::IncPrecision(sub, bits)   => fixed(sub).map(|(w, p)| GT::Fixed(
                 w.and_then(|w| w.checked_add(*bits)),
-                p.and_then(|p| p.checked_add(*bits as i16))
+                p.and_then(|p| p.checked_add(*bits as SBits))
             )),
             Self::DecPrecision(sub, bits)   => fixed(sub).map(|(w, p)| GT::Fixed(
                 w.and_then(|w| w.checked_sub(*bits)),
-                p.and_then(|p| p.checked_sub(*bits as i16))
+                p.and_then(|p| p.checked_sub(*bits as SBits))
             )),
             Self::SetPrecision(sub, bits)   => fixed(sub).map(|(w, p)| GT::Fixed(
-                w.and_then(|w| p.and_then(|p| (w as i16).checked_sub(p)))
+                w.and_then(|w| p.and_then(|p| (w as SBits).checked_sub(p)))
                     .and_then(|w| w.checked_add(*bits))
                     .and_then(|w| w.try_into().ok()),
                 p
