@@ -7,7 +7,7 @@ use std::fmt;
 #[cfg(test)]
 use quickcheck::{Arbitrary, Gen};
 
-use super::{BitWidth, Combinator, SBits};
+use super::{BitWidth, Combinator, SBits, UBits};
 
 
 /// FIRRTL ground type
@@ -214,16 +214,16 @@ impl Combinator<GroundType> for MaxWidth {
 ///
 /// This function effectively computes `max(lw - lp, rw - rp) + max(lp, rp)`
 /// (cmp. section 10 of the FIRRTL spec), but tries to avoid underflow issues.
-/// If the result doesn't fit into an `u16`, the function returns `None`.
-pub fn combine_fixed_max(lhs: (u16, i16), rhs: (u16, i16)) -> BitWidth {
+/// If the result doesn't fit into an [UBits], the function returns `None`.
+pub fn combine_fixed_max(lhs: (UBits, SBits), rhs: (UBits, SBits)) -> BitWidth {
     use std::cmp::max;
 
     use std::convert::TryInto;
 
-    let lw = lhs.0 as i32;
-    let lp = lhs.1 as i32;
-    let rw = rhs.0 as i32;
-    let rp = rhs.1 as i32;
+    let lw: i32 = lhs.0.into();
+    let lp: i32 = lhs.1.into();
+    let rw: i32 = rhs.0.into();
+    let rp: i32 = rhs.1.into();
     (max(lw - lp, rw - rp) + max(lp, rp)).try_into().ok()
 }
 
