@@ -35,6 +35,13 @@ pub type BitWidth = Option<u16>;
 pub type VecWidth = u16;
 
 
+/// Data type for expressing an unsigned number of bits
+pub type UBits = u16;
+
+/// Data type for expressing a signed number of bits
+pub type SBits = i16;
+
+
 /// Trait representing common FIRRTL type concepts
 pub trait TypeExt {
     /// Check whether this type is type equivalent to another one
