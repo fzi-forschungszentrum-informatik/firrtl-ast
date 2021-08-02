@@ -29,7 +29,7 @@ pub use r#type::bundle_fields;
 ///
 /// A bit-width may be undefined in some instances, i.e. they may need to be
 /// inferred later.
-pub type BitWidth = Option<u16>;
+pub type BitWidth = Option<UBits>;
 
 /// Number of elements in a vector
 pub type VecWidth = u16;
