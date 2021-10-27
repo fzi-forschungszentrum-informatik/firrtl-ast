@@ -54,6 +54,18 @@ impl Type {
         }
     }
 
+    /// If this type is a vector type, return the base type and width
+    ///
+    /// This function returns the type of a vector element and the width of the
+    /// vector, or `None` if called on a type not a vector type.
+    pub fn vector(&self) -> Option<(&Arc<Self>, super::VecWidth)> {
+        if let Self::Vector(t, w) = self {
+            Some((t, *w))
+        } else {
+            None
+        }
+    }
+
     /// Return the bundle field with the given name
     ///
     /// If the type is not a bundle type or the bundle does not contain a field
