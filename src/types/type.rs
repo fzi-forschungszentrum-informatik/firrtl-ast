@@ -47,11 +47,7 @@ impl Type {
     /// This function returns the type of a vector element or `None`, if called
     /// on a type not a vector type.
     pub fn vector_base(&self) -> Option<&Arc<Self>> {
-        if let Self::Vector(t, _) = self {
-            Some(t)
-        } else {
-            None
-        }
+        self.vector().map(|(b, _)| b)
     }
 
     /// If this type is a vector type, return the base type and width
