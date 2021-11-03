@@ -9,7 +9,7 @@ quickcheck = "1"
 quickcheck_macros = "1"
 
 [dependencies]
-nom = "6.1"
+nom = "7.0"
 num-bigint = "0.4"
 num-traits = "0.2"
 transiter = "0.1"

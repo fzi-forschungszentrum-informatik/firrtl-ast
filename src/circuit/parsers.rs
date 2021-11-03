@@ -28,7 +28,7 @@ pub fn circuit(input: &str) -> Result<Circuit, ParseError> {
 pub fn consumer(input: &str) -> Result<ModuleConsumer<Modules, ParseError>, ParseError> {
     let (mod_input, (top_name, info)) = map(
         tuple((
-            fold_many0(le, (), |_, _| ()),
+            fold_many0(le, Default::default, |_, _| ()),
             kw("circuit"),
             spaced(identifier),
             spaced(op(":")),

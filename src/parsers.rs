@@ -151,7 +151,7 @@ pub fn le<'i>(input: &'i str) -> IResult<'i, ()> {
 
     nom::multi::fold_many1(
         spaced(preceded(opt(tuple((chr(';'), not_line_ending))), line_ending)),
-        (),
+        Default::default,
         |_, _| ()
     )(input)
 }

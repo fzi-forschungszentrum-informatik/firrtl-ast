@@ -69,7 +69,7 @@ pub fn expr<'i, R: super::Reference + Clone>(
             map(tuple((op("["), spaced(decimal), spaced(op("]")))), |(_, i, _)| Subscript::Index(i)),
             map(tuple((op("["), sub, spaced(op("]")))), |(_, i, _)| Subscript::Access(i)),
         ))),
-        res,
+        move || res.clone(),
         |e, s| match s {
             Subscript::Field(index)  => E::SubField{base: Arc::new(e), index},
             Subscript::Index(index)  => E::SubIndex{base: Arc::new(e), index},

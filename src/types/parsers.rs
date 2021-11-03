@@ -60,7 +60,7 @@ pub fn r#type(input: &str) -> IResult<super::Type> {
 
     fold_many0(
         spaced(tuple((op("["), spaced(decimal), spaced(op("]"))))),
-        res,
+        move || res.clone(),
         |t, (_, w, _)| T::Vector(Arc::new(t), w)
     )(input)
 }
