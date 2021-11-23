@@ -194,12 +194,9 @@ impl Arbitrary for Entity {
         match self {
             Self::Port(port)            => Box::new(port.shrink().map(Into::into)),
             Self::Wire{name, r#type}    => {
-                let n = name.clone();
-                let t = r#type.clone();
-                let res = Identifier::from(name.as_ref())
+                let res = (Identifier::from(name.as_ref()), r#type.clone())
                     .shrink()
-                    .map(move |n| Self::Wire{name: n.into(), r#type: t.clone()})
-                    .chain(r#type.shrink().map(move |r#type| Self::Wire{name: n.clone(), r#type}));
+                    .map(|(n, r#type)| Self::Wire{name: n.into(), r#type});
                 Box::new(res)
             },
             Self::Register(reg)         => Box::new(reg.shrink().map(Into::into)),
