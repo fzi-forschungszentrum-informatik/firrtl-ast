@@ -290,13 +290,9 @@ impl Arbitrary for Port {
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
-        let res = Identifier::from(self.name.as_ref()).shrink().map({
-            let dir = self.dir;
-            move |n| Port {name: n.into(), dir}
-        }).chain(self.dir.shrink().map({
-            let n = self.name.clone();
-            move |dir| Port {name: n.clone(), dir}
-        }));
+        let res = (Identifier::from(self.name.as_ref()), self.dir)
+            .shrink()
+            .map(|(n, dir)| Port{name: n.into(), dir});
         Box::new(res)
     }
 }
