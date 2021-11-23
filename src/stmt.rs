@@ -308,24 +308,15 @@ impl Arbitrary for Statement {
                 let clock = clock.clone();
                 let cond = cond.clone();
 
-                let res = name
-                    .as_ref()
-                    .map(|n| Identifier::from(n.as_ref()))
-                    .shrink()
-                    .map({
-                        let msg = msg.clone();
-                        move |name| (name.map(Into::into), msg.clone())
-                    })
-                    .chain(tests::FormatString::from(msg.clone()).shrink().map({
-                        let name = name.clone();
-                        move |msg| (name.clone(), msg.into())
-                    }))
-                    .map(move |(name, msg)| Kind::Print{
-                        name: name,
-                        clock: clock.clone(),
-                        cond: cond.clone(),
-                        msg: msg,
-                    }.into());
+                let res = (
+                    name.as_ref().map(|n| Identifier::from(n.as_ref())),
+                    tests::FormatString::from(msg.clone()),
+                ).shrink().map(move |(n, m)| Kind::Print{
+                    name: n.map(Into::into),
+                    clock: clock.clone(),
+                    cond: cond.clone(),
+                    msg: m.into(),
+                }.into());
                 Box::new(res)
             },
             _ => Box::new(std::iter::empty()),
