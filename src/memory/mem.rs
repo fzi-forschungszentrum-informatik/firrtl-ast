@@ -196,62 +196,21 @@ impl Arbitrary for Memory {
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
-        let d = self.depth();
-        let rl = self.read_latency();
-        let wl = self.write_latency();
-        let ruw = self.read_under_write();
-
-        let res = Identifier::from(self.name.as_ref()).shrink().map({
-            let t = self.data_type().clone();
-            let p = self.ports.clone();
-            move |n| {
-                let mut res = Self::new(n, t.clone(), d);
-                res.add_ports(p.clone());
-                res.with_read_latency(rl)
-                    .with_write_latency(wl)
-                    .with_read_under_write(ruw)
-            }
-        }).chain(self.data_type().shrink().map({
-            let n = self.name.clone();
-            let p = self.ports.clone();
-            move |t| {
-                let mut res = Self::new(n.clone(), t, d);
-                res.add_ports(p.clone());
-                res.with_read_latency(rl)
-                    .with_write_latency(wl)
-                    .with_read_under_write(ruw)
-            }
-        })).chain(self.depth().shrink().map({
-            let n = self.name.clone();
-            let t = self.data_type().clone();
-            let p = self.ports.clone();
-            move |d| {
-                let mut res = Self::new(n.clone(), t.clone(), d);
-                res.add_ports(p.clone());
-                res.with_read_latency(rl)
-                    .with_write_latency(wl)
-                    .with_read_under_write(ruw)
-            }
-        })).chain(self.ports.shrink().map({
-            let n = self.name.clone();
-            let t = self.data_type().clone();
-            move |p| {
-                let mut res = Self::new(n.clone(), t.clone(), d);
-                res.add_ports(p);
-                res.with_read_latency(rl)
-                    .with_write_latency(wl)
-                    .with_read_under_write(ruw)
-            }
-        })).chain(self.read_latency().shrink().map({
-            let mem = self.clone();
-            move |l| mem.clone().with_read_latency(l)
-        })).chain(self.write_latency().shrink().map({
-            let mem = self.clone();
-            move |l| mem.clone().with_write_latency(l)
-        })).chain(self.read_under_write().shrink().map({
-            let mem = self.clone();
-            move |ruw| mem.clone().with_read_under_write(ruw)
-        }));
+        let res = (
+            Identifier::from(self.name().as_ref()),
+            self.data_type().clone(),
+            self.depth(),
+            self.ports.clone(),
+            self.read_latency(),
+            self.write_latency(),
+            self.read_under_write(),
+        ).shrink().map(|(n, t, d, p, rl, wl, ruw)| {
+            let mut res = Self::new(n, t, d);
+            res.add_ports(p);
+            res.with_read_latency(rl)
+                .with_write_latency(wl)
+                .with_read_under_write(ruw)
+        });
         Box::new(res)
     }
 }
@@ -290,13 +249,9 @@ impl Arbitrary for Port {
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
-        let res = Identifier::from(self.name.as_ref()).shrink().map({
-            let dir = self.dir;
-            move |n| Port {name: n.into(), dir}
-        }).chain(self.dir.shrink().map({
-            let n = self.name.clone();
-            move |dir| Port {name: n.clone(), dir}
-        }));
+        let res = (Identifier::from(self.name.as_ref()), self.dir)
+            .shrink()
+            .map(|(n, dir)| Port{name: n.into(), dir});
         Box::new(res)
     }
 }

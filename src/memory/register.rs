@@ -127,13 +127,15 @@ impl<R: expr::tests::TypedRef + Clone + 'static> Arbitrary for Register<R> {
         use types::{GroundType as GT};
         use expr::tests::TypedExpr;
 
-        let res = crate::tests::Identifier::from(self.name.as_ref())
-            .shrink()
+        let res = (
+            crate::tests::Identifier::from(self.name().as_ref()),
+            TypedExpr {expr: self.clock.clone(), r#type: GT::Clock.into()},
+        ).shrink()
+            .filter(|(_, c)| c.r#type == GT::Clock.into())
             .map({
                 let t = self.r#type.clone();
-                let c = self.clock.clone();
                 let r = self.reset.clone();
-                move |n| Self::new(n, t.clone(), c.clone()).with_optional_reset(r.clone())
+                move |(n, c)| Self::new(n, t.clone(), c.expr).with_optional_reset(r.clone())
             })
             .chain(self.r#type.shrink().map({
                 // When shrinking the type, it's unlikely that we'll find a
@@ -143,38 +145,19 @@ impl<R: expr::tests::TypedRef + Clone + 'static> Arbitrary for Register<R> {
                 let n = self.name.clone();
                 let c = self.clock.clone();
                 move |t| Self::new(n.clone(), t, c.clone())
-            }))
-            .chain(TypedExpr {expr: self.clock.clone(), r#type: GT::Clock.into()}
-                .shrink()
-                .filter(|c| c.r#type == GT::Clock.into())
-                .map({
-                    let n = self.name.clone();
-                    let t = self.r#type.clone();
-                    let r = self.reset.clone();
-                    move |c| Self::new(n.clone(), t.clone(), c.expr).with_optional_reset(r.clone())
-                })
-            );
+            }));
 
         if let Some((sig, val)) = self.reset.as_ref() {
-            let n = self.name.clone();
-            let c = self.clock.clone();
+            let r_shrink = (
+                TypedExpr {expr: sig.clone(), r#type: GT::UInt(Some(1)).into()},
+                TypedExpr {expr: val.clone(), r#type: self.r#type.clone()},
+            ).shrink().filter(|(s, _)| s.r#type == GT::UInt(Some(1)).into()).map({
+                let n = self.name.clone();
+                let c = self.clock.clone();
 
-            let r_shrink = TypedExpr {expr: sig.clone(), r#type: GT::UInt(Some(1)).into()}
-                .shrink()
-                .filter(|sig| sig.r#type == GT::UInt(Some(1)).into())
-                .map({
-                    let val = val.clone();
-                    let t = self.r#type.clone();
-                    move |sig| (sig.expr, val.clone(), t.clone())
-                })
-                .chain(TypedExpr {expr: val.clone(), r#type: self.r#type.clone()}
-                    .shrink()
-                    .map({
-                        let sig = sig.clone();
-                        move |val| (sig.clone(), val.expr, val.r#type)
-                    })
-                )
-                .map(move |(s, v, t)| Self::new(n.clone(), t, c.clone()).with_optional_reset(Some((s, v))));
+                move |(s, v)| Self::new(n.clone(), v.r#type, c.clone())
+                    .with_optional_reset(Some((s.expr, v.expr)))
+            });
 
             Box::new(res.chain(r_shrink).chain(std::iter::once(self.clone().without_reset())))
         } else {

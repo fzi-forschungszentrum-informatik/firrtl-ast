@@ -82,22 +82,9 @@ impl Arbitrary for Memory {
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         use crate::tests::Identifier;
 
-        let k = self.kind();
-        let res = Identifier::from(self.name_ref())
+        let res = (Identifier::from(self.name_ref()), self.data_type.clone(), self.kind())
             .shrink()
-            .map({
-                let t = self.data_type.clone();
-                move |n| Self::new(n, t.clone(), k)
-            })
-            .chain(self.data_type.shrink().map({
-                let n = self.name.clone();
-                move |t| Self::new(n.clone(), t, k)
-            }))
-            .chain(k.shrink().map({
-                let n = self.name.clone();
-                let t = self.data_type.clone();
-                move |k| Self::new(n.clone(), t.clone(), k)
-            }));
+            .map(|(n, t, k)| Self::new(n, t, k));
         Box::new(res)
     }
 }
