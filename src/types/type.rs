@@ -173,6 +173,15 @@ impl From<std::collections::HashMap<Arc<str>, BundleField>> for Type {
     }
 }
 
+impl PartialEq<GroundType> for Type {
+    fn eq(&self, other: &GroundType) -> bool {
+        match self {
+            Self::GroundType(g) => g == other,
+            _ => false,
+        }
+    }
+}
+
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use crate::display::CommaSeparated;

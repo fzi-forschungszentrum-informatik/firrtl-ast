@@ -131,7 +131,7 @@ impl<R: expr::tests::TypedRef + Clone + 'static> Arbitrary for Register<R> {
             crate::tests::Identifier::from(self.name().as_ref()),
             TypedExpr {expr: self.clock.clone(), r#type: GT::Clock.into()},
         ).shrink()
-            .filter(|(_, c)| c.r#type == GT::Clock.into())
+            .filter(|(_, c)| c.r#type == GT::Clock)
             .map({
                 let t = self.r#type.clone();
                 let r = self.reset.clone();
@@ -151,7 +151,7 @@ impl<R: expr::tests::TypedRef + Clone + 'static> Arbitrary for Register<R> {
             let r_shrink = (
                 TypedExpr {expr: sig.clone(), r#type: GT::UInt(Some(1)).into()},
                 TypedExpr {expr: val.clone(), r#type: self.r#type.clone()},
-            ).shrink().filter(|(s, _)| s.r#type == GT::UInt(Some(1)).into()).map({
+            ).shrink().filter(|(s, _)| s.r#type == GT::UInt(Some(1))).map({
                 let n = self.name.clone();
                 let c = self.clock.clone();
 
