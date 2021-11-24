@@ -37,6 +37,12 @@ fn parse_type(original: Type) -> Result<Equivalence<Type>, String> {
 
 
 #[quickcheck]
+fn type_partial_eq(lhs: Type, rhs: GroundType) -> Equivalence<bool> {
+    Equivalence::of(lhs == rhs, lhs == Type::from(rhs))
+}
+
+
+#[quickcheck]
 fn dummy_combine_self(t: Type) -> Result<Equivalence<Type>, (Type, Type)> {
     DummyCombinator()
         .combine(&t, &t)
